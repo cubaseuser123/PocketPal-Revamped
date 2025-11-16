@@ -1,5 +1,5 @@
 {
-  "name": "my-turborepo",
+  "name": "PocketPal",
   "private": true,
   "scripts": {
     "build": "turbo run build",
