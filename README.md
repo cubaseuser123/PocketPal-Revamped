@@ -1,135 +1,272 @@
-# Turborepo starter
+# 🚀 PocketPal — Monorepo Setup Guide
 
-This Turborepo starter is maintained by the Turborepo core team.
+PocketPal is a **cross-platform financial tracking app** built using a **Turborepo monorepo**.
 
-## Using this example
+It contains:
 
-Run the following command:
+- **Web App** → Next.js
+- **Mobile App** → Ionic + Capacitor + React
+- **Backend API** → Express.js
+- **Shared Packages** → UI, TS Config, ESLint Config
+- **Package Manager** → pnpm
+- **Build System** → Turborepo
 
-```sh
-npx create-turbo@latest
-```
+This guide helps teammates clone, install, and run the entire project easily.
 
-## What's inside?
+---
 
-This Turborepo includes the following packages/apps:
-
-### Apps and Packages
-
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
+# 📁 Repository Structure
 
 ```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
+pocketpal/
+│
+├── apps/
+│   ├── backend/            # Express.js API server
+│   ├── mobile/             # Ionic + Capacitor (React) mobile app
+│   └── web/                # Next.js web app
+│
+├── packages/
+│   ├── eslint-config/      # Shared ESLint rules
+│   ├── typescript-config/  # Shared tsconfig.json presets
+│   └── ui/                 # Shared UI components + utilities
+│
+├── turbo.json              # Turborepo pipelines
+├── pnpm-workspace.yaml     # pnpm workspace setup
+├── package.json
+├── .syncpackrc.json
+├── .npmrc
+└── README.md
 ```
 
-You can build a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
+---
+
+# 🛠️ Tech Stack
+
+### **Web (apps/web)**
+
+- Next.js
+- React
+- TailwindCSS
+- shadcn/ui
+- Shared UI package
+
+### **Mobile (apps/mobile)**
+
+- Ionic Framework
+- React
+- Capacitor
+- TailwindCSS
+
+### **Backend (apps/backend)**
+
+- Node.js
+- Express.js
+
+### **Monorepo Tools**
+
+- Turborepo
+- pnpm workspaces
+
+### **Shared Packages**
+
+- UI Component Library (`packages/ui`)
+- TypeScript Config (`packages/typescript-config`)
+- ESLint Config (`packages/eslint-config`)
+
+---
+
+# 📦 Prerequisites
+
+Make sure you have the following installed:
+
+| Tool                       | Version                      |
+| -------------------------- | ---------------------------- |
+| **Node.js**                | v20+                         |
+| **pnpm**                   | v8+                          |
+| **Git**                    | Any recent version           |
+| **Android Studio / Xcode** | For running mobile builds    |
+| **Ionic CLI**              | _(optional but recommended)_ |
+
+Install pnpm if needed:
 
 ```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
+npm install -g pnpm
 ```
 
-### Develop
-
-To develop all apps and packages, run the following command:
+Install Ionic CLI:
 
 ```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
+npm install -g @ionic/cli
 ```
 
-You can develop a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
+---
+
+# 📥 1. Clone the Repository
 
 ```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
+git clone <repo-url>
+cd pocketpal
 ```
 
-### Remote Caching
+---
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
+# 📦 2. Install All Dependencies
 
 ```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
+pnpm install
 ```
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+This installs dependencies for all apps and shared packages.
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+---
+
+# 🏗️ 3. Running Each App
+
+## 🌐 Web App (Next.js)
+
+Run using Turborepo:
 
 ```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
+pnpm dev --filter web
 ```
 
-## Useful Links
+Or directly inside the app:
 
-Learn more about the power of Turborepo:
+```
+cd apps/web
+pnpm dev
+```
 
-- [Tasks](https://turborepo.com/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.com/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.com/docs/reference/configuration)
-- [CLI Usage](https://turborepo.com/docs/reference/command-line-reference)
+Runs on: **http://localhost:3000**
+
+---
+
+## 📱 Mobile App (Ionic + Capacitor)
+
+Start in dev mode:
+
+```
+pnpm dev --filter mobile
+```
+
+Or:
+
+```
+cd apps/mobile
+pnpm dev
+```
+
+### Run on Android:
+
+**Android Studio must be installed and set up.**
+
+```
+cd apps/mobile
+pnpm cap sync android
+pnpm cap open android
+```
+
+---
+
+## 🖥️ Backend API (Express.js)
+
+Run via Turborepo:
+
+```
+pnpm dev --filter backend
+```
+
+Or inside the backend folder:
+
+```
+cd apps/backend
+pnpm dev
+```
+
+---
+
+# 🔁 Turborepo Commands
+
+| Command                     | Description                  |
+| --------------------------- | ---------------------------- |
+| `pnpm dev`                  | Run all apps (if configured) |
+| `pnpm dev --filter web`     | Run web only                 |
+| `pnpm dev --filter mobile`  | Run mobile only              |
+| `pnpm dev --filter backend` | Run backend only             |
+| `pnpm build`                | Build everything             |
+| `pnpm build --filter web`   | Build web only               |
+| `pnpm lint`                 | Lint entire monorepo         |
+
+---
+
+# 📦 Shared Packages
+
+### `packages/ui/`
+
+- Shared React components
+- Shared Tailwind styles
+
+### `packages/typescript-config/`
+
+- Base tsconfig + multiple presets
+- Used by all apps
+
+### `packages/eslint-config/`
+
+- Shared linting rules
+- Keeps code style consistent
+
+Usage example:
+
+```json
+{
+  "extends": ["@repo/typescript-config/react"],
+  "eslintConfig": {
+    "extends": ["@repo/eslint-config"]
+  }
+}
+```
+
+---
+
+# ⚠️ Common Issues & Fixes
+
+### ❌ Capacitor not detecting Android/iOS project
+
+Run:
+
+```
+pnpm cap sync
+```
+
+### ❌ UI package not updating
+
+Build the UI package:
+
+```
+pnpm build --filter ui
+```
+
+### ❌ Dependency mismatch
+
+Run:
+
+```
+pnpm update -r
+```
+
+---
+
+# 🤝 Contribution Workflow
+
+1. Create a new branch
+2. Make changes
+3. Run `pnpm lint` and `pnpm build`
+4. Commit + push
+5. Open a Pull Request
+
+---
+
+# 🎉 You're Ready!
+
+If you need help setting up or contributing to PocketPal, create an issue or reach out to the team.
