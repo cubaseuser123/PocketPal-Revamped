@@ -5,7 +5,7 @@ interface ContainerProps {}
 const ExploreContainer: React.FC<ContainerProps> = () => {
   return (
     <div id="container">
-      <strong>to create an app?</strong>
+      <strong>Ready to create an app?</strong>
       <p>
         Start with Ionic{" "}
         <a

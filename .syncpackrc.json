@@ -1,0 +1,32 @@
+{
+  "$schema": "https://raw.githubusercontent.com/JamieMason/syncpack/main/schema.json",
+  "packageManager": "pnpm",
+  "source": ["package.json", "apps/*/package.json", "packages/*/package.json"],
+
+  "versionGroups": [
+    {
+      "packages": ["**"],
+      "dependencies": ["$LOCAL"],
+      "dependencyTypes": ["dev", "prod"],
+      "pinVersion": "workspace:*"
+    }
+  ],
+
+  "semverGroups": [
+    {
+      "label": "Allow workspace:*",
+      "range": "workspace:*",
+      "dependencies": ["@repo/*"],
+      "dependencyTypes": ["prod", "dev"],
+      "packages": ["apps/*", "packages/*"]
+    }
+  ],
+
+  "invalidVersion": {
+    "action": "allow"
+  },
+
+  "sortAz": ["prod", "dev", "peer"],
+
+  "sortFirst": ["name", "version", "private", "type"]
+}
