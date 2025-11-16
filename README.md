@@ -255,6 +255,20 @@ Run:
 pnpm update -r
 ```
 
+### ❌ Dependency version conflicts
+
+You can check for version mismatches using Syncpack:
+
+```
+pnpm dlx syncpack list-mismatches
+```
+
+If there are mismatches, run:
+
+```
+pnpm dlx syncpack fix-mismatches
+```
+
 ---
 
 # 🤝 Contribution Workflow
