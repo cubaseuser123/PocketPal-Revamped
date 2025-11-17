@@ -84,7 +84,7 @@ Make sure you have the following installed:
 | **Node.js**                | v20+                         |
 | **pnpm**                   | v8+                          |
 | **Git**                    | Any recent version           |
-| **Android Studio / Xcode** | For running mobile builds    |
+| **Android Studio**         | For running mobile builds    |
 | **Ionic CLI**              | _(optional but recommended)_ |
 
 Install pnpm if needed:
@@ -104,8 +104,8 @@ npm install -g @ionic/cli
 # 📥 1. Clone the Repository
 
 ```
-git clone <repo-url>
-cd pocketpal
+git clone https://github.com/HarshK97/PocketPal/
+cd PocketPal
 ```
 
 ---
