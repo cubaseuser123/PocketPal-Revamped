@@ -36,3 +36,27 @@ ion-tab-bar {
 ion-tab-button {
   border-radius: 16px !important;
 }
+
+ion-tab-bar ion-tab-button ion-icon {
+  transition: transform 0.4s ease-in-out;
+}
+
+ion-tab-bar ion-tab-button.tab-selected ion-icon {
+  transform: translateY(-8px) scale(1.05);
+}
+
+ion-tab-bar ion-label {
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition:
+    opacity 0.4s ease-in-out,
+    transform 0.4s ease-in-out;
+  position: absolute;
+}
+
+ion-tab-bar ion-tab-button.tab-selected ion-label {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(18px);
+}
