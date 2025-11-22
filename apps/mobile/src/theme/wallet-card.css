@@ -1,0 +1,19 @@
+ion-card.primary-card {
+  --background: linear-gradient(
+    to bottom right,
+    #c59cff 0%,
+    #8f4bff 45%,
+    #3d1d73 100%
+  );
+  border-radius: 20px;
+}
+
+ion-card.savings-card {
+  --background: linear-gradient(
+    to bottom right,
+    #10b981 0%,
+    #0b8a63 45%,
+    #02412e 100%
+  );
+  border-radius: 20px;
+}
