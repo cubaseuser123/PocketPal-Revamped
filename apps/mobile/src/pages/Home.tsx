@@ -1,22 +1,41 @@
-import { IonContent, IonPage } from "@ionic/react";
-import React from "react";
-import { IonIcon } from "@ionic/react";
-import { flame } from "ionicons/icons";
+import { IonContent, IonPage, IonHeader } from "@ionic/react";
+import React, { useState } from "react";
+import Welcome from "../components/Welcome";
 
 const Home: React.FC = () => {
+  const [activeWallet, setActiveWallet] = useState<"Primary" | "Savings">(
+    "Primary",
+  );
+
   return (
     <IonPage>
-      <IonContent className="ion-padding-top">
-        <div className="flex flex-row items-center justify-between px-6 pt-20">
-          <div>
-            <div className="text-xl text-gray-400">Good morning,</div>
-            <div className="text-2xl text-white">Harsh 👋</div>
+      <IonHeader>
+        <Welcome />
+        <div className="ion-margin relative flex flex-row rounded-4xl bg-gray-800 px-2 py-2 text-center text-white">
+          <div
+            className={`absolute top-2 bottom-2 w-[calc(50%-4px)] rounded-4xl bg-(--ion-color-primary) transition-all duration-300 ${
+              activeWallet === "Primary" ? "left-2" : "left-[calc(50%+2px)]"
+            }`}
+          />
+
+          <div
+            onClick={() => setActiveWallet("Primary")}
+            className="z-10 flex-1 px-6 py-2"
+          >
+            Primary
           </div>
-          <div className="flex flex-row items-center gap-2 rounded-xl bg-gray-600 px-4 py-1 text-xl text-white">
-            <IonIcon icon={flame} className="animate-pulse text-orange-400" />
-            <span>12</span>
+
+          <div
+            onClick={() => setActiveWallet("Savings")}
+            className="z-10 flex-1 px-6 py-2"
+          >
+            Savings
           </div>
         </div>
+      </IonHeader>
+
+      <IonContent className="">
+        <h1 className="text-white">Content goes here</h1>
       </IonContent>
     </IonPage>
   );
