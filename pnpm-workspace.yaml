@@ -1,4 +1,10 @@
 packages:
-  - "apps/*"
-  - "apps/mobile/*"
-  - "packages/*"
+  - apps/*
+  - apps/mobile/*
+  - packages/*
+
+ignoredBuiltDependencies:
+  - core-js
+  - cypress
+  - esbuild
+  - sharp
