@@ -1,19 +1,33 @@
-ion-card.primary-card {
-  --background: linear-gradient(
-    to bottom right,
-    #c59cff 0%,
-    #8f4bff 45%,
-    #3d1d73 100%
-  );
-  border-radius: 20px;
+.primary-card {
+  background: linear-gradient(
+    135deg,
+    rgba(164, 104, 255, 0.2) 0%,
+    rgba(144, 92, 224, 0.15) 50%,
+    rgba(48, 43, 99, 0.1) 100%
+  ) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(164, 104, 255, 0.3);
+  border-radius: 24px;
+  box-shadow:
+    0 8px 32px 0 rgba(164, 104, 255, 0.2),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+  margin: 0;
 }
 
-ion-card.savings-card {
-  --background: linear-gradient(
-    to bottom right,
-    #10b981 0%,
-    #0b8a63 45%,
-    #02412e 100%
-  );
-  border-radius: 20px;
+.savings-card {
+  background: linear-gradient(
+    135deg,
+    rgba(16, 185, 129, 0.2) 0%,
+    rgba(11, 138, 99, 0.15) 50%,
+    rgba(2, 65, 46, 0.1) 100%
+  ) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 24px;
+  box-shadow:
+    0 8px 32px 0 rgba(16, 185, 129, 0.2),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+  margin: 0;
 }

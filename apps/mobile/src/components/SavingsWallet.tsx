@@ -1,5 +1,6 @@
 import { IonCard, IonCardContent, IonIcon, isPlatform } from "@ionic/react";
 import { shieldCheckmarkOutline, lockClosedOutline } from "ionicons/icons";
+import "../theme/wallet-card.css";
 
 const SavingsWallet = () => {
   const isAndroid = isPlatform("android");
@@ -36,7 +37,7 @@ const SavingsWallet = () => {
 
               <div className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/15 px-2 py-1 text-xs backdrop-blur-xl">
                 <IonIcon icon={shieldCheckmarkOutline} />
-                <span>UPI Linked</span>
+                <span>Locked & Encrypted</span>
               </div>
             </div>
           </div>
