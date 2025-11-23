@@ -4,8 +4,9 @@ import User from "../models/User.js";
 export const protect = async (req, res, next) => {
   try {
     let token;
+    console.log("🟡 protect middleware HIT");
+console.log("🟡 Authorization header:", req.headers.authorization);
 
-    // Get token from Authorization header
     if (
       req.headers.authorization &&
       req.headers.authorization.startsWith("Bearer")
@@ -17,13 +18,17 @@ export const protect = async (req, res, next) => {
       return res.status(401).json({ message: "Not authorized, no token" });
     }
 
-    // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Attach user to request
-    req.user = await User.findById(decoded.id).select("-password");
+    // Fetch user
+    const user = await User.findById(decoded.id);
 
-    next();
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    req.user = user; // attach full user object
+    next(); // VERY IMPORTANT
 
   } catch (error) {
     return res.status(401).json({
@@ -32,4 +37,3 @@ export const protect = async (req, res, next) => {
     });
   }
 };
-export default protect;

@@ -2,35 +2,26 @@ import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
-      required: [true, "Name is required"],
-      trim: true,
-    },
+    name: { type: String, required: true, trim: true },
 
     email: {
       type: String,
-      required: [true, "Email is required"],
+      required: true,
       unique: true,
       lowercase: true,
       trim: true,
     },
 
-    password: {
-      type: String,
-      required: [true, "Password is required"],
-      select: false, // Password should not appear in queries by default
-    },
+    otp: { type: String, select: false },
+    otpExpires: { type: Date, select: false },
   },
-  {
-    timestamps: true, // adds createdAt and updatedAt
-  }
+  { timestamps: true }
 );
 
-// Remove password when sending user object
 userSchema.methods.toJSON = function () {
   const obj = this.toObject();
-  delete obj.password;
+  delete obj.otp;
+  delete obj.otpExpires;
   return obj;
 };
 

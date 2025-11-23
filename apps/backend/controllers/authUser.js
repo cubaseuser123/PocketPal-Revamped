@@ -1,110 +1,93 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+import { sendEmailOTP } from "../config/sendEmail.js"; // email sender
 
-// ---------------- REGISTER USER ----------------
-export const registerUser = async (req, res) => {
+const OTP_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+// send-otp: create user if not exist, generate OTP, email it
+export const sendOTP = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email } = req.body;
+    if (!name || !email) return res.status(400).json({ message: "Name and email required" });
 
-    // Check if all fields provided
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
+    let user = await User.findOne({ email });
 
-    // Check if user exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: "Email already exists" });
-    }
+    // generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedOTP = await bcrypt.hash(otp, 10);
+    const expiresAt = Date.now() + OTP_TTL_MS;
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create user
-    const user = await User.create({
-      name,
-      email,
-      password: hashedPassword,
-    });
-
-    return res.status(201).json({
-      message: "User registered successfully",
-      user: user.toJSON(), // ensures password is removed
-    });
-
-  } catch (error) {
-    return res.status(500).json({
-      message: "Server error",
-      error: error.message,
-    });
-  }
-};
-
-// ---------------- LOGIN USER ----------------
-export const loginUser = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    // Validate input
-    if (!email || !password) {
-      return res.status(400).json({ message: "Email and password required" });
-    }
-
-    // Check user
-    const user = await User.findOne({ email }).select("+password");
     if (!user) {
-      return res.status(400).json({ message: "Invalid credentials" });
+      user = await User.create({
+        name,
+        email,
+        otp: hashedOTP,
+        otpExpires: expiresAt,
+      });
+    } else {
+      user.otp = hashedOTP;
+      user.otpExpires = expiresAt;
+      await user.save();
     }
 
-    // Compare passwords
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ message: "Invalid credentials" });
+    // send email
+    const send = await sendEmailOTP(email, otp);
+    if (!send.success) {
+      return res.status(500).json({ message: "Failed to send OTP email", error: send.error });
     }
 
-    // Generate token
-    const token = jwt.sign(
-      { id: user._id },
-      process.env.JWT_SECRET,
-      { expiresIn: "1d" }
-    );
-
-    return res.json({
-      message: "Login successful",
-      token,
-      user: user.toJSON(),
-    });
-
-  } catch (error) {
-    return res.status(500).json({
-      message: "Server error",
-      error: error.message,
-    });
+    return res.json({ message: "OTP sent to email" });
+  } catch (err) {
+    console.error("sendOTP error:", err);
+    return res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
-// ---------------- LOGOUT USER ----------------
-export const logoutUser = (req, res) => {
-  return res.json({ message: "Logout successful" });
+// verify-otp: verify hashed OTP, issue JWT
+export const verifyOTP = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) return res.status(400).json({ message: "Email and OTP required" });
+
+    const user = await User.findOne({ email }).select("+otp +otpExpires");
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (!user.otp || !user.otpExpires || user.otpExpires < Date.now()) {
+      return res.status(400).json({ message: "OTP expired or not present" });
+    }
+
+    const isMatch = await bcrypt.compare(otp.toString(), user.otp);
+    if (!isMatch) return res.status(400).json({ message: "Invalid OTP" });
+
+    // create JWT
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+
+    // clear OTP fields
+    user.otp = undefined;
+    user.otpExpires = undefined;
+    await user.save();
+
+    return res.json({ message: "OTP verified", token, user: user.toJSON() });
+  } catch (err) {
+    console.error("verifyOTP error:", err);
+    return res.status(500).json({ message: "Server error", error: err.message });
+  }
 };
 
-// ---------------- GET LOGGED-IN USER ----------------
+// getMe (protected)
 export const getMe = async (req, res) => {
   try {
-    // req.user will come from protect middleware
+    console.log("🟢 getMe controller reached");
+
     const user = await User.findById(req.user.id);
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    return res.json({ user: user.toJSON() });
-
-  } catch (error) {
-    return res.status(500).json({
-      message: "Server error",
-      error: error.message,
-    });
+    if (!user) return res.status(404).json({ message: "User not found" });
+    return res.json({ user });
+  } catch (err) {
+    return res.status(500).json({ message: "Server error", error: err.message });
   }
+};
+
+export const logoutUser = (req, res) => {
+  return res.json({ message: "Logout successful" });
 };
