@@ -13,9 +13,11 @@ const App: React.FC = () => (
       <IonReactRouter>
         <IonRouterOutlet>
           <Route exact path="/login" component={Login} />
-          <ProtectedRoute path="/home" component={AuthenticatedLayout} />
+
+          <ProtectedRoute path="/app" component={AuthenticatedLayout} />
+
           <Route exact path="/">
-            <Redirect to="/home" />
+            <Redirect to="/app/home" />
           </Route>
         </IonRouterOutlet>
       </IonReactRouter>
