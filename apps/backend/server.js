@@ -11,6 +11,14 @@ const app = express();
 
 // Middlewares
 app.use(express.json());
+app.use(
+  cors({
+    origin: "*",        // allow any origin
+    credentials: true,  // allow cookies (even though origin: "*" ignores it)
+    allowedHeaders: ["Content-Type", "Authorization"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  })
+);
 
 // Swagger
 swaggerDocs(app);
