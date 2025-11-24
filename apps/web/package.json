@@ -10,6 +10,7 @@
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
+    "@repo/auth": "workspace:*",
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*"
   },

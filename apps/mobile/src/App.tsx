@@ -14,6 +14,7 @@ import {
 import { IonReactRouter } from "@ionic/react-router";
 import { homeOutline, giftOutline, personOutline } from "ionicons/icons";
 import { Sparkles, Target } from "lucide-react";
+import { AuthProvider } from "@repo/auth";
 
 /* Core CSS required for Ionic components to work properly */
 import "@ionic/react/css/core.css";
@@ -31,6 +32,7 @@ import "./main.css";
 import "./theme/variables.css";
 import "./theme/floating-tab-bar.css";
 import Home from "./pages/Home";
+import Login from "./pages/Login";
 
 setupIonicReact();
 
@@ -59,49 +61,51 @@ const Profile: React.FC = () => (
 );
 
 const App: React.FC = () => (
-  <IonApp>
-    <IonReactRouter>
-      <IonTabs>
-        <IonRouterOutlet>
-          <Route exact path="/home">
-            <Home />
-          </Route>
-          <Route exact path="/goals">
-            <Goals />
-          </Route>
-          <Route exact path="/ai">
-            <AI />
-          </Route>
-          <Route exact path="/rewards">
-            <Rewards />
-          </Route>
-          <Route exact path="/profile">
-            <Profile />
-          </Route>
-          <Route exact path="/">
-            <Redirect to="/home" />
-          </Route>
-        </IonRouterOutlet>
-        <IonTabBar slot="bottom" translucent={true}>
-          <IonTabButton tab="home" href="/home">
-            <IonIcon aria-hidden="true" icon={homeOutline} />
-          </IonTabButton>
-          <IonTabButton tab="goals" href="/goals">
-            <Target />
-          </IonTabButton>
-          <IonTabButton tab="ai" href="/ai" className="ai-tab-button">
-            <Sparkles />
-          </IonTabButton>
-          <IonTabButton tab="rewards" href="/rewards">
-            <IonIcon aria-hidden="true" icon={giftOutline} />
-          </IonTabButton>
-          <IonTabButton tab="profile" href="/profile">
-            <IonIcon aria-hidden="true" icon={personOutline} />
-          </IonTabButton>
-        </IonTabBar>
-      </IonTabs>
-    </IonReactRouter>
-  </IonApp>
+  <AuthProvider>
+    <IonApp>
+      <IonReactRouter>
+        <IonTabs>
+          <IonRouterOutlet>
+            <Route exact path="/home">
+              <Home />
+            </Route>
+            <Route exact path="/goals">
+              <Goals />
+            </Route>
+            <Route exact path="/ai">
+              <AI />
+            </Route>
+            <Route exact path="/rewards">
+              <Rewards />
+            </Route>
+            <Route exact path="/profile">
+              <Profile />
+            </Route>
+            <Route exact path="/">
+              <Home />
+            </Route>
+          </IonRouterOutlet>
+          <IonTabBar slot="bottom" translucent={true}>
+            <IonTabButton tab="home" href="/home">
+              <IonIcon aria-hidden="true" icon={homeOutline} />
+            </IonTabButton>
+            <IonTabButton tab="goals" href="/goals">
+              <Target />
+            </IonTabButton>
+            <IonTabButton tab="ai" href="/ai" className="ai-tab-button">
+              <Sparkles />
+            </IonTabButton>
+            <IonTabButton tab="rewards" href="/rewards">
+              <IonIcon aria-hidden="true" icon={giftOutline} />
+            </IonTabButton>
+            <IonTabButton tab="profile" href="/profile">
+              <IonIcon aria-hidden="true" icon={personOutline} />
+            </IonTabButton>
+          </IonTabBar>
+        </IonTabs>
+      </IonReactRouter>
+    </IonApp>
+  </AuthProvider>
 );
 
 export default App;
