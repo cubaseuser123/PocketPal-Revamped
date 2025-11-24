@@ -1,19 +1,19 @@
 import { CapacitorHttp, HttpResponse } from "@capacitor/core";
 import { Capacitor } from "@capacitor/core";
 import { RequestProps } from "../types";
-import { cookies } from "../cookies/cookies";
+import { storage } from "../storage/storage";
 
 async function request({
   method,
   url,
   data,
 }: RequestProps): Promise<HttpResponse> {
-  const token = await cookies.get("access_token");
+  const token = await storage.get("access_token");
 
   console.log("Making request:", {
     method,
     url,
-    data,
+    hasToken: !!token,
     platform: Capacitor.getPlatform(),
   });
 
@@ -23,7 +23,6 @@ async function request({
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 
-  // Use native fetch for web platform to ensure proper body handling
   if (Capacitor.getPlatform() === "web") {
     const fetchOptions: RequestInit = {
       method,
@@ -34,8 +33,6 @@ async function request({
     if (data && (method === "POST" || method === "PUT" || method === "PATCH")) {
       fetchOptions.body = JSON.stringify(data);
     }
-
-    console.log("Using fetch with options:", fetchOptions);
 
     const response = await fetch(url, fetchOptions);
     const responseData = await response.json().catch(() => ({}));
@@ -48,25 +45,17 @@ async function request({
     };
   }
 
-  // Use CapacitorHttp for native platforms
   const options: any = {
     method,
     url,
     headers,
   };
 
-  // For native platforms, CapacitorHttp expects data as a plain object
-  // It will handle the serialization internally
   if (data && (method === "POST" || method === "PUT" || method === "PATCH")) {
     options.data = data;
   }
 
-  console.log("Using CapacitorHttp with options:", options);
-
   const response = await CapacitorHttp.request(options);
-
-  console.log("Response:", response);
-
   return response;
 }
 

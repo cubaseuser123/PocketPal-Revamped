@@ -1,7 +1,7 @@
 import { IonPage, IonContent, IonIcon, isPlatform } from "@ionic/react";
 import { useState, useEffect, useRef } from "react";
 import { useHistory } from "react-router";
-import { auth, useAuth } from "@repo/auth";
+import { useAuth, auth } from "@repo/auth";
 import { config } from "../config";
 import { arrowBack, sparklesOutline } from "ionicons/icons";
 
@@ -73,10 +73,19 @@ export default function Login() {
 
     try {
       setIsLoading(true);
+
       await auth.verifyOtp({ email, otp: code, baseUrl: config.backendUrl });
+
+      const token = await auth.getToken();
+      if (!token) {
+        throw new Error("Token was not stored properly");
+      }
+
+      console.log("[Login] Authentication successful, token stored");
       setAuthenticated(true);
       history.push("/app/home");
     } catch (err: any) {
+      console.error("[Login] Verification failed:", err);
       alert(err.message || "Failed to verify OTP");
     } finally {
       setIsLoading(false);

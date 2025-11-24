@@ -14,8 +14,8 @@ const app = express();
 app.use(express.json());
 app.use(
   cors({
-    origin: "http://localhost:8100", // allow any origin
-    credentials: true, // allow cookies (even though origin: "*" ignores it)
+    origin: ["http://localhost:8100", "http://localhost:3000"],
+    credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   }),
@@ -27,6 +27,10 @@ swaggerDocs(app);
 // MongoDB
 connectDB();
 
+app.use((req, res, next) => {
+  console.log("REQUEST:", req.method, req.url, "Origin:", req.headers.origin);
+  next();
+});
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);

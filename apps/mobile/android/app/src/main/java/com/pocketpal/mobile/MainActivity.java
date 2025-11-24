@@ -1,4 +1,4 @@
-package io.ionic.starter;
+package com.pocketpal.mobile;
 
 import com.getcapacitor.BridgeActivity;
 

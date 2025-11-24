@@ -14,6 +14,7 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@capacitor/core": "7.4.4"
+    "@capacitor/core": "7.4.4",
+    "@capacitor/preferences": "^7.0.2"
   }
 }

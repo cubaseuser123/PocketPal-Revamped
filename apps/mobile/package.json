@@ -14,13 +14,13 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@repo/auth": "workspace:*",
     "@capacitor/android": "7.4.4",
     "@capacitor/app": "7.1.0",
     "@capacitor/core": "7.4.4",
     "@capacitor/haptics": "7.0.2",
     "@capacitor/ios": "7.4.4",
     "@capacitor/keyboard": "7.0.3",
+    "@capacitor/preferences": "^7.0.2",
     "@capacitor/status-bar": "7.0.3",
     "@fortawesome/fontawesome-svg-core": "^7.1.0",
     "@fortawesome/free-brands-svg-icons": "^7.1.0",
@@ -29,6 +29,7 @@
     "@fortawesome/react-fontawesome": "^3.1.0",
     "@ionic/react": "^8.7.9",
     "@ionic/react-router": "^8.7.9",
+    "@repo/auth": "workspace:*",
     "@tailwindcss/vite": "^4.1.17",
     "@types/react-router": "^5.1.20",
     "@types/react-router-dom": "^5.3.3",

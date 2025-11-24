@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { cookies } from "../cookies/cookies";
+import { storage } from "../storage/storage";
 import { AuthContextValue, AuthProviderProps } from "../types";
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -11,11 +11,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const token = await cookies.get("access_token");
-        console.log("Auth check - token found:", !!token);
+        const token = await storage.get("access_token");
+        console.log("[Auth] Token found:", !!token);
         setAuthenticated(!!token);
       } catch (error) {
-        console.error("Error checking auth:", error);
+        console.error("[Auth] Error checking:", error);
         setAuthenticated(false);
       } finally {
         setLoading(false);
@@ -28,7 +28,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     const handleVisibilityChange = async () => {
       if (document.visibilityState === "visible") {
-        const token = await cookies.get("access_token");
+        const token = await storage.get("access_token");
+        console.log("[Auth] Visibility check - token found:", !!token);
         setAuthenticated(!!token);
       }
     };
