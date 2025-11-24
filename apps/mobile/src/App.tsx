@@ -12,12 +12,7 @@ import {
   setupIonicReact,
 } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
-import {
-  homeOutline,
-  sparklesOutline,
-  giftOutline,
-  personOutline,
-} from "ionicons/icons";
+import { homeOutline, giftOutline, personOutline } from "ionicons/icons";
 import { Sparkles, Target } from "lucide-react";
 
 /* Core CSS required for Ionic components to work properly */

@@ -5,7 +5,7 @@ export const protect = async (req, res, next) => {
   try {
     let token;
     console.log("🟡 protect middleware HIT");
-console.log("🟡 Authorization header:", req.headers.authorization);
+    console.log("🟡 Authorization header:", req.headers.authorization);
 
     if (
       req.headers.authorization &&
@@ -29,7 +29,6 @@ console.log("🟡 Authorization header:", req.headers.authorization);
 
     req.user = user; // attach full user object
     next(); // VERY IMPORTANT
-
   } catch (error) {
     return res.status(401).json({
       message: "Not authorized",
