@@ -19,12 +19,9 @@ async function verifyOtp({ email, otp, baseUrl }: VerifyOtpProps) {
     email,
     otp,
   });
-
   if (response.status === 200) {
     const { user, token } = response.data;
-
     await cookies.set("access_token", token, baseUrl);
-
     return user;
   } else {
     throw new Error("OTP verification failed");
@@ -45,7 +42,6 @@ async function logoutUser(baseUrl: string) {
   if (response.status !== 200) {
     throw new Error("Logout failed");
   }
-
   await cookies.clear();
 }
 

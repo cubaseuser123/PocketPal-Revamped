@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import connectDB from "./config/db.js";
+import cors from "cors";
 import swaggerDocs from "./config/swagger.js";
 import authRoutes from "./routes/authRoutes.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
@@ -13,11 +14,11 @@ const app = express();
 app.use(express.json());
 app.use(
   cors({
-    origin: "*",        // allow any origin
-    credentials: true,  // allow cookies (even though origin: "*" ignores it)
+    origin: "http://localhost:8100", // allow any origin
+    credentials: true, // allow cookies (even though origin: "*" ignores it)
     allowedHeaders: ["Content-Type", "Authorization"],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  })
+  }),
 );
 
 // Swagger
@@ -29,7 +30,6 @@ connectDB();
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
-
 
 app.get("/", (req, res) => {
   res.send("PocketPal API running");
