@@ -10,22 +10,18 @@ import {
 import { homeOutline, giftOutline, personOutline } from "ionicons/icons";
 import { Target, Sparkles } from "lucide-react";
 import Home from "./pages/Home";
-// import Goals from "./pages/Goals";
-// import AI from "./pages/AI";
-// import Rewards from "./pages/Rewards";
-// import Profile from "./pages/Profile";
+import UPIScanner from "./pages/UPIScanner";
 
 export function AuthenticatedLayout() {
   return (
     <IonTabs>
       <IonRouterOutlet>
         <Route exact path="/app/home" component={Home} />
-
+        <Route exact path="/app/scan-upi" component={UPIScanner} />
         {/* <Route exact path="/app/goals" component={Goals} /> */}
         {/* <Route exact path="/app/ai" component={AI} /> */}
         {/* <Route exact path="/app/rewards" component={Rewards} /> */}
         {/* <Route exact path="/app/profile" component={Profile} /> */}
-
         <Route exact path="/app">
           <Redirect to="/app/home" />
         </Route>
@@ -35,19 +31,15 @@ export function AuthenticatedLayout() {
         <IonTabButton tab="home" href="/app/home">
           <IonIcon icon={homeOutline} />
         </IonTabButton>
-
         <IonTabButton tab="goals" href="/app/goals">
-          <Target />
+          <Target size={24} />
         </IonTabButton>
-
-        <IonTabButton tab="ai" href="/app/ai" className="ai-tab-button">
-          <Sparkles />
+        <IonTabButton tab="ai" href="/app/ai">
+          <Sparkles size={24} />
         </IonTabButton>
-
         <IonTabButton tab="rewards" href="/app/rewards">
           <IonIcon icon={giftOutline} />
         </IonTabButton>
-
         <IonTabButton tab="profile" href="/app/profile">
           <IonIcon icon={personOutline} />
         </IonTabButton>

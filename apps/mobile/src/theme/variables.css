@@ -125,3 +125,90 @@ ion-page {
 .neo-btn:active {
   transform: scale(0.96);
 }
+
+ion-tab-bar {
+  --background: var(--ion-background-color, #1a1a1a) !important;
+  --border: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  contain: layout style !important;
+}
+
+/* Force consistent tab button shape - no ellipse/pill */
+ion-tab-button {
+  --background: transparent !important;
+  --background-focused: transparent !important;
+  --background-hover: transparent !important;
+  --color: rgba(255, 255, 255, 0.5) !important;
+  --color-selected: var(--ion-color-primary, #a468ff) !important;
+  --padding-top: 8px !important;
+  --padding-bottom: 8px !important;
+  --padding-start: 12px !important;
+  --padding-end: 12px !important;
+  --ripple-color: transparent !important;
+  border-radius: 0 !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  flex: 1 !important;
+}
+
+/* Remove ALL platform-specific shapes */
+ion-tab-button::part(native) {
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  contain: none !important;
+}
+
+/* Active tab styling */
+ion-tab-button.tab-selected {
+  --color: var(--ion-color-primary, #a468ff) !important;
+}
+
+/* Icon consistent sizing */
+ion-tab-button ion-icon {
+  font-size: 24px !important;
+  width: 24px !important;
+  height: 24px !important;
+  margin: 0 !important;
+}
+
+/* SVG icons (Lucide) consistent sizing */
+ion-tab-button svg {
+  width: 24px !important;
+  height: 24px !important;
+  margin: 0 !important;
+  stroke-width: 2 !important;
+}
+
+/* Remove Android Material Design effects */
+.md ion-tab-button {
+  contain: none !important;
+}
+
+.md ion-tab-button::part(native) {
+  border-radius: 0 !important;
+  contain: none !important;
+}
+
+/* Remove iOS specific effects */
+.ios ion-tab-button::part(native) {
+  border-radius: 0 !important;
+  contain: none !important;
+}
+
+/* Remove ripple/highlight effects on all platforms */
+ion-tab-button ion-ripple-effect {
+  display: none !important;
+}
+
+/* Prevent any shape rendering */
+.tab-button-native {
+  border-radius: 0 !important;
+}
+
+/* Force linear layout, no circular masks */
+ion-tab-button::before,
+ion-tab-button::after {
+  display: none !important;
+}
