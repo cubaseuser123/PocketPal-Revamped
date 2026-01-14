@@ -1,6 +1,5 @@
 packages:
   - apps/*
-  - apps/mobile/*
   - packages/*
 
 ignoredBuiltDependencies:
@@ -8,3 +7,5 @@ ignoredBuiltDependencies:
   - cypress
   - esbuild
   - sharp
+
+nodeLinker: hoisted

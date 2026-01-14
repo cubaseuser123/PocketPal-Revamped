@@ -14,7 +14,10 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@capacitor/core": "7.4.4",
-    "@capacitor/preferences": "^7.0.2"
+    "expo-secure-store": "~14.2.3",
+    "react-native": ">=0.70.0"
+  },
+  "peerDependencies": {
+    "expo": ">=51.0.0"
   }
 }

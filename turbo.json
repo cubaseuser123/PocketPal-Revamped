@@ -10,7 +10,9 @@
         "!.next/cache/**",
         "dist/**",
         "build/**",
-        "www/**"
+        ".expo/**",
+        "android/**",
+        "ios/**"
       ]
     },
     "lint": {

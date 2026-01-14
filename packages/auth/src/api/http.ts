@@ -1,7 +1,6 @@
-import { CapacitorHttp, HttpResponse } from "@capacitor/core";
-import { Capacitor } from "@capacitor/core";
-import { RequestProps } from "../types";
+import { RequestProps, HttpResponse } from "../types";
 import { storage } from "../storage/storage";
+import { Platform } from "react-native";
 
 async function request({
   method,
@@ -14,7 +13,7 @@ async function request({
     method,
     url,
     hasToken: !!token,
-    platform: Capacitor.getPlatform(),
+    platform: Platform.OS,
   });
 
   const headers: Record<string, string> = {
@@ -23,40 +22,25 @@ async function request({
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 
-  if (Capacitor.getPlatform() === "web") {
-    const fetchOptions: RequestInit = {
-      method,
-      headers,
-      credentials: "include",
-    };
-
-    if (data && (method === "POST" || method === "PUT" || method === "PATCH")) {
-      fetchOptions.body = JSON.stringify(data);
-    }
-
-    const response = await fetch(url, fetchOptions);
-    const responseData = await response.json().catch(() => ({}));
-
-    return {
-      status: response.status,
-      headers: Object.fromEntries(response.headers.entries()),
-      data: responseData,
-      url: response.url,
-    };
-  }
-
-  const options: any = {
+  const fetchOptions: RequestInit = {
     method,
-    url,
     headers,
+    credentials: "include",
   };
 
   if (data && (method === "POST" || method === "PUT" || method === "PATCH")) {
-    options.data = data;
+    fetchOptions.body = JSON.stringify(data);
   }
 
-  const response = await CapacitorHttp.request(options);
-  return response;
+  const response = await fetch(url, fetchOptions);
+  const responseData = await response.json().catch(() => ({}));
+
+  return {
+    status: response.status,
+    headers: Object.fromEntries(response.headers.entries()),
+    data: responseData,
+    url: response.url,
+  };
 }
 
 export const api = {
@@ -65,3 +49,4 @@ export const api = {
   put: (url: string, data: any) => request({ method: "PUT", url, data }),
   delete: (url: string) => request({ method: "DELETE", url }),
 };
+

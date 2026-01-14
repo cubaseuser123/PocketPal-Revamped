@@ -1,11 +1,24 @@
-import { CapacitorCookies } from "@capacitor/core";
-import { Capacitor } from "@capacitor/core";
+import { Platform } from "react-native";
 
+const isNative = Platform.OS === "ios" || Platform.OS === "android";
+
+// Cookie helper for web only - native apps should use secure storage for tokens
 export const cookies = {
   get: async (key: string): Promise<string | null> => {
     try {
-      const map = await CapacitorCookies.getCookies();
-      return map[key] ?? null;
+      if (isNative) {
+        console.warn("[Cookies] Cookies not available on native. Use storage instead.");
+        return null;
+      }
+
+      if (typeof document === "undefined") return null;
+
+      const value = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith(`${key}=`))
+        ?.split("=")[1];
+
+      return value ?? null;
     } catch (error) {
       console.error("Error getting cookie:", error);
       return null;
@@ -13,41 +26,56 @@ export const cookies = {
   },
 
   getAll: async (): Promise<Record<string, string>> => {
-    return CapacitorCookies.getCookies();
+    if (isNative || typeof document === "undefined") {
+      return {};
+    }
+
+    const result: Record<string, string> = {};
+    document.cookie.split("; ").forEach((cookie) => {
+      const [key, value] = cookie.split("=");
+      if (key && value) {
+        result[key] = value;
+      }
+    });
+    return result;
   },
 
   clear: async (): Promise<void> => {
-    await CapacitorCookies.clearAllCookies();
+    if (isNative || typeof document === "undefined") {
+      return;
+    }
+
+    const cookies = document.cookie.split("; ");
+    for (const cookie of cookies) {
+      const [key] = cookie.split("=");
+      if (key) {
+        document.cookie = `${key}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+      }
+    }
   },
 
   set: async (
     key: string,
     value: string,
-    url: string,
+    _url: string,
     expiresInDays: number = 30,
   ): Promise<void> => {
-    const platform = Capacitor.getPlatform();
+    if (isNative) {
+      console.warn("[Cookies] Cookies not available on native. Use storage instead.");
+      return;
+    }
+
+    if (typeof document === "undefined") return;
 
     const expires = new Date();
     expires.setDate(expires.getDate() + expiresInDays);
 
     try {
-      await CapacitorCookies.setCookie({
-        key,
-        value,
-        url,
-        path: "/",
-        expires: expires.toISOString(),
-      });
-
-      console.log(`Cookie set successfully: ${key} on ${platform}`);
+      document.cookie = `${key}=${value}; path=/; expires=${expires.toUTCString()}; SameSite=Lax`;
+      console.log(`Cookie set successfully: ${key}`);
     } catch (error) {
       console.error("Error setting cookie:", error);
-
-      if (platform === "web") {
-        document.cookie = `${key}=${value}; path=/; expires=${expires.toUTCString()}; SameSite=Lax`;
-        console.log(`Cookie set via document.cookie: ${key}`);
-      }
     }
   },
 };
+

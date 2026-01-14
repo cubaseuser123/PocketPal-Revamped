@@ -14,6 +14,13 @@ export type RequestProps = {
   data?: any;
 };
 
+export type HttpResponse = {
+  status: number;
+  headers: Record<string, string>;
+  data: any;
+  url: string;
+};
+
 export type SendOtpProps = {
   name: string;
   email: string;

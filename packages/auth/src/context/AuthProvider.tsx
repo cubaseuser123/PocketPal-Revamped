@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
+import { AppState, AppStateStatus, Platform } from "react-native";
 import { storage } from "../storage/storage";
 import { AuthContextValue, AuthProviderProps } from "../types";
 
@@ -26,18 +27,33 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   useEffect(() => {
-    const handleVisibilityChange = async () => {
-      if (document.visibilityState === "visible") {
+    const handleAppStateChange = async (nextAppState: AppStateStatus) => {
+      if (nextAppState === "active") {
         const token = await storage.get("access_token");
-        console.log("[Auth] Visibility check - token found:", !!token);
+        console.log("[Auth] App state check - token found:", !!token);
         setAuthenticated(!!token);
       }
     };
 
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
+    // Use AppState for native, document.visibilityState for web
+    if (Platform.OS === "web" && typeof document !== "undefined") {
+      const handleVisibilityChange = async () => {
+        if (document.visibilityState === "visible") {
+          const token = await storage.get("access_token");
+          console.log("[Auth] Visibility check - token found:", !!token);
+          setAuthenticated(!!token);
+        }
+      };
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+      return () => {
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
+      };
+    } else {
+      const subscription = AppState.addEventListener("change", handleAppStateChange);
+      return () => {
+        subscription.remove();
+      };
+    }
   }, []);
 
   return (
@@ -50,3 +66,4 @@ export function AuthProvider({ children }: AuthProviderProps) {
 export function useAuth() {
   return useContext(AuthContext);
 }
+
