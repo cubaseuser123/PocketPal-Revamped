@@ -3,12 +3,12 @@ import { storage } from "../storage/storage";
 
 interface SendOtpParams {
   name: string;
-  email: string;
+  phone: string;
   baseUrl: string;
 }
 
 interface VerifyOtpParams {
-  email: string;
+  phone: string;
   otp: string;
   baseUrl: string;
 }
@@ -20,13 +20,13 @@ interface AuthResponse {
 }
 
 export const auth = {
-  sendOtp: async ({ name, email, baseUrl }: SendOtpParams): Promise<void> => {
+  sendOtp: async ({ name, phone, baseUrl }: SendOtpParams): Promise<void> => {
     try {
-      console.log("[Auth] Sending OTP to:", email);
+      console.log("[Auth] Sending OTP to:", phone);
 
-      const response = await api.post(`${baseUrl}/auth/send-otp`, {
+      const response = await api.post(`${baseUrl}/api/auth/send-otp`, {
         name,
-        email,
+        phone,
       });
 
       if (response.status !== 200) {
@@ -41,15 +41,15 @@ export const auth = {
   },
 
   verifyOtp: async ({
-    email,
+    phone,
     otp,
     baseUrl,
   }: VerifyOtpParams): Promise<void> => {
     try {
-      console.log("[Auth] Verifying OTP for:", email);
+      console.log("[Auth] Verifying OTP for:", phone);
 
-      const response = await api.post(`${baseUrl}/auth/verify-otp`, {
-        email,
+      const response = await api.post(`${baseUrl}/api/auth/verify-otp`, {
+        phone,
         otp,
       });
 

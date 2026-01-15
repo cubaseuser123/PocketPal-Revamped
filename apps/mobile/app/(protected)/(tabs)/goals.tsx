@@ -2,10 +2,10 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-nati
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 
-import { PageHeader } from "../../components/ui/PageHeader";
-import { GoalPallyTip } from "../../components/goals/GoalPallyTip";
-import { FeaturedGoalCard } from "../../components/goals/FeaturedGoalCard";
-import { OtherGoalCard } from "../../components/goals/OtherGoalCard";
+import { PageHeader } from "../../../components/ui/PageHeader";
+import { GoalPallyTip } from "../../../components/goals/GoalPallyTip";
+import { FeaturedGoalCard } from "../../../components/goals/FeaturedGoalCard";
+import { OtherGoalCard } from "../../../components/goals/OtherGoalCard";
 
 export default function GoalsScreen() {
   const insets = useSafeAreaInsets();

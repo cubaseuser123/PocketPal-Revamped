@@ -1,12 +1,12 @@
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { PageHeader } from "../../components/ui/PageHeader";
-import { PallyTip } from "../../components/dashboard/PallyTip";
-import { ExpenseWalletCard } from "../../components/wallets/ExpenseWalletCard";
-import { TransactionList } from "../../components/wallets/TransactionList";
-import { MoveMoneyCard } from "../../components/wallets/MoveMoneyCard";
-import { SavingsWalletCard } from "../../components/wallets/SavingsWalletCard";
+import { PageHeader } from "../../../components/ui/PageHeader";
+import { PallyTip } from "../../../components/dashboard/PallyTip";
+import { ExpenseWalletCard } from "../../../components/wallets/ExpenseWalletCard";
+import { TransactionList } from "../../../components/wallets/TransactionList";
+import { MoveMoneyCard } from "../../../components/wallets/MoveMoneyCard";
+import { SavingsWalletCard } from "../../../components/wallets/SavingsWalletCard";
 
 // Mock data
 const MOCK_CATEGORIES = [

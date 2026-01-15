@@ -8,7 +8,7 @@ const router = express.Router();
  * @swagger
  * /api/auth/send-otp:
  *   post:
- *     summary: Send OTP to user's email
+ *     summary: Send OTP to user's phone via SMS
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -18,17 +18,17 @@ const router = express.Router();
  *             type: object
  *             required:
  *               - name
- *               - email
+ *               - phone
  *             properties:
  *               name:
  *                 type: string
- *                 example: sample
- *               email:
+ *                 example: Rahul
+ *               phone:
  *                 type: string
- *                 example: sample@gmail.com
+ *                 example: "+919876543210"
  *     responses:
  *       200:
- *         description: OTP sent to email
+ *         description: OTP sent to phone
  */
 router.post("/send-otp", sendOTP);
 
@@ -36,7 +36,7 @@ router.post("/send-otp", sendOTP);
  * @swagger
  * /api/auth/verify-otp:
  *   post:
- *     summary: Verify OTP sent to email
+ *     summary: Verify OTP sent to phone
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -45,12 +45,12 @@ router.post("/send-otp", sendOTP);
  *           schema:
  *             type: object
  *             required:
- *               - email
+ *               - phone
  *               - otp
  *             properties:
- *               email:
+ *               phone:
  *                 type: string
- *                 example: sample@gmail.com
+ *                 example: "+919876543210"
  *               otp:
  *                 type: string
  *                 example: "123456"
@@ -79,8 +79,8 @@ router.post("/verify-otp", verifyOTP);
  *                 user:
  *                   type: object
  *                   example:
- *                     name: "sample"
- *                     email: "sample@gmail.com"
+ *                     name: "Rahul"
+ *                     phone: "+919876543210"
  */
 
 router.get("/me", (req, res, next) => {

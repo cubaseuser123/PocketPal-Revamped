@@ -1,72 +1,83 @@
-import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
-import { sendEmailOTP } from "../config/sendEmail.js"; // email sender
+import { sendVerificationOTP, checkVerificationOTP } from "../config/sendSms.js";
 
-const OTP_TTL_MS = 5 * 60 * 1000; // 5 minutes
-
-// send-otp: create user if not exist, generate OTP, email it
+// send-otp: create user if not exist, send OTP via Twilio Verify
 export const sendOTP = async (req, res) => {
   try {
-    const { name, email } = req.body;
-    if (!name || !email) return res.status(400).json({ message: "Name and email required" });
+    console.log("📱 sendOTP called with body:", req.body);
+    
+    const { name, phone } = req.body;
+    if (!name || !phone) {
+      console.log("❌ Missing name or phone");
+      return res.status(400).json({ message: "Name and phone required" });
+    }
 
-    let user = await User.findOne({ email });
+    // Validate phone format
+    const phoneRegex = /^\+?[1-9]\d{9,14}$/;
+    if (!phoneRegex.test(phone.replace(/\s/g, ""))) {
+      console.log("❌ Invalid phone format:", phone);
+      return res.status(400).json({ message: "Invalid phone number format" });
+    }
 
-    // generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const hashedOTP = await bcrypt.hash(otp, 10);
-    const expiresAt = Date.now() + OTP_TTL_MS;
+    // Ensure phone has + prefix
+    const formattedPhone = phone.startsWith("+") ? phone : `+${phone}`;
+    console.log("📞 Formatted phone:", formattedPhone);
+
+    let user = await User.findOne({ phone: formattedPhone });
+    console.log("👤 User found:", !!user);
 
     if (!user) {
       user = await User.create({
         name,
-        email,
-        otp: hashedOTP,
-        otpExpires: expiresAt,
+        phone: formattedPhone,
       });
-    } else {
-      user.otp = hashedOTP;
-      user.otpExpires = expiresAt;
+      console.log("✅ New user created");
+    } else if (name && name !== user.name) {
+      user.name = name;
       await user.save();
+      console.log("✅ User name updated");
     }
 
-    // send email
-    const send = await sendEmailOTP(email, otp);
-    if (!send.success) {
-      return res.status(500).json({ message: "Failed to send OTP email", error: send.error });
+    // Send OTP via Twilio Verify
+    console.log("📤 Sending OTP to:", formattedPhone);
+    const result = await sendVerificationOTP(formattedPhone);
+    console.log("📬 Twilio result:", result);
+    
+    if (!result.success) {
+      console.log("❌ Twilio failed:", result.error);
+      return res.status(500).json({ message: "Failed to send OTP", error: result.error });
     }
 
-    return res.json({ message: "OTP sent to email" });
+    console.log("✅ OTP sent successfully");
+    return res.json({ message: "OTP sent to phone" });
   } catch (err) {
-    console.error("sendOTP error:", err);
+    console.error("❌ sendOTP error:", err);
     return res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
-// verify-otp: verify hashed OTP, issue JWT
+// verify-otp: verify via Twilio Verify API, issue JWT
 export const verifyOTP = async (req, res) => {
   try {
-    const { email, otp } = req.body;
-    if (!email || !otp) return res.status(400).json({ message: "Email and OTP required" });
+    const { phone, otp } = req.body;
+    if (!phone || !otp) return res.status(400).json({ message: "Phone and OTP required" });
 
-    const user = await User.findOne({ email }).select("+otp +otpExpires");
-    if (!user) return res.status(404).json({ message: "User not found" });
+    // Ensure phone has + prefix
+    const formattedPhone = phone.startsWith("+") ? phone : `+${phone}`;
 
-    if (!user.otp || !user.otpExpires || user.otpExpires < Date.now()) {
-      return res.status(400).json({ message: "OTP expired or not present" });
+    // Verify OTP via Twilio Verify
+    const result = await checkVerificationOTP(formattedPhone, otp.toString());
+    if (!result.success) {
+      return res.status(400).json({ message: result.error || "Invalid OTP" });
     }
 
-    const isMatch = await bcrypt.compare(otp.toString(), user.otp);
-    if (!isMatch) return res.status(400).json({ message: "Invalid OTP" });
+    // Find user
+    const user = await User.findOne({ phone: formattedPhone });
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-    // create JWT
+    // Create JWT
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
-
-    // clear OTP fields
-    user.otp = undefined;
-    user.otpExpires = undefined;
-    await user.save();
 
     return res.json({ message: "OTP verified", token, user: user.toJSON() });
   } catch (err) {

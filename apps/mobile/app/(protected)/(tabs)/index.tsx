@@ -3,14 +3,14 @@ import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
-import { PageHeader } from "../../components/ui/PageHeader";
-import { PallyTip } from "../../components/dashboard/PallyTip";
-import { WeeklySavingGoal } from "../../components/dashboard/WeeklySavingGoal";
-import { PredictionCard } from "../../components/dashboard/PredictionCard";
-import { SpendingOverview } from "../../components/dashboard/SpendingOverview";
-import { ExpenseWallet } from "../../components/dashboard/ExpenseWallet";
-import { SavingsWallet } from "../../components/dashboard/SavingsWallet";
-import { ArcadeTeaser } from "../../components/dashboard/ArcadeTeaser";
+import { PageHeader } from "../../../components/ui/PageHeader";
+import { PallyTip } from "../../../components/dashboard/PallyTip";
+import { WeeklySavingGoal } from "../../../components/dashboard/WeeklySavingGoal";
+import { PredictionCard } from "../../../components/dashboard/PredictionCard";
+import { SpendingOverview } from "../../../components/dashboard/SpendingOverview";
+import { ExpenseWallet } from "../../../components/dashboard/ExpenseWallet";
+import { SavingsWallet } from "../../../components/dashboard/SavingsWallet";
+import { ArcadeTeaser } from "../../../components/dashboard/ArcadeTeaser";
 
 // Mock data - replace with real data later
 const MOCK_USER = {
@@ -72,11 +72,11 @@ export default function HomeScreen() {
   };
 
   const handleEnterArcade = () => {
-    router.push("/(tabs)/arcade");
+    router.push("/(protected)/(tabs)/arcade");
   };
 
   const handleAvatarPress = () => {
-    router.push("/profile");
+    router.push("/(protected)/profile");
   };
 
   return (

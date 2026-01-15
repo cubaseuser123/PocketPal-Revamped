@@ -23,12 +23,12 @@ export type HttpResponse = {
 
 export type SendOtpProps = {
   name: string;
-  email: string;
+  phone: string;
   baseUrl: string;
 };
 
 export type VerifyOtpProps = {
-  email: string;
+  phone: string;
   otp: string;
   baseUrl: string;
 };

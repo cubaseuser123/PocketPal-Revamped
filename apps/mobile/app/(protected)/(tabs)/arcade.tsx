@@ -1,15 +1,13 @@
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { useState } from "react";
 
-import { PageHeader } from "../../components/ui/PageHeader";
-import { ArcadeWelcome } from "../../components/arcade/ArcadeWelcome";
-import { StreakArena } from "../../components/arcade/StreakArena";
-import { BossBattles } from "../../components/arcade/BossBattles";
-import { NoSpendQuests } from "../../components/arcade/NoSpendQuests";
-import { SavingsWheel } from "../../components/arcade/SavingsWheel";
-import { SpinWheelBottomSheet } from "../../components/arcade/SpinWheelBottomSheet";
+import { PageHeader } from "../../../components/ui/PageHeader";
+import { ArcadeWelcome } from "../../../components/arcade/ArcadeWelcome";
+import { StreakArena } from "../../../components/arcade/StreakArena";
+import { BossBattles } from "../../../components/arcade/BossBattles";
+import { NoSpendQuests } from "../../../components/arcade/NoSpendQuests";
+import { SavingsWheel } from "../../../components/arcade/SavingsWheel";
 
 // Mock data
 const MOCK_BOSSES = [
@@ -51,7 +49,6 @@ const MOCK_QUESTS = [
 export default function ArcadeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const [isSpinWheelOpen, setIsSpinWheelOpen] = useState(false);
 
   const handleSeeMap = () => {
     console.log("See map");
@@ -62,18 +59,18 @@ export default function ArcadeScreen() {
   };
 
   const handleSpin = () => {
-    setIsSpinWheelOpen(true);
+    router.push("/(protected)/savings-wheel");
   };
 
   const handleStreakPress = () => {
-    router.push("/streak-arena");
+    router.push("/(protected)/streak-arena");
   };
 
   const handleBossPress = (id: string) => {
     // In a real app, we'd pass the boss ID to load specific data
     // For now we just navigate to the template
     router.push({
-      pathname: "/boss-battle",
+      pathname: "/(protected)/boss-battle",
       params: { id }
     });
   };
@@ -123,12 +120,7 @@ export default function ArcadeScreen() {
         {/* Savings Wheel */}
         <SavingsWheel onSpin={handleSpin} />
       </ScrollView>
-
-      {/* Spin Wheel Bottom Sheet */}
-      <SpinWheelBottomSheet 
-        isOpen={isSpinWheelOpen} 
-        onClose={() => setIsSpinWheelOpen(false)} 
-      />
     </View>
   );
 }
+

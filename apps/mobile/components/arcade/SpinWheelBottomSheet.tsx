@@ -18,15 +18,17 @@ export function SpinWheelBottomSheet({
 }: SpinWheelBottomSheetProps) {
   const bottomSheetRef = useRef<BottomSheet>(null);
 
-  // Snap points requirement: 50% only
-  const snapPoints = useMemo(() => ["50%"], []);
+  // Snap points: expandable like Pally - 65% (open), 90% (draggable to full)
+  const snapPoints = useMemo(() => ["65%", "90%"], []);
 
-  // Handle open/close
+  // Expand to correct position when opened (like Pally)
   useEffect(() => {
-    if (isOpen) {
-      bottomSheetRef.current?.expand();
-    } else {
-      bottomSheetRef.current?.close();
+    if (isOpen && bottomSheetRef.current) {
+      // Delay to ensure sheet is fully mounted
+      const timer = setTimeout(() => {
+        bottomSheetRef.current?.expand();
+      }, 100);
+      return () => clearTimeout(timer);
     }
   }, [isOpen]);
 
@@ -81,6 +83,9 @@ export function SpinWheelBottomSheet({
       </View>
     );
   };
+
+  // Return null when not open - forces fresh mount when opening (like Pally)
+  if (!isOpen) return null;
 
   return (
     <BottomSheet
@@ -305,11 +310,12 @@ const styles = StyleSheet.create({
       height: 0,
       borderLeftWidth: 16,
       borderRightWidth: 16,
-      borderTopWidth: 24, // Points DOWN
+      borderTopWidth: 24,
       borderLeftColor: "transparent",
       borderRightColor: "transparent", 
       borderTopColor: "#FFF",
       zIndex: 40,
+      // Triangle points DOWN into the wheel
   },
   wheel: {
       width: "100%",

@@ -2,9 +2,9 @@ import { Tabs } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { TabBar } from "../../components/ui/TabBar";
-import { PallyBottomSheet } from "../../components/pally/PallyBottomSheet";
-import { usePally } from "../../contexts/PallyContext";
+import { TabBar } from "../../../components/ui/TabBar";
+import { PallyBottomSheet } from "../../../components/pally/PallyBottomSheet";
+import { usePally } from "../../../contexts/PallyContext";
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();

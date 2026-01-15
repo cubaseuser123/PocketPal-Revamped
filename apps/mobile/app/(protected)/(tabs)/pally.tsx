@@ -9,7 +9,7 @@ export default function PallyScreen() {
 
   useEffect(() => {
     // Redirect to home if someone navigates here directly
-    router.replace("/(tabs)");
+    router.replace("/(protected)/(tabs)");
   }, []);
 
   return <View className="flex-1 bg-background-dark" />;

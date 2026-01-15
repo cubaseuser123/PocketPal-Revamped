@@ -3,11 +3,11 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 
-import { ProfileHeader } from "../components/profile/ProfileHeader";
-import { LevelProgressCard } from "../components/profile/LevelProgressCard";
-import { BadgesCard } from "../components/profile/BadgesCard";
-import { StatsOverviewCard } from "../components/profile/StatsOverviewCard";
-import { SettingsMenuCard } from "../components/profile/SettingsMenuCard";
+import { ProfileHeader } from "../../components/profile/ProfileHeader";
+import { LevelProgressCard } from "../../components/profile/LevelProgressCard";
+import { BadgesCard } from "../../components/profile/BadgesCard";
+import { StatsOverviewCard } from "../../components/profile/StatsOverviewCard";
+import { SettingsMenuCard } from "../../components/profile/SettingsMenuCard";
 
 // Mock data
 const MOCK_BADGES = [
