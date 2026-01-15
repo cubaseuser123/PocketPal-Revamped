@@ -7,6 +7,11 @@ import cors from "cors";
 import swaggerDocs from "./config/swagger.js";
 import authRoutes from "./routes/authRoutes.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
+import walletRoutes from "./routes/walletRoutes.js";
+import transactionRoutes from "./routes/transactionRoutes.js";
+import goalRoutes from "./routes/goalRoutes.js";
+import categoryRoutes from "./routes/categoryRoutes.js";
 
 
 const app = express();
@@ -32,9 +37,15 @@ app.use((req, res, next) => {
   console.log("REQUEST:", req.method, req.url, "Origin:", req.headers.origin);
   next();
 });
+
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
+app.use("/api/user", userRoutes);
+app.use("/api/wallets", walletRoutes);
+app.use("/api/transactions", transactionRoutes);
+app.use("/api/goals", goalRoutes);
+app.use("/api/categories", categoryRoutes);
 
 app.get("/", (req, res) => {
   res.send("PocketPal API running");
