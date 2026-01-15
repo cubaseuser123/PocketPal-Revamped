@@ -1,4 +1,4 @@
-import { ScrollView, View } from "react-native";
+import { ScrollView, View, Text, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
@@ -8,54 +8,46 @@ import { StreakArena } from "../../../components/arcade/StreakArena";
 import { BossBattles } from "../../../components/arcade/BossBattles";
 import { NoSpendQuests } from "../../../components/arcade/NoSpendQuests";
 import { SavingsWheel } from "../../../components/arcade/SavingsWheel";
-
-// Mock data
-const MOCK_BOSSES = [
-  {
-    id: "1",
-    name: "Food Beast",
-    emoji: "🍔",
-    type: "BOSS" as const,
-    weakness: "Home Cooking",
-    hpPercent: 60,
-  },
-  {
-    id: "2",
-    name: "Cab Demon",
-    emoji: "🚕",
-    type: "MINION" as const,
-    weakness: "Walking",
-    hpPercent: 100,
-  },
-];
-
-const MOCK_QUESTS = [
-  {
-    id: "1",
-    name: "Swiggy Shield",
-    description: "Don't order for 3 days",
-    icon: "restaurant-menu" as const,
-    iconColor: "#FF8C32",
-  },
-  {
-    id: "2",
-    name: "Cab Crusader",
-    description: "Take metro 5 times",
-    icon: "local-taxi" as const,
-    iconColor: "#FFFFFF",
-  },
-];
+import { useUser, useBoss, useQuests } from "../../../hooks/useApi";
 
 export default function ArcadeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  
+  // Use real data from backend (cached via React Query)
+  const { user } = useUser();
+  const { boss, loading: bossLoading } = useBoss();
+  const { quests, loading: questsLoading, assignQuests } = useQuests();
+
+  // Transform boss data for BossBattles component
+  const bossesForDisplay = boss ? [{
+    id: boss._id,
+    name: boss.name,
+    emoji: boss.emoji || "🍔",
+    type: "BOSS" as const,
+    weakness: boss.description,
+    hpPercent: Math.round((boss.currentHealth / boss.totalHealth) * 100),
+  }] : [];
+
+  // Transform quests for NoSpendQuests component
+  const questsForDisplay = quests.map(q => ({
+    id: q._id,
+    name: q.title,
+    description: q.description,
+    icon: q.type === "savings" ? "savings" as const : "restaurant-menu" as const,
+    iconColor: q.completed ? "#3DDC97" : "#FF8C32",
+    progress: q.progress,
+    target: q.requirement.target,
+    completed: q.completed,
+  }));
 
   const handleSeeMap = () => {
     console.log("See map");
   };
 
-  const handleStartQuest = (id: string) => {
-    console.log("Start quest:", id);
+  const handleStartQuest = async (id: string) => {
+    // Quest is already assigned, this could open quest details
+    console.log("Quest clicked:", id);
   };
 
   const handleSpin = () => {
@@ -67,8 +59,6 @@ export default function ArcadeScreen() {
   };
 
   const handleBossPress = (id: string) => {
-    // In a real app, we'd pass the boss ID to load specific data
-    // For now we just navigate to the template
     router.push({
       pathname: "/(protected)/boss-battle",
       params: { id }
@@ -80,7 +70,7 @@ export default function ArcadeScreen() {
       <PageHeader
         title="Arcade"
         seasonBadge="SEASON 1"
-        coins={1250}
+        coins={user?.coins || 0}
       />
 
       <ScrollView
@@ -105,17 +95,37 @@ export default function ArcadeScreen() {
         />
 
         {/* Boss Battles */}
-        <BossBattles 
-          bosses={MOCK_BOSSES} 
-          onSeeMap={handleSeeMap} 
-          onPressBoss={handleBossPress}
-        />
+        {bossLoading ? (
+          <View style={{ padding: 20, alignItems: "center" }}>
+            <ActivityIndicator color="#FF8C32" />
+          </View>
+        ) : bossesForDisplay.length > 0 ? (
+          <BossBattles 
+            bosses={bossesForDisplay} 
+            onSeeMap={handleSeeMap} 
+            onPressBoss={handleBossPress}
+          />
+        ) : (
+          <View style={{ padding: 20, alignItems: "center" }}>
+            <Text style={{ color: "#B0B0C3" }}>No active boss battles</Text>
+          </View>
+        )}
 
         {/* No-Spend Quests */}
-        <NoSpendQuests
-          quests={MOCK_QUESTS}
-          onStartQuest={handleStartQuest}
-        />
+        {questsLoading ? (
+          <View style={{ padding: 20, alignItems: "center" }}>
+            <ActivityIndicator color="#FF8C32" />
+          </View>
+        ) : questsForDisplay.length > 0 ? (
+          <NoSpendQuests
+            quests={questsForDisplay}
+            onStartQuest={handleStartQuest}
+          />
+        ) : (
+          <View style={{ padding: 20, alignItems: "center" }}>
+            <Text style={{ color: "#B0B0C3" }}>No quests available</Text>
+          </View>
+        )}
 
         {/* Savings Wheel */}
         <SavingsWheel onSpin={handleSpin} />
@@ -123,4 +133,3 @@ export default function ArcadeScreen() {
     </View>
   );
 }
-

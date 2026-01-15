@@ -54,16 +54,11 @@ export default function WalletsScreen() {
   }));
 
   const handleScan = () => {
-    console.log("Scan QR");
-    // Check if UPI is enabled
-    if (wallets?.primary?.limits?.upiEnabled === false) {
-      console.log("UPI not available for Small PPI. Complete KYC to enable.");
-    }
+    router.push("/(protected)/scan-qr");
   };
 
   const handleLoadMoney = () => {
-    console.log("Load money");
-    // TODO: Navigate to add money screen
+    router.push("/(protected)/load-money");
   };
 
   const handleMore = () => {
@@ -75,7 +70,7 @@ export default function WalletsScreen() {
   };
 
   const handleAddToSavings = () => {
-    console.log("Add to savings");
+    router.push("/(protected)/transfer-money");
   };
 
   const handleTransactionPress = (id: string) => {

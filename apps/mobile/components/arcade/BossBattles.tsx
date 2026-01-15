@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 
 interface Boss {
   id: string;
@@ -36,12 +36,8 @@ export function BossBattles({ bosses, onSeeMap, onPressBoss }: BossBattlesProps)
         </Text>
       </View>
 
-      {/* Carousel */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
+      {/* Full-width cards */}
+      <View style={styles.cardsContainer}>
         {bosses.map((boss) => {
           const typeColor = getTypeColor(boss.type);
           const hpColor = getHpColor(boss.hpPercent);
@@ -99,7 +95,7 @@ export function BossBattles({ bosses, onSeeMap, onPressBoss }: BossBattlesProps)
             </TouchableOpacity>
           );
         })}
-      </ScrollView>
+      </View>
     </View>
   );
 }
@@ -124,12 +120,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
   },
-  scrollContent: {
-    paddingRight: 20,
-    gap: 16,
+  cardsContainer: {
+    gap: 12,
   },
   card: {
-    width: 220,
+    width: "100%",
     backgroundColor: "#1A1A22",
     borderRadius: 16,
     padding: 16,

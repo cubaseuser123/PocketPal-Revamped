@@ -168,8 +168,8 @@ export default function Home() {
                 Meet Pally.
               </h2>
               <p className="mb-8 text-lg leading-relaxed text-gray-400">
-                Pally isn t just a mascot. He s your coach. He celebrates your
-                wins, nudges you when you re off track, and gives you
+                Pally isn t just a mascot. He's your coach. He celebrates your
+                wins, nudges you when you're off track, and gives you
                 personalized tips to stretch your budget further.
               </p>
               <ul className="space-y-4">
@@ -246,7 +246,7 @@ export default function Home() {
               </h3>
               <p className="text-muted-light dark:text-muted-dark">
                 See exactly where your money goes. Food? Projected to be 15%
-                higher this weekend? We ll let you know.
+                higher this weekend? We'll let you know.
               </p>
             </div>
             <div className="dark:bg-surface-dark hover:border-primary/50 rounded-3xl border border-gray-200 bg-white p-8 shadow-sm transition-colors dark:border-white/5">

@@ -75,15 +75,15 @@ export default function HomeScreen() {
   };
 
   const handleScan = () => {
-    console.log("Scan QR");
+    router.push("/(protected)/scan-qr");
   };
 
   const handleLoadMoney = () => {
-    console.log("Load money");
+    router.push("/(protected)/load-money");
   };
 
   const handleAddToSavings = () => {
-    console.log("Add to savings");
+    router.push("/(protected)/transfer-money");
   };
 
   const handleEnterArcade = () => {

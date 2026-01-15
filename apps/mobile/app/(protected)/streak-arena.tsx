@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { PallyIcon } from "../../components/ui/PallyIcon";
+import { useUser } from "../../hooks/useApi";
 
 // Mock data
 const MOCK_STREAK_DATA = {
@@ -30,6 +31,7 @@ const MOCK_STREAK_DATA = {
 export default function StreakArenaScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { user } = useUser();
 
   const handleBack = () => {
     router.back();
@@ -47,7 +49,7 @@ export default function StreakArenaScreen() {
         </View>
         <View style={styles.coinsBadge}>
           <MaterialIcons name="monetization-on" size={14} color="#FFD166" />
-          <Text style={styles.coinsText}>1,250</Text>
+          <Text style={styles.coinsText}>{user?.coins?.toLocaleString() || 0}</Text>
         </View>
       </View>
 
