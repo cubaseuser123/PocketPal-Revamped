@@ -1,8 +1,10 @@
-import { ScrollView, View, TouchableOpacity, Text, StyleSheet, Alert } from "react-native";
+import { ScrollView, View, TouchableOpacity, Text, StyleSheet, Alert, Modal, TextInput, ActivityIndicator } from "react-native";
+import { useState } from "react";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "@repo/auth";
+import { useUser } from "../../hooks/useApi";
 
 import { ProfileHeader } from "../../components/profile/ProfileHeader";
 import { LevelProgressCard } from "../../components/profile/LevelProgressCard";
@@ -19,12 +21,13 @@ const MOCK_BADGES = [
 ];
 
 const MOCK_STATS = [
-  { id: "1", emoji: "🪙", value: "1,250", label: "Total Coins" },
+  { id: "1", emoji: "🪙", value: "---", label: "Total Coins" },
   { id: "2", emoji: "🔥", value: "9 days", label: "Longest Streak" },
   { id: "3", emoji: "💰", value: "₹4,800", label: "Total Saved" },
 ];
 
 const MOCK_MENU_ITEMS = [
+  { id: "subscriptions", icon: "payment" as const, label: "Subscriptions" },
   { id: "notifications", icon: "notifications" as const, label: "Notifications" },
   { id: "verification", icon: "verified" as const, label: "Verification", badge: "KYC DONE", badgeColor: "#3DDC97" },
   { id: "help", icon: "help" as const, label: "Help" },
@@ -34,6 +37,11 @@ export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const authContext = useAuth();
+  const { user, updateUser } = useUser();
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editAvatar, setEditAvatar] = useState("");
+  const [updating, setUpdating] = useState(false);
 
   const handleBack = () => {
     router.back();
@@ -44,11 +52,19 @@ export default function ProfileScreen() {
   };
 
   const handleEditProfile = () => {
-    console.log("Edit profile");
+    if (user) {
+      setEditName(user.name);
+      setEditAvatar(user.avatarUrl || "");
+      setIsEditModalVisible(true);
+    }
   };
 
   const handleMenuPress = (id: string) => {
-    console.log("Menu item pressed:", id);
+    if (id === "subscriptions") {
+      router.push("/(protected)/subscriptions");
+    } else {
+      console.log("Menu item pressed:", id);
+    }
   };
 
   const handleLogout = () => {
@@ -92,20 +108,28 @@ export default function ProfileScreen() {
       >
         {/* Profile Info */}
         <ProfileHeader
-          name="Harsh"
-          subtitle="Student @ XYZ University"
-          avatarUrl="https://lh3.googleusercontent.com/aida-public/AB6AXuCgYdfbobFGGHhdgWxoDaUCEs63jw9XW071wbK2QOYAOFr2eumOPIZMnD4-EjLmX6rpo5RGDb2w1yX4aDUQ6EuQ5xXpNfNjDkmAcC6QV19DO-_WOjqzKcvsUddIdhAIoXsc44nJ5qv_DFXZN-5kHrVbywVjAefDZkPu9VYMbmKDlrkI7-01lLtYfjGqT8HhqjjRJdzf7-8hyPXlzBFCC5c83r8oPLzacBgkgNoAi_VuLjUYw0rUrW6s635ldlnrqY4JmjbwWVebHIwZ"
+          name={user?.name || "User"}
+          subtitle={user?.phone || "PocketPal User"}
+          avatarUrl={user?.avatarUrl || "https://api.dicebear.com/7.x/avataaars/png?seed=PocketPal"}
           onEditPress={handleEditProfile}
         />
 
         {/* Level Progress */}
-        <LevelProgressCard level={3} currentXp={340} maxXp={500} />
+        <LevelProgressCard 
+          level={user?.level || 1} 
+          currentXp={user?.coins ? user.coins % 1000 : 0} 
+          maxXp={1000} 
+        />
 
         {/* Badges */}
         <BadgesCard badges={MOCK_BADGES} />
 
         {/* Stats */}
-        <StatsOverviewCard stats={MOCK_STATS} />
+        <StatsOverviewCard 
+          stats={MOCK_STATS.map(stat => 
+            stat.id === "1" ? { ...stat, value: user?.coins?.toLocaleString() || "0" } : stat
+          )} 
+        />
 
         {/* Settings Menu */}
         <SettingsMenuCard items={MOCK_MENU_ITEMS} onItemPress={handleMenuPress} />
@@ -116,6 +140,74 @@ export default function ProfileScreen() {
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Edit Profile Modal */}
+      <Modal
+        visible={isEditModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setIsEditModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Edit Profile</Text>
+            
+            <Text style={styles.inputLabel}>Display Name</Text>
+            <TextInput 
+              style={styles.input}
+              value={editName}
+              onChangeText={setEditName}
+              placeholder="Your Name"
+              placeholderTextColor="#666"
+            />
+            
+            <Text style={styles.inputLabel}>Avatar URL</Text>
+            <TextInput 
+              style={styles.input}
+              value={editAvatar}
+              onChangeText={setEditAvatar}
+              placeholder="https://..."
+              placeholderTextColor="#666"
+              autoCapitalize="none"
+            />
+
+            <View style={styles.buttonRow}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.cancelBtn]} 
+                onPress={() => setIsEditModalVisible(false)}
+              >
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.saveBtn]} 
+                onPress={async () => {
+                  if (!editName) return;
+                  setUpdating(true);
+                  try {
+                    await updateUser({ 
+                      name: editName,
+                      avatarUrl: editAvatar || undefined
+                    });
+                    setIsEditModalVisible(false);
+                  } catch (e) {
+                    Alert.alert("Error", "Failed to update profile");
+                  } finally {
+                    setUpdating(false);
+                  }
+                }}
+                disabled={updating}
+              >
+                {updating ? (
+                  <ActivityIndicator color="#FFF" size="small" />
+                ) : (
+                  <Text style={styles.buttonText}>Save</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -169,5 +261,58 @@ const styles = StyleSheet.create({
     color: "#EF4444",
     fontSize: 14,
     fontWeight: "700",
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.8)",
+    justifyContent: "center",
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: "#1C1C23",
+    borderRadius: 24,
+    padding: 24,
+    gap: 16,
+  },
+  modalTitle: {
+    color: "#FFF",
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  inputLabel: {
+    color: "#B0B0C3",
+    fontSize: 14,
+    marginBottom: -8,
+  },
+  input: {
+    backgroundColor: "#2A2A35",
+    borderRadius: 12,
+    padding: 16,
+    color: "#FFF",
+    fontSize: 16,
+  },
+  buttonRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 8,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  cancelBtn: {
+    backgroundColor: "#2A2A35",
+  },
+  saveBtn: {
+    backgroundColor: "#FF8C32",
+  },
+  buttonText: {
+    color: "#FFF",
+    fontWeight: "600",
+    fontSize: 16,
   },
 });

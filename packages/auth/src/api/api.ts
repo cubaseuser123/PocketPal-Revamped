@@ -131,6 +131,45 @@ export const categoryApi = {
   },
 };
 
+// Subscription API
+export const subscriptionApi = {
+  add: async (baseUrl: string, data: {
+    name: string;
+    price: number;
+    category?: string;
+    startDate: string;
+    renewalCycle?: string;
+  }) => {
+    const response = await httpApi.post(`${baseUrl}/api/subscriptions/add`, data);
+    return response.data;
+  },
+
+  getAll: async (baseUrl: string) => {
+    const response = await httpApi.get(`${baseUrl}/api/subscriptions`);
+    return response.data;
+  },
+
+  getActive: async (baseUrl: string) => {
+    const response = await httpApi.get(`${baseUrl}/api/subscriptions/active`);
+    return response.data;
+  },
+
+  getUpcoming: async (baseUrl: string) => {
+    const response = await httpApi.get(`${baseUrl}/api/subscriptions/upcoming`);
+    return response.data;
+  },
+
+  getCancelled: async (baseUrl: string) => {
+    const response = await httpApi.get(`${baseUrl}/api/subscriptions/cancelled`);
+    return response.data;
+  },
+
+  cancel: async (baseUrl: string, id: string) => {
+    const response = await httpApi.put(`${baseUrl}/api/subscriptions/cancel/${id}`, {});
+    return response.data;
+  },
+};
+
 // Export all APIs
 export const pocketPalApi = {
   user: userApi,
@@ -138,4 +177,5 @@ export const pocketPalApi = {
   transactions: transactionApi,
   goals: goalApi,
   categories: categoryApi,
+  subscriptions: subscriptionApi,
 };

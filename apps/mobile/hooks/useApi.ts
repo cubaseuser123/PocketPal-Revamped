@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback } from "react";
 import { Platform } from "react-native";
-import { useFocusEffect } from "expo-router";
-import { pocketPalApi, userApi, walletApi, transactionApi, goalApi, categoryApi } from "@repo/auth";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { userApi, walletApi, transactionApi, goalApi, categoryApi, subscriptionApi } from "@repo/auth";
 
 // Get API base URL based on platform
 const getApiUrl = (): string => {
@@ -81,151 +81,172 @@ export interface Category {
   color: string;
 }
 
+export interface Subscription {
+  _id: string;
+  name: string;
+  price: number;
+  category: string;
+  startDate: string;
+  renewalCycle: string;
+  status: string;
+  nextRenewal: string;
+}
+
 // Hook for user profile
 export function useUser() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchUser = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  const { data: user, isLoading, error, refetch } = useQuery({
+    queryKey: ["user"],
+    queryFn: async () => {
       const data = await userApi.getProfile(API_URL);
-      setUser(data.user);
-    } catch (err: any) {
-      console.error("[useUser] Error:", err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      return data.user as User;
+    },
+  });
 
-  // Auto-refresh when screen comes into focus
-  useFocusEffect(
-    useCallback(() => {
-      fetchUser();
-    }, [fetchUser])
-  );
+  const queryClient = useQueryClient();
 
-  return { user, loading, error, refetch: fetchUser };
+  const updateUserMutation = useMutation({
+    mutationFn: async (data: { name?: string; avatarUrl?: string }) => {
+      return await userApi.updateProfile(API_URL, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["user"] });
+    },
+  });
+
+  const updateUser = useCallback(async (data: { name?: string; avatarUrl?: string }) => {
+    return await updateUserMutation.mutateAsync(data);
+  }, [updateUserMutation]);
+
+  return { user, loading: isLoading, error: error ? (error as Error).message : null, refetch, updateUser };
 }
 
 // Hook for wallets
 export function useWallets() {
-  const [wallets, setWallets] = useState<WalletData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const fetchWallets = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  const { data: wallets, isLoading, error, refetch } = useQuery({
+    queryKey: ["wallets"],
+    queryFn: async () => {
       const data = await walletApi.get(API_URL);
-      setWallets(data);
-    } catch (err: any) {
-      console.error("[useWallets] Error:", err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      return data as WalletData;
+    },
+  });
+
+  const addMoneyMutation = useMutation({
+    mutationFn: async (amount: number) => {
+      return await walletApi.addMoney(API_URL, amount);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["wallets"] });
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["spendingSummary"] });
+    },
+  });
+
+  const transferMutation = useMutation({
+    mutationFn: async ({ from, to, amount, sourceGoalId }: { from: string; to: string; amount: number; sourceGoalId?: string }) => {
+      // @ts-ignore - The type definition in @repo/auth might be stale, but the source code has 5 arguments.
+      return await walletApi.transfer(API_URL, from, to, amount, sourceGoalId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["wallets"] });
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["spendingSummary"] });
+      queryClient.invalidateQueries({ queryKey: ["goals"] }); // Goals might change if transfer involves them
+    },
+  });
 
   const addMoney = useCallback(async (amount: number) => {
-    const result = await walletApi.addMoney(API_URL, amount);
-    await fetchWallets(); // Refresh after adding
-    return result;
-  }, [fetchWallets]);
+    return await addMoneyMutation.mutateAsync(amount);
+  }, [addMoneyMutation]);
 
   const transfer = useCallback(async (from: string, to: string, amount: number, sourceGoalId?: string) => {
-    const result = await walletApi.transfer(API_URL, from, to, amount, sourceGoalId);
-    await fetchWallets(); // Refresh after transfer
-    return result;
-  }, [fetchWallets]);
+    return await transferMutation.mutateAsync({ from, to, amount, sourceGoalId });
+  }, [transferMutation]);
 
-  // Auto-refresh when screen comes into focus
-  useFocusEffect(
-    useCallback(() => {
-      fetchWallets();
-    }, [fetchWallets])
-  );
-
-  return { wallets, loading, error, refetch: fetchWallets, addMoney, transfer };
+  return { 
+    wallets, 
+    loading: isLoading, 
+    error: error ? (error as Error).message : null, 
+    refetch, 
+    addMoney, 
+    transfer 
+  };
 }
 
 // Hook for transactions
 export function useTransactions(walletType?: string) {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchTransactions = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  const { data: transactions, isLoading, error, refetch } = useQuery({
+    queryKey: ["transactions", { walletType }],
+    queryFn: async () => {
       const data = await transactionApi.list(API_URL, { walletType, limit: 20 });
-      setTransactions(data.transactions);
-    } catch (err: any) {
-      console.error("[useTransactions] Error:", err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [walletType]);
+      return data.transactions as Transaction[];
+    },
+  });
 
-  useEffect(() => {
-    fetchTransactions();
-  }, [fetchTransactions]);
-
-  return { transactions, loading, error, refetch: fetchTransactions };
+  return { transactions: transactions || [], loading: isLoading, error: error ? (error as Error).message : null, refetch };
 }
 
 // Hook for spending summary
 export function useSpendingSummary(period: "week" | "month" | "3m" = "week") {
-  const [summary, setSummary] = useState<{ totalSpent: number; avgPerDay: number } | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchSummary = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  const { data: summary, isLoading, error, refetch } = useQuery({
+    queryKey: ["spendingSummary", period],
+    queryFn: async () => {
       const data = await transactionApi.summary(API_URL, period);
-      setSummary(data);
-    } catch (err: any) {
-      console.error("[useSpendingSummary] Error:", err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [period]);
+      return data as { totalSpent: number; avgPerDay: number };
+    },
+  });
 
-  useEffect(() => {
-    fetchSummary();
-  }, [fetchSummary]);
-
-  return { summary, loading, error, refetch: fetchSummary };
+  return { summary, loading: isLoading, error: error ? (error as Error).message : null, refetch };
 }
 
 // Hook for goals
 export function useGoals() {
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const fetchGoals = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  const { data: goals, isLoading, error, refetch } = useQuery({
+    queryKey: ["goals"],
+    queryFn: async () => {
       const data = await goalApi.list(API_URL);
-      setGoals(data.goals);
-    } catch (err: any) {
-      console.error("[useGoals] Error:", err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      return data.goals as Goal[];
+    },
+  });
+
+  const createGoalMutation = useMutation({
+    mutationFn: async (goalData: {
+      name: string;
+      emoji?: string;
+      category?: string;
+      color?: string;
+      targetAmount: number;
+      isFeatured?: boolean;
+    }) => {
+      return await goalApi.create(API_URL, goalData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["goals"] });
+    },
+  });
+
+  const addToGoalMutation = useMutation({
+    mutationFn: async ({ id, amount }: { id: string; amount: number }) => {
+      return await goalApi.addToGoal(API_URL, id, amount);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["goals"] });
+      queryClient.invalidateQueries({ queryKey: ["wallets"] }); // Money taken from wallet
+    },
+  });
+
+  const deleteGoalMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await goalApi.delete(API_URL, id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["goals"] });
+      queryClient.invalidateQueries({ queryKey: ["wallets"] }); // Money returned to wallet? Usually yes, depends on backend logic
+    },
+  });
 
   const createGoal = useCallback(async (goalData: {
     name: string;
@@ -235,58 +256,105 @@ export function useGoals() {
     targetAmount: number;
     isFeatured?: boolean;
   }) => {
-    const result = await goalApi.create(API_URL, goalData);
-    await fetchGoals(); // Refresh after creating
-    return result;
-  }, [fetchGoals]);
+    return await createGoalMutation.mutateAsync(goalData);
+  }, [createGoalMutation]);
 
   const addToGoal = useCallback(async (id: string, amount: number) => {
-    const result = await goalApi.addToGoal(API_URL, id, amount);
-    await fetchGoals(); // Refresh after adding
-    return result;
-  }, [fetchGoals]);
+    return await addToGoalMutation.mutateAsync({ id, amount });
+  }, [addToGoalMutation]);
 
   const deleteGoal = useCallback(async (id: string) => {
-    const result = await goalApi.delete(API_URL, id);
-    await fetchGoals(); // Refresh after deleting
-    return result;
-  }, [fetchGoals]);
+    return await deleteGoalMutation.mutateAsync(id);
+  }, [deleteGoalMutation]);
 
-  // Auto-refresh when screen comes into focus
-  useFocusEffect(
-    useCallback(() => {
-      fetchGoals();
-    }, [fetchGoals])
-  );
+  const updateGoalMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      return await goalApi.update(API_URL, id, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["goals"] });
+    },
+  });
 
-  return { goals, loading, error, refetch: fetchGoals, createGoal, addToGoal, deleteGoal };
+  const updateGoal = useCallback(async (id: string, data: any) => {
+    return await updateGoalMutation.mutateAsync({ id, data });
+  }, [updateGoalMutation]);
+
+  return { goals: goals || [], loading: isLoading, error: error ? (error as Error).message : null, refetch, createGoal, addToGoal, deleteGoal, updateGoal };
 }
 
 // Hook for categories
 export function useCategories() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchCategories = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  const { data: categories, isLoading, error, refetch } = useQuery({
+    queryKey: ["categories"],
+    queryFn: async () => {
       const data = await categoryApi.list(API_URL);
-      setCategories(data.categories);
-    } catch (err: any) {
-      console.error("[useCategories] Error:", err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      return data.categories as Category[];
+    },
+  });
 
-  useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
+  return { categories: categories || [], loading: isLoading, error: error ? (error as Error).message : null, refetch };
+}
 
-  return { categories, loading, error, refetch: fetchCategories };
+// Hook for subscriptions
+export function useSubscriptions() {
+  const queryClient = useQueryClient();
+
+  const { data: subscriptions, isLoading, error, refetch } = useQuery({
+    queryKey: ["subscriptions"],
+    queryFn: async () => {
+      const data = await subscriptionApi.getActive(API_URL);
+      return data.subscriptions as Subscription[];
+    },
+  });
+
+  const addSubscriptionMutation = useMutation({
+    mutationFn: async (data: {
+      name: string;
+      price: number;
+      category?: string;
+      startDate: string;
+      renewalCycle?: string;
+    }) => {
+      return await subscriptionApi.add(API_URL, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+      queryClient.invalidateQueries({ queryKey: ["spendingSummary"] });
+    },
+  });
+
+  const cancelSubscriptionMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await subscriptionApi.cancel(API_URL, id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+    },
+  });
+
+  const addSubscription = useCallback(async (data: {
+    name: string;
+    price: number;
+    category?: string;
+    startDate: string;
+    renewalCycle?: string;
+  }) => {
+    return await addSubscriptionMutation.mutateAsync(data);
+  }, [addSubscriptionMutation]);
+
+  const cancelSubscription = useCallback(async (id: string) => {
+    return await cancelSubscriptionMutation.mutateAsync(id);
+  }, [cancelSubscriptionMutation]);
+
+  return { 
+    subscriptions: subscriptions || [], 
+    loading: isLoading, 
+    error: error ? (error as Error).message : null, 
+    refetch, 
+    addSubscription, 
+    cancelSubscription 
+  };
 }
 
 // Export API URL for direct use

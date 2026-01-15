@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, Modal, TextInput } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -10,10 +10,19 @@ export default function GoalDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ id: string }>();
-  const { goals, loading, deleteGoal, addToGoal } = useGoals();
+  const { goals, loading, deleteGoal, addToGoal, updateGoal } = useGoals();
   const [adding, setAdding] = useState(false);
   
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+  const [updating, setUpdating] = useState(false);
+  
   const goal = goals?.find(g => g._id === params.id);
+
+  // Initialize edit state when goal is found (or when modal opens, handled in useEffect/handler conceptually, 
+  // but simpler to just set defaults or use effects. Let's use a side effect for simplicity or just init when button pressed)
+  // Actually, better to just set it when button is pressed. Let's update the button press handler.
   
   if (loading) {
     return (
@@ -80,9 +89,23 @@ export default function GoalDetailScreen() {
           <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Goal Details</Text>
-        <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
-          <MaterialIcons name="delete-outline" size={24} color="#EF4444" />
-        </TouchableOpacity>
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <TouchableOpacity 
+            style={styles.editButton} 
+            onPress={() => {
+              if (goal) {
+                setEditName(goal.name);
+                setEditAmount(goal.targetAmount.toString());
+                setIsEditModalVisible(true);
+              }
+            }}
+          >
+            <MaterialIcons name="edit" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+            <MaterialIcons name="delete-outline" size={24} color="#EF4444" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView 
@@ -215,6 +238,14 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     backgroundColor: "rgba(239, 68, 68, 0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  editButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -360,5 +391,58 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "700",
     color: "#FFFFFF",
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.8)",
+    justifyContent: "center",
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: "#1C1C23",
+    borderRadius: 24,
+    padding: 24,
+    gap: 16,
+  },
+  modalTitle: {
+    color: "#FFF",
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  inputLabel: {
+    color: "#B0B0C3",
+    fontSize: 14,
+    marginBottom: -8,
+  },
+  input: {
+    backgroundColor: "#2A2A35",
+    borderRadius: 12,
+    padding: 16,
+    color: "#FFF",
+    fontSize: 16,
+  },
+  buttonRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 8,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  cancelBtn: {
+    backgroundColor: "#2A2A35",
+  },
+  saveBtn: {
+    backgroundColor: "#FF8C32",
+  },
+  buttonText: {
+    color: "#FFF",
+    fontWeight: "600",
+    fontSize: 16,
   },
 });

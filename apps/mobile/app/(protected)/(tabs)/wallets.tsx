@@ -1,6 +1,8 @@
 import { ScrollView, View, ActivityIndicator, Text } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { MaterialIcons } from "@expo/vector-icons";
+import { TouchableOpacity } from "react-native";
 
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { PallyTip } from "../../../components/dashboard/PallyTip";
@@ -128,6 +130,34 @@ export default function WalletsScreen() {
           onLoadMoney={handleLoadMoney}
           onMore={handleMore}
         />
+
+        {/* Subscriptions Link */}
+        <TouchableOpacity
+          style={{
+            backgroundColor: "#2A2A35",
+            padding: 16,
+            borderRadius: 16,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between"
+          }}
+          onPress={() => router.push("/(protected)/subscriptions")}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <View style={{ 
+              width: 40, height: 40, borderRadius: 20, 
+              backgroundColor: "rgba(255, 140, 50, 0.1)", 
+              alignItems: "center", justifyContent: "center" 
+            }}>
+              <MaterialIcons name="payment" size={24} color="#FF8C32" />
+            </View>
+            <View>
+              <Text style={{ color: "#FFF", fontSize: 16, fontWeight: "600" }}>Subscriptions</Text>
+              <Text style={{ color: "#AAA", fontSize: 12 }}>Manage recurring payments</Text>
+            </View>
+          </View>
+          <MaterialIcons name="chevron-right" size={24} color="#666" />
+        </TouchableOpacity>
 
         {/* Recent Transactions */}
         <TransactionList

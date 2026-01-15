@@ -74,7 +74,7 @@ export function FeaturedGoalCard({
 
         {/* Progress Bar */}
         <View style={styles.progressBarBg}>
-           <View style={[styles.progressBarFill, { width: `${percent}%` }]}>
+           <View style={[styles.progressBarFill, { width: `${percent}%` as any }]}>
               <LinearGradient 
                  colors={["#FF8C32", "#FFD166"]} 
                  start={{x:0, y:0}} 
