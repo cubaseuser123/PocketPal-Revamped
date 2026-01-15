@@ -5,6 +5,7 @@ import { useRef, useEffect } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { storage, userApi } from "@repo/auth";
+import { PallyIcon } from "../../components/ui/PallyIcon";
 
 const ONBOARDING_COMPLETE_KEY = "onboarding_complete";
 
@@ -111,7 +112,7 @@ export default function OnboardingSuccessScreen() {
             >
               <View style={styles.speechBubble}>
                 <Text style={styles.speechText}>
-                  First step done. The fun part starts now 🐿️
+                  First step done. The fun part starts now
                 </Text>
                 <View style={styles.speechTail} />
               </View>
@@ -121,14 +122,15 @@ export default function OnboardingSuccessScreen() {
             <View style={styles.pallyGlow} />
 
             {/* Pally */}
-            <Animated.Text
+            <Animated.View
               style={[
                 styles.pallyEmoji,
                 { transform: [{ translateY: jumpAnim }] },
+                { zIndex: 10 }
               ]}
             >
-              🐿️
-            </Animated.Text>
+              <PallyIcon size={96} />
+            </Animated.View>
           </View>
 
           {/* Subtitle */}

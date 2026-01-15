@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useWallets, useGoals } from "../../hooks/useApi";
+import { PallyIcon } from "../../components/ui/PallyIcon";
 
 export default function TransferMoneyScreen() {
   const router = useRouter();
@@ -164,10 +165,10 @@ export default function TransferMoneyScreen() {
           style={styles.tipCard}
         >
           <View style={styles.tipIcon}>
-            <Text style={styles.tipEmoji}>🐿️</Text>
+            <PallyIcon size={24} />
           </View>
           <Text style={styles.tipText}>
-            Smart transfers keep your <Text style={styles.tipHighlight}>streak alive</Text> 🐿️
+            Smart transfers keep your <Text style={styles.tipHighlight}>streak alive</Text>
           </Text>
         </LinearGradient>
 

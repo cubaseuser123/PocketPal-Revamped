@@ -1,84 +1,20 @@
-import { ScrollView, View, Text, TouchableOpacity, StyleSheet, Animated } from "react-native";
+import { ScrollView, View, Text, TouchableOpacity, StyleSheet, Animated, ActivityIndicator } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useEffect, useRef } from "react";
 import { LinearGradient } from "expo-linear-gradient";
-
-// Boss type definition
-interface BossData {
-  id: string;
-  name: string;
-  title: string;
-  emoji: string;
-  sidekickEmoji?: string;
-  color: string;
-  currentHp: number;
-  maxHp: number;
-  todayChallenge: string;
-  challengeDescription: string;
-  timeRemaining: string;
-  activeHeroes: number;
-}
-
-// Default boss data (Food Beast)
-const DEFAULT_BOSS: BossData = {
-  id: "food-beast",
-  name: "THE FOOD",
-  title: "BEAST",
-  emoji: "🍔",
-  sidekickEmoji: "🍟",
-  color: "#EF4444",
-  currentHp: 12450,
-  maxHp: 50000,
-  todayChallenge: "Community Raid: No Delivery",
-  challengeDescription: "Server-wide Event: Every skipped meal deals massive damage together!",
-  timeRemaining: "04:23:10",
-  activeHeroes: 324,
-};
-
-// Battle log type
-interface BattleLogEntry {
-  id: string;
-  user: string;
-  action: string;
-  timeAgo: string;
-  damage: number;
-  icon: keyof typeof MaterialIcons.glyphMap;
-  color: string;
-}
-
-const MOCK_COMMUNITY_LOG: BattleLogEntry[] = [
-  { id: "1", user: "Harsh", action: "Skipped Zomato", timeAgo: "2m", damage: 150, icon: "restaurant-menu", color: "#EF4444" },
-  { id: "2", user: "Sarah", action: "Cooked Lunch", timeAgo: "5m", damage: 120, icon: "soup-kitchen", color: "#3DDC97" },
-  { id: "3", user: "Mike", action: "Walked Home", timeAgo: "12m", damage: 100, icon: "directions-walk", color: "#FFA24C" },
-  { id: "4", user: "You", action: "Skipped Swiggy", timeAgo: "15m", damage: 150, icon: "takeout-dining", color: "#EF4444" },
-];
-
-// Leaderboard type
-interface LeaderboardEntry {
-  id: string;
-  rank: number;
-  user: string;
-  damage: number;
-  avatar: string;
-}
-
-const MOCK_LEADERBOARD: LeaderboardEntry[] = [
-  { id: "1", rank: 1, user: "Alex W.", damage: 2450, avatar: "🦸‍♂️" },
-  { id: "2", rank: 2, user: "Sarah J.", damage: 2100, avatar: "🧝‍♀️" },
-  { id: "3", rank: 3, user: "Mike T.", damage: 1950, avatar: "🧙‍♂️" },
-];
+import { PallyIcon } from "../../components/ui/PallyIcon";
+import { useBoss, getFullAvatarUrl } from "../../hooks/useApi";
 
 export default function BossBattleScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
   const floatAnim = useRef(new Animated.Value(0)).current;
-
-  // Get boss data from params or use default
-  const boss = DEFAULT_BOSS;
-  const hpPercent = (boss.currentHp / boss.maxHp) * 100;
+  
+  // Fetch real boss data from backend
+  const { boss, loading, dealDamage } = useBoss();
 
   useEffect(() => {
     // Floating animation
@@ -102,6 +38,23 @@ export default function BossBattleScreen() {
     router.back();
   };
 
+  // Show loading state
+  if (loading || !boss) {
+    return (
+      <View style={[styles.container, { alignItems: "center", justifyContent: "center" }]}>
+        <ActivityIndicator size="large" color="#FF8C32" />
+        <Text style={{ color: "#B0B0C3", marginTop: 16 }}>Loading boss...</Text>
+      </View>
+    );
+  }
+
+  // Transform boss data
+  const hpPercent = (boss.currentHealth / boss.totalHealth) * 100;
+  const bossColor = boss.status === "defeated" ? "#3DDC97" : "#EF4444";
+  
+  // Get leaderboard (top 10)
+  const leaderboard = boss.leaderboard?.slice(0, 10) || [];
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -114,7 +67,7 @@ export default function BossBattleScreen() {
         </View>
         <View style={styles.liveBadge}>
           <View style={styles.liveDot} />
-          <Text style={styles.liveText}>{boss.activeHeroes} Fighting</Text>
+          <Text style={styles.liveText}>{leaderboard.length} Fighting</Text>
         </View>
       </View>
 
@@ -128,9 +81,9 @@ export default function BossBattleScreen() {
       >
         {/* Boss Hero Section */}
         <View style={styles.heroSection}>
-          <View style={[styles.heroGlow, { backgroundColor: `${boss.color}15` }]} />
+          <View style={[styles.heroGlow, { backgroundColor: `${bossColor}15` }]} />
 
-          {/* Boss with sidekicks */}
+          {/* Boss with sidekicks - 3 emoji display */}
           <View style={styles.bossContainer}>
             {/* Left sidekick */}
             {boss.sidekickEmoji && (
@@ -147,7 +100,7 @@ export default function BossBattleScreen() {
 
             {/* Main boss */}
             <Animated.View style={{ transform: [{ translateY: floatAnim }] }}>
-              <Text style={styles.bossEmoji}>{boss.emoji}</Text>
+              <Text style={styles.bossEmoji}>{boss.emoji || "👾"}</Text>
             </Animated.View>
 
             {/* Right sidekick */}
@@ -166,22 +119,22 @@ export default function BossBattleScreen() {
 
           {/* Boss name */}
           <Text style={styles.bossName}>
-            {boss.name} <Text style={{ color: boss.color }}>{boss.title}</Text>
+            {boss.name}
           </Text>
 
           {/* HP Bar */}
           <View style={styles.hpContainer}>
             <View style={styles.hpLabelRow}>
-              <Text style={[styles.hpLabel, { color: boss.color }]}>RAID PROGRESS</Text>
-              <Text style={[styles.hpLabel, { color: boss.color }]}>
-                {(boss.maxHp - boss.currentHp).toLocaleString()} / {boss.maxHp.toLocaleString()} HP
+              <Text style={[styles.hpLabel, { color: bossColor }]}>RAID PROGRESS</Text>
+              <Text style={[styles.hpLabel, { color: bossColor }]}>
+                {(boss.totalHealth - boss.currentHealth).toLocaleString()} / {boss.totalHealth.toLocaleString()} HP
               </Text>
             </View>
             <View style={styles.hpBar}>
               <View
                 style={[
                   styles.hpFill,
-                  { width: `${100 - hpPercent}%`, backgroundColor: boss.color },
+                  { width: `${100 - hpPercent}%`, backgroundColor: bossColor },
                 ]}
               >
                 <View style={styles.hpStripes} />
@@ -199,14 +152,14 @@ export default function BossBattleScreen() {
                 <MaterialIcons name="groups" size={14} color="#FF8C32" />
                 <Text style={styles.challengeLabel}>COMMUNITY GOAL</Text>
               </View>
-              <Text style={styles.challengeTitle}>{boss.todayChallenge}</Text>
+              <Text style={styles.challengeTitle}>Defeat {boss.name}</Text>
             </View>
             <View style={styles.timerBadge}>
-              <Text style={styles.timerLabel}>ENDS IN</Text>
-              <Text style={styles.timerValue}>{boss.timeRemaining}</Text>
+              <Text style={styles.timerLabel}>STATUS</Text>
+              <Text style={styles.timerValue}>{boss.status.toUpperCase()}</Text>
             </View>
           </View>
-          <Text style={styles.challengeDesc}>{boss.challengeDescription}</Text>
+          <Text style={styles.challengeDesc}>{boss.description}</Text>
           
           <TouchableOpacity style={styles.joinRaidButton}>
             <Text style={styles.joinRaidText}>Join Raid</Text>
@@ -221,56 +174,29 @@ export default function BossBattleScreen() {
             <Text style={styles.battleLogTitle}>Top Heroes</Text>
           </View>
           
-          {MOCK_LEADERBOARD.map((entry) => (
-             <View key={entry.id} style={styles.leaderboardItem}>
+          {leaderboard.length > 0 ? leaderboard.map((entry, index) => (
+             <View key={entry.userId?._id || index} style={styles.leaderboardItem}>
                 <View style={styles.leaderboardLeft}>
                    <View style={[
                        styles.rankBadge, 
-                       entry.rank === 1 ? styles.rank1 : 
-                       entry.rank === 2 ? styles.rank2 : styles.rank3
+                       index === 0 ? styles.rank1 : 
+                       index === 1 ? styles.rank2 : styles.rank3
                    ]}>
-                      <Text style={styles.rankText}>#{entry.rank}</Text>
+                      <Text style={styles.rankText}>#{index + 1}</Text>
                    </View>
-                   <Text style={styles.avatarEmoji}>{entry.avatar}</Text>
-                   <Text style={styles.leaderboardUser}>{entry.user}</Text>
+                   <Text style={styles.avatarEmoji}>🦸</Text>
+                   <Text style={styles.leaderboardUser}>{entry.userId?.name || "Hero"}</Text>
                 </View>
                 <View style={styles.leaderboardRight}>
                     <Text style={styles.leaderboardDamage}>{entry.damage} HP</Text>
                     <MaterialIcons name="flash-on" size={12} color="#EF4444" />
                 </View>
              </View>
-          ))}
-        </View>
-
-        {/* Community Activity Log */}
-        <View style={styles.battleLogSection}>
-          <View style={styles.battleLogHeader}>
-            <MaterialIcons name="public" size={18} color="#B0B0C3" />
-            <Text style={styles.battleLogTitle}>Live Battle Feed</Text>
-          </View>
-
-          {MOCK_COMMUNITY_LOG.map((entry) => (
-            <View key={entry.id} style={styles.logItem}>
-              <View style={styles.logLeft}>
-                <View style={[styles.logIcon, { backgroundColor: `${entry.color}15`, borderColor: `${entry.color}30` }]}>
-                  <MaterialIcons name={entry.icon} size={18} color={entry.color} />
-                </View>
-                <View>
-                  <View style={{flexDirection: 'row', alignItems: 'center', gap: 6}}>
-                     <Text style={styles.logUser}>{entry.user}</Text>
-                     <Text style={styles.logTime}>{entry.timeAgo}</Text>
-                  </View>
-                  <Text style={styles.logAction}>{entry.action}</Text>
-                </View>
-              </View>
-              <View style={styles.logRight}>
-                <View style={styles.damageRow}>
-                  <MaterialIcons name="flash-on" size={12} color="#EF4444" />
-                  <Text style={styles.damageText}>-{entry.damage}</Text>
-                </View>
-              </View>
+          )) : (
+            <View style={{ padding: 16, alignItems: "center" }}>
+              <Text style={{ color: "#B0B0C3" }}>Be the first to deal damage!</Text>
             </View>
-          ))}
+          )}
         </View>
 
         {/* Pally Tip - Now scrollable */}
@@ -283,12 +209,12 @@ export default function BossBattleScreen() {
           >
             <View style={styles.pallyTipContent}>
               <View style={styles.pallyIconContainer}>
-                <Text style={styles.pallyIcon}>🐿️</Text>
+                <PallyIcon size={20} />
               </View>
               <View style={styles.pallyTextContainer}>
                 <Text style={styles.pallyLabel}>RAID STRATEGY</Text>
                 <Text style={styles.pallyMessage}>
-                  We need 50 more people to skip lunch orders to defeat this boss today!
+                  Every good financial habit deals damage to the boss. Keep saving to win!
                 </Text>
               </View>
             </View>

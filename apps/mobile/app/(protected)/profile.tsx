@@ -1,10 +1,11 @@
-import { ScrollView, View, TouchableOpacity, Text, StyleSheet, Alert, Modal, TextInput, ActivityIndicator } from "react-native";
+import { ScrollView, View, TouchableOpacity, Text, StyleSheet, Alert, Modal, TextInput, ActivityIndicator, Image } from "react-native";
 import { useState } from "react";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
-import { useAuth } from "@repo/auth";
-import { useUser } from "../../hooks/useApi";
+import { useAuth, storage } from "@repo/auth";
+import { useUser, API_URL, getFullAvatarUrl } from "../../hooks/useApi";
+import * as ImagePicker from 'expo-image-picker';
 
 import { ProfileHeader } from "../../components/profile/ProfileHeader";
 import { LevelProgressCard } from "../../components/profile/LevelProgressCard";
@@ -37,7 +38,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const authContext = useAuth();
-  const { user, updateUser } = useUser();
+  const { user, updateUser, refetch } = useUser();
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [editName, setEditName] = useState("");
   const [editAvatar, setEditAvatar] = useState("");
@@ -58,6 +59,69 @@ export default function ProfileScreen() {
       setIsEditModalVisible(true);
     }
   };
+
+  const pickImage = async () => {
+    // Request permission
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (permissionResult.granted === false) {
+      Alert.alert("Permission Required", "You've refused to allow this app to access your photos!");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5,
+    });
+
+    if (!result.canceled) {
+      const uri = result.assets[0].uri;
+      uploadImage(uri);
+    }
+  };
+
+  const uploadImage = async (uri: string) => {
+    const token = await storage.get("access_token");
+    if (!token) return;
+    
+    setUpdating(true);
+    try {
+      const formData = new FormData();
+      // @ts-ignore
+      formData.append('image', {
+        uri,
+        name: `profile-${Date.now()}.jpg`,
+        type: 'image/jpeg',
+      });
+
+      const response = await fetch(`${API_URL}/api/user/avatar`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Upload failed');
+      }
+
+      setEditAvatar(data.avatarUrl);
+      refetch(); // Refresh user data
+      Alert.alert("Success", "Profile picture updated!");
+      
+    } catch (error: any) {
+      Alert.alert("Error", error.message || "Failed to upload image");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
 
   const handleMenuPress = (id: string) => {
     if (id === "subscriptions") {
@@ -85,6 +149,8 @@ export default function ProfileScreen() {
     );
   };
 
+  const displayAvatar = getFullAvatarUrl(user?.avatarUrl) || "https://api.dicebear.com/7.x/avataaars/png?seed=PocketPal";
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -110,7 +176,7 @@ export default function ProfileScreen() {
         <ProfileHeader
           name={user?.name || "User"}
           subtitle={user?.phone || "PocketPal User"}
-          avatarUrl={user?.avatarUrl || "https://api.dicebear.com/7.x/avataaars/png?seed=PocketPal"}
+          avatarUrl={displayAvatar}
           onEditPress={handleEditProfile}
         />
 
@@ -152,6 +218,29 @@ export default function ProfileScreen() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Edit Profile</Text>
             
+            <View style={{ alignItems: 'center', marginBottom: 20 }}>
+              <Image 
+                source={{ uri: editAvatar || "https://api.dicebear.com/7.x/avataaars/png?seed=PocketPal" }} 
+                style={{ width: 80, height: 80, borderRadius: 40, marginBottom: 10, backgroundColor: '#333' }} 
+              />
+              <TouchableOpacity 
+                style={{ 
+                  flexDirection: 'row', 
+                  alignItems: 'center', 
+                  gap: 8, 
+                  backgroundColor: 'rgba(255, 140, 50, 0.15)', 
+                  paddingHorizontal: 16, 
+                  paddingVertical: 8, 
+                  borderRadius: 20 
+                }}
+                onPress={pickImage}
+                disabled={updating}
+              >
+                <MaterialIcons name="photo-camera" size={18} color="#FF8C32" />
+                <Text style={{ color: '#FF8C32', fontWeight: '600' }}>Change Photo</Text>
+              </TouchableOpacity>
+            </View>
+            
             <Text style={styles.inputLabel}>Display Name</Text>
             <TextInput 
               style={styles.input}
@@ -161,7 +250,7 @@ export default function ProfileScreen() {
               placeholderTextColor="#666"
             />
             
-            <Text style={styles.inputLabel}>Avatar URL</Text>
+            <Text style={styles.inputLabel}>Avatar URL (or upload above)</Text>
             <TextInput 
               style={styles.input}
               value={editAvatar}
@@ -190,6 +279,7 @@ export default function ProfileScreen() {
                       avatarUrl: editAvatar || undefined
                     });
                     setIsEditModalVisible(false);
+                    refetch();
                   } catch (e) {
                     Alert.alert("Error", "Failed to update profile");
                   } finally {

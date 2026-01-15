@@ -11,7 +11,7 @@ import { SpendingOverview } from "../../../components/dashboard/SpendingOverview
 import { ExpenseWallet } from "../../../components/dashboard/ExpenseWallet";
 import { SavingsWallet } from "../../../components/dashboard/SavingsWallet";
 import { ArcadeTeaser } from "../../../components/dashboard/ArcadeTeaser";
-import { useUser, useWallets, useSpendingSummary, useCategories, useGoals } from "../../../hooks/useApi";
+import { useUser, useWallets, useSpendingSummary, useCategories, useGoals, getFullAvatarUrl } from "../../../hooks/useApi";
 
 // Static spending chart data (would come from analytics API in future)
 const SPENDING_CHART_DATA = {
@@ -75,15 +75,15 @@ export default function HomeScreen() {
   };
 
   const handleScan = () => {
-    console.log("Scan QR");
+    router.push("/(protected)/scan-qr");
   };
 
   const handleLoadMoney = () => {
-    console.log("Load money");
+    router.push("/(protected)/load-money");
   };
 
   const handleAddToSavings = () => {
-    console.log("Add to savings");
+    router.push("/(protected)/transfer-money");
   };
 
   const handleEnterArcade = () => {
@@ -112,7 +112,7 @@ export default function HomeScreen() {
         showAvatar
         userName={user?.name || "User"}
         userLevel={user?.level || 1}
-        avatarUrl={user?.avatarUrl || undefined}
+        avatarUrl={getFullAvatarUrl(user?.avatarUrl) || undefined}
         coins={user?.coins || 0}
         onAvatarPress={handleAvatarPress}
       />

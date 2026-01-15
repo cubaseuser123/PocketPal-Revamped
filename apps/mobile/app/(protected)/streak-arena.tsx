@@ -1,7 +1,9 @@
-import { ScrollView, View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { ScrollView, View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
+import { PallyIcon } from "../../components/ui/PallyIcon";
+import { useUser } from "../../hooks/useApi";
 
 // Mock data
 const MOCK_STREAK_DATA = {
@@ -29,6 +31,7 @@ const MOCK_STREAK_DATA = {
 export default function StreakArenaScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { user } = useUser();
 
   const handleBack = () => {
     router.back();
@@ -46,7 +49,7 @@ export default function StreakArenaScreen() {
         </View>
         <View style={styles.coinsBadge}>
           <MaterialIcons name="monetization-on" size={14} color="#FFD166" />
-          <Text style={styles.coinsText}>1,250</Text>
+          <Text style={styles.coinsText}>{user?.coins?.toLocaleString() || 0}</Text>
         </View>
       </View>
 
@@ -160,7 +163,7 @@ export default function StreakArenaScreen() {
             <Text style={styles.powerupTitle}>Streak Shield</Text>
             <Text style={styles.powerupDesc}>Protect your streak if you miss a day.</Text>
             <View style={styles.pallyTip}>
-              <Text style={styles.pallyEmoji}>🐿️</Text>
+              <PallyIcon size={24} />
               <Text style={styles.pallyText}>"Even squirrels slip sometimes!"</Text>
             </View>
           </View>

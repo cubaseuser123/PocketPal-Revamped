@@ -5,6 +5,7 @@ import { useRef, useEffect, useState } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { storage, useAuth, userApi } from "@repo/auth";
+import { PallyIcon } from "../../components/ui/PallyIcon";
 
 // Storage key for onboarding completion
 const ONBOARDING_COMPLETE_KEY = "onboarding_complete";
@@ -136,7 +137,7 @@ export default function KYCSelfieScreen() {
                 <View style={styles.speechTail} />
               </View>
             </Animated.View>
-            <Text style={styles.mascotEmoji}>🐿️</Text>
+            <PallyIcon size={72} style={{ transform: [{ scaleX: -1 }] }} />
           </View>
         </View>
 

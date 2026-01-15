@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRef, useEffect, useState } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { PallyIcon } from "../../components/ui/PallyIcon";
 
 export default function KYCDetailsScreen() {
   const router = useRouter();
@@ -129,11 +130,11 @@ export default function KYCDetailsScreen() {
             ]}
           >
             <View style={styles.speechBubble}>
-              <Text style={styles.speechText}>Almost done! 🐿️</Text>
+              <Text style={styles.speechText}>Almost done!</Text>
               <View style={styles.speechTail} />
             </View>
           </Animated.View>
-          <Text style={styles.mascotEmoji}>🐿️</Text>
+          <PallyIcon size={72} style={{ transform: [{ scaleX: -1 }] }} />
         </View>
 
         {/* Button */}

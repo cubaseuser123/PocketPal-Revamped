@@ -1,10 +1,12 @@
-import { View, Text, TouchableOpacity, StyleSheet, Animated } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Animated, Alert, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LinearGradient } from "expo-linear-gradient";
+import { PallyIcon } from "../../components/ui/PallyIcon";
 import Svg, { Path, G } from "react-native-svg";
+import { useWheel, useUser } from "../../hooks/useApi";
 
 // Wheel segments configuration
 const WHEEL_SEGMENTS = [
@@ -21,6 +23,10 @@ export default function SavingsWheelScreen() {
   const insets = useSafeAreaInsets();
   const floatAnim = useRef(new Animated.Value(0)).current;
   const spinAnim = useRef(new Animated.Value(0)).current;
+  const [isSpinning, setIsSpinning] = useState(false);
+  
+  const { wheelStatus, spin, refetch } = useWheel();
+  const { user } = useUser();
 
   useEffect(() => {
     // Floating animation for Pally
@@ -53,9 +59,25 @@ export default function SavingsWheelScreen() {
     router.back();
   };
 
-  const handleSpin = () => {
-    // TODO: Implement spinning logic
-    console.log("Spinning the wheel!");
+  const handleSpin = async () => {
+    if (!wheelStatus?.canSpin || isSpinning) {
+      Alert.alert("Daily Limit", "You've already spun the wheel today! Come back tomorrow.");
+      return;
+    }
+    
+    setIsSpinning(true);
+    try {
+      const result = await spin();
+      Alert.alert(
+        "🎉 Congratulations!",
+        result.message || `You won ${result.coinsWon} coins!`,
+        [{ text: "Awesome!", onPress: () => refetch() }]
+      );
+    } catch (error: any) {
+      Alert.alert("Error", error.message || "Failed to spin");
+    } finally {
+      setIsSpinning(false);
+    }
   };
 
   const wheelRotation = spinAnim.interpolate({
@@ -75,7 +97,7 @@ export default function SavingsWheelScreen() {
         </View>
         <View style={styles.coinBadge}>
           <Text style={styles.coinEmoji}>🪙</Text>
-          <Text style={styles.coinText}>1,250</Text>
+          <Text style={styles.coinText}>{user?.coins?.toLocaleString() || 0}</Text>
         </View>
       </View>
 
@@ -91,7 +113,8 @@ export default function SavingsWheelScreen() {
           <Animated.View style={[styles.pallyContainer, { transform: [{ translateY: floatAnim }] }]}>
             <View style={styles.pallyStick} />
             <View style={styles.pallyDot} />
-            <Text style={styles.pallyEmoji}>🐿️</Text>
+            <View style={styles.pallyDot} />
+            <PallyIcon size={56} style={{ transform: [{ rotate: "-12deg" }] }} />
           </Animated.View>
         </View>
 

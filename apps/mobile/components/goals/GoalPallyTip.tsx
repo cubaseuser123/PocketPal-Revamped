@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { PallyIcon } from "../ui/PallyIcon";
 
 export function GoalPallyTip() {
   return (
@@ -11,7 +12,7 @@ export function GoalPallyTip() {
     >
       <View style={styles.skewedBg} />
       <View style={styles.iconContainer}>
-        <Text style={styles.icon}>🐿️</Text>
+        <PallyIcon size={24} />
       </View>
       <Text style={styles.text}>
         <Text style={styles.highlight}>Pally tip:</Text> Goals give your savings a purpose 🎯

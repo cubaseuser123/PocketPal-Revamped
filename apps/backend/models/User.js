@@ -13,6 +13,9 @@ const userSchema = new mongoose.Schema(
     // Status
     kycCompleted: { type: Boolean, default: false },
     onboardingCompleted: { type: Boolean, default: false },
+    
+    // Savings Wheel
+    lastSpinDate: { type: Date, default: null },
   },
   { timestamps: true }
 );

@@ -47,11 +47,10 @@ export function WeeklySavingGoal({
     <View style={styles.container}>
       {/* Background glow */}
       <View style={styles.backgroundGlow} />
-
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.label}>Weekly Saving Goal</Text>
+          <Text style={styles.label}>Main Saving Goal</Text>
           <View style={styles.amountRow}>
             <Text style={styles.currentAmount}>
               ₹{currentAmount.toLocaleString()}
@@ -72,13 +71,14 @@ export function WeeklySavingGoal({
             },
           ]}
         >
-          <View style={[styles.statusDot, { backgroundColor: config.dotColor }]} />
+          <View
+            style={[styles.statusDot, { backgroundColor: config.dotColor }]}
+          />
           <Text style={[styles.statusText, { color: config.textColor }]}>
             {config.label}
           </Text>
         </View>
       </View>
-
       {/* Progress bar */}
       <View style={styles.progressBarContainer}>
         <View style={[styles.progressBarFill, { width: `${progress}%` }]}>
@@ -97,11 +97,10 @@ export function WeeklySavingGoal({
           />
         </View>
       </View>
-
       {/* Today's save */}
       {todaySaved !== undefined && (
         <Text style={styles.todaySaved}>
-          You saved ₹{todaySaved} today! 🔥
+          You saved ₹{todaySaved} this week! 🔥
         </Text>
       )}
     </View>

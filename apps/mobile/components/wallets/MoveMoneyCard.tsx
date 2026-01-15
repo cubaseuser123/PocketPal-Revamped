@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
+import { PallyIcon } from "../ui/PallyIcon";
 
 interface MoveMoneyCardProps {
   onPress: () => void;
@@ -13,9 +14,12 @@ export function MoveMoneyCard({ onPress }: MoveMoneyCardProps) {
         className="absolute -top-0 left-1/2 z-10 bg-primary px-3 py-1 rounded-full border border-primary flex-row items-center gap-1"
         style={[styles.badge, { transform: [{ translateX: -70 }] }]}
       >
-        <Text className="text-background-dark text-[10px] font-bold">
-          Move smart, not fast 🐿️
-        </Text>
+        <View className="flex-row items-center gap-1">
+          <Text className="text-background-dark text-[10px] font-bold">
+            Move smart, not fast
+          </Text>
+          <PallyIcon size={12} />
+        </View>
       </View>
 
       {/* Card */}

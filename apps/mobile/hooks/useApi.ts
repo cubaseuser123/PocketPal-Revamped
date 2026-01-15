@@ -17,6 +17,14 @@ const getApiUrl = (): string => {
 
 const API_URL = getApiUrl();
 
+export const getFullAvatarUrl = (url?: string | null) => {
+  if (!url) return null;
+  if (url.startsWith("http")) return url;
+  // Remove leading slash if API_URL ends with one, or ensure slash exists
+  // consistently handles /uploads/xxx
+  return `${API_URL}${url.startsWith("/") ? "" : "/"}${url}`;
+};
+
 // Types
 export interface User {
   id: string;
@@ -357,5 +365,157 @@ export function useSubscriptions() {
   };
 }
 
+// Hook for Boss Battle
+export interface BossBattle {
+  _id: string;
+  name: string;
+  description: string;
+  imageUrl: string;
+  emoji: string;
+  sidekickEmoji?: string;
+  totalHealth: number;
+  currentHealth: number;
+  rewards: { coins: number; xp: number };
+  status: "active" | "defeated" | "upcoming";
+  leaderboard: Array<{ userId: { _id: string; name: string; avatarUrl: string | null }; damage: number }>;
+}
+
+export function useBoss() {
+  const queryClient = useQueryClient();
+
+  const { data: boss, isLoading, error, refetch } = useQuery({
+    queryKey: ["boss"],
+    queryFn: async () => {
+      const { auth } = await import("@repo/auth");
+      const token = await auth.getToken();
+      const res = await fetch(`${API_URL}/api/boss/active`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return null;
+      return await res.json() as BossBattle;
+    },
+  });
+
+  const dealDamageMutation = useMutation({
+    mutationFn: async ({ bossId, amount }: { bossId: string; amount: number }) => {
+      const { auth } = await import("@repo/auth");
+      const token = await auth.getToken();
+      const res = await fetch(`${API_URL}/api/boss/${bossId}/damage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ amount }),
+      });
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["boss"] });
+    },
+  });
+
+  const dealDamage = useCallback(async (bossId: string, amount: number) => {
+    return await dealDamageMutation.mutateAsync({ bossId, amount });
+  }, [dealDamageMutation]);
+
+  return { boss, loading: isLoading, error: error ? (error as Error).message : null, refetch, dealDamage };
+}
+
+// Hook for Quests
+export interface Quest {
+  _id: string;
+  title: string;
+  description: string;
+  type: string;
+  requirement: { action: string; target: number };
+  rewards: { coins: number; xp: number };
+  difficulty: "easy" | "medium" | "hard";
+  progress: number;
+  completed: boolean;
+  expiresAt: string;
+}
+
+export function useQuests() {
+  const queryClient = useQueryClient();
+
+  const { data: quests, isLoading, error, refetch } = useQuery({
+    queryKey: ["quests"],
+    queryFn: async () => {
+      const { auth } = await import("@repo/auth");
+      const token = await auth.getToken();
+      const res = await fetch(`${API_URL}/api/quests/my`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return await res.json() as Quest[];
+    },
+  });
+
+  const assignQuestsMutation = useMutation({
+    mutationFn: async () => {
+      const { auth } = await import("@repo/auth");
+      const token = await auth.getToken();
+      const res = await fetch(`${API_URL}/api/quests/assign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ count: 3 }),
+      });
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["quests"] });
+    },
+  });
+
+  const assignQuests = useCallback(async () => {
+    return await assignQuestsMutation.mutateAsync();
+  }, [assignQuestsMutation]);
+
+  return { quests: quests || [], loading: isLoading, error: error ? (error as Error).message : null, refetch, assignQuests };
+}
+
+// Hook for Savings Wheel
+export interface WheelStatus {
+  canSpin: boolean;
+  lastSpinDate: string | null;
+  segments: Array<{ id: number; label: string; reward: number; color: string }>;
+}
+
+export function useWheel() {
+  const queryClient = useQueryClient();
+
+  const { data: wheelStatus, isLoading, error, refetch } = useQuery({
+    queryKey: ["wheel"],
+    queryFn: async () => {
+      const { auth } = await import("@repo/auth");
+      const token = await auth.getToken();
+      const res = await fetch(`${API_URL}/api/wheel/status`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return await res.json() as WheelStatus;
+    },
+  });
+
+  const spinMutation = useMutation({
+    mutationFn: async () => {
+      const { auth } = await import("@repo/auth");
+      const token = await auth.getToken();
+      const res = await fetch(`${API_URL}/api/wheel/spin`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["wheel"] });
+      queryClient.invalidateQueries({ queryKey: ["user"] }); // Coins update
+    },
+  });
+
+  const spin = useCallback(async () => {
+    return await spinMutation.mutateAsync();
+  }, [spinMutation]);
+
+  return { wheelStatus, loading: isLoading, error: error ? (error as Error).message : null, refetch, spin };
+}
+
 // Export API URL for direct use
 export { API_URL };
+

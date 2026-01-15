@@ -12,6 +12,9 @@ import walletRoutes from "./routes/walletRoutes.js";
 import transactionRoutes from "./routes/transactionRoutes.js";
 import goalRoutes from "./routes/goalRoutes.js";
 import categoryRoutes from "./routes/categoryRoutes.js";
+import bossRoutes from "./routes/bossRoutes.js";
+import questRoutes from "./routes/questRoutes.js";
+import wheelRoutes from "./routes/wheelRoutes.js";
 
 
 const app = express();
@@ -38,6 +41,9 @@ app.use((req, res, next) => {
   next();
 });
 
+// Static folder
+app.use("/uploads", express.static("uploads"));
+
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
@@ -46,6 +52,9 @@ app.use("/api/wallets", walletRoutes);
 app.use("/api/transactions", transactionRoutes);
 app.use("/api/goals", goalRoutes);
 app.use("/api/categories", categoryRoutes);
+app.use("/api/boss", bossRoutes);
+app.use("/api/quests", questRoutes);
+app.use("/api/wheel", wheelRoutes);
 
 app.get("/", (req, res) => {
   res.send("PocketPal API running");
