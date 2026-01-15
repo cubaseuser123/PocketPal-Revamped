@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRef, useEffect } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { PallyIcon } from "../../components/ui/PallyIcon";
 
 export default function WalletExplanationScreen() {
   const router = useRouter();
@@ -109,11 +110,11 @@ export default function WalletExplanationScreen() {
       >
         <View style={styles.speechBubble}>
           <Text style={styles.speechText}>
-            You're always in control 🐿️
+            You're always in control
           </Text>
           <View style={styles.speechTail} />
         </View>
-        <Text style={styles.pallyEmoji}>🐿️</Text>
+        <PallyIcon size={72} style={{ transform: [{ scaleX: -1 }] }} />
       </Animated.View>
 
       {/* Bottom button */}

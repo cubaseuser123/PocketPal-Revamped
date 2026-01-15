@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useEffect, useRef } from "react";
 import { LinearGradient } from "expo-linear-gradient";
+import { PallyIcon } from "../../components/ui/PallyIcon";
 
 // Boss type definition
 interface BossData {
@@ -283,7 +284,7 @@ export default function BossBattleScreen() {
           >
             <View style={styles.pallyTipContent}>
               <View style={styles.pallyIconContainer}>
-                <Text style={styles.pallyIcon}>🐿️</Text>
+                <PallyIcon size={20} />
               </View>
               <View style={styles.pallyTextContainer}>
                 <Text style={styles.pallyLabel}>RAID STRATEGY</Text>

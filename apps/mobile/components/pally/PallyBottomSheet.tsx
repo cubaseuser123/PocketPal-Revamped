@@ -10,6 +10,7 @@ import BottomSheet, { BottomSheetBackdrop, BottomSheetScrollView } from "@gorhom
 import { MaterialIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
+import { PallyIcon } from "../ui/PallyIcon";
 
 interface Message {
   id: string;
@@ -97,7 +98,7 @@ export function PallyBottomSheet({ isOpen, onClose }: PallyBottomSheetProps) {
       const pallyResponse: Message = {
         id: (Date.now() + 1).toString(),
         type: "pally",
-        text: "Great question! Let me analyze that for you... 🐿️",
+        text: "Great question! Let me analyze that for you...",
         timestamp: "Just now",
       };
       setMessages((prev) => [...prev, pallyResponse]);
@@ -136,8 +137,8 @@ export function PallyBottomSheet({ isOpen, onClose }: PallyBottomSheetProps) {
                 colors={["#FF8C32", "#FFA24C"]}
                 style={styles.avatarGradient}
               >
-                <View style={styles.avatarInner}>
-                  <Text style={styles.avatarEmoji}>🐿️</Text>
+                <View style={[styles.avatarInner, { justifyContent: 'center', alignItems: 'center' }]}>
+                  <PallyIcon size={24} />
                 </View>
               </LinearGradient>
               <View style={styles.onlineIndicator} />
@@ -169,7 +170,7 @@ export function PallyBottomSheet({ isOpen, onClose }: PallyBottomSheetProps) {
             >
               {message.type === "pally" && (
                 <View style={styles.pallyIcon}>
-                  <Text style={styles.pallyIconEmoji}>🐿️</Text>
+                  <PallyIcon size={18} />
                 </View>
               )}
               <View

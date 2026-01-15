@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, Platform } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { PallyIcon } from "../ui/PallyIcon";
 
 interface PallyTipProps {
   message: string;
@@ -17,7 +18,7 @@ export function PallyTip({ message }: PallyTipProps) {
         <View style={styles.content}>
           {/* Squirrel icon */}
           <View style={styles.iconContainer}>
-            <Text style={styles.icon}>🐿️</Text>
+            <PallyIcon size={20} />
           </View>
 
           {/* Tip content */}

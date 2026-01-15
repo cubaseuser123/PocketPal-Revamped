@@ -118,7 +118,7 @@ export default function WalletsScreen() {
           message={
             wallets?.kycCompleted 
               ? "Full KYC PPI: UPI and transfers enabled! 🚀" 
-              : "Small PPI: Complete KYC to unlock UPI & higher limits 🐿️"
+              : "Small PPI: Complete KYC to unlock UPI & higher limits"
           } 
         />
 

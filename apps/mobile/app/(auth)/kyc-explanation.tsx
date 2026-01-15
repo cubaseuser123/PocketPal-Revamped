@@ -5,6 +5,7 @@ import { useRef, useEffect } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { storage, useAuth } from "@repo/auth";
+import { PallyIcon } from "../../components/ui/PallyIcon";
 
 // Storage key for onboarding completion
 const ONBOARDING_COMPLETE_KEY = "onboarding_complete";
@@ -112,14 +113,14 @@ export default function KYCExplanationScreen() {
         >
           <View style={styles.speechBubble}>
             <Text style={styles.speechText}>
-              Quick check. Big unlock 🐿️
+              Quick check. Big unlock
             </Text>
             <View style={styles.speechTail} />
           </View>
         </Animated.View>
         
         <View style={styles.mascotContainer}>
-          <Text style={styles.pallyEmoji}>🐿️</Text>
+          <PallyIcon size={64} />
           <View style={styles.idCardContainer}>
             <View style={styles.idCard}>
               <View style={styles.idAvatar} />

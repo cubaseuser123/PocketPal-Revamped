@@ -5,6 +5,7 @@ import { useRef, useEffect } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { storage, useAuth } from "@repo/auth";
+import { PallyIcon } from "../../components/ui/PallyIcon";
 
 // Storage key for onboarding completion
 const ONBOARDING_COMPLETE_KEY = "onboarding_complete";
@@ -115,11 +116,11 @@ export default function HowItWorksScreen() {
       >
         <View style={styles.speechBubble}>
           <Text style={styles.speechText}>
-            That's it. Three simple steps 🐿️
+            That's it. Three simple steps
           </Text>
           <View style={styles.speechTail} />
         </View>
-        <Text style={styles.pallyEmoji}>🐿️</Text>
+        <PallyIcon size={72} style={{ transform: [{ scaleX: -1 }] }} />
       </Animated.View>
 
       {/* Bottom button */}

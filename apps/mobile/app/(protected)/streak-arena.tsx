@@ -1,7 +1,8 @@
-import { ScrollView, View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { ScrollView, View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
+import { PallyIcon } from "../../components/ui/PallyIcon";
 
 // Mock data
 const MOCK_STREAK_DATA = {
@@ -160,7 +161,7 @@ export default function StreakArenaScreen() {
             <Text style={styles.powerupTitle}>Streak Shield</Text>
             <Text style={styles.powerupDesc}>Protect your streak if you miss a day.</Text>
             <View style={styles.pallyTip}>
-              <Text style={styles.pallyEmoji}>🐿️</Text>
+              <PallyIcon size={24} />
               <Text style={styles.pallyText}>"Even squirrels slip sometimes!"</Text>
             </View>
           </View>

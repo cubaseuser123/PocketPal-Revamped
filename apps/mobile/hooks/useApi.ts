@@ -17,6 +17,14 @@ const getApiUrl = (): string => {
 
 const API_URL = getApiUrl();
 
+export const getFullAvatarUrl = (url?: string | null) => {
+  if (!url) return null;
+  if (url.startsWith("http")) return url;
+  // Remove leading slash if API_URL ends with one, or ensure slash exists
+  // consistently handles /uploads/xxx
+  return `${API_URL}${url.startsWith("/") ? "" : "/"}${url}`;
+};
+
 // Types
 export interface User {
   id: string;

@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useEffect, useRef } from "react";
 import { LinearGradient } from "expo-linear-gradient";
+import { PallyIcon } from "../../components/ui/PallyIcon";
 import Svg, { Path, G } from "react-native-svg";
 
 // Wheel segments configuration
@@ -91,7 +92,8 @@ export default function SavingsWheelScreen() {
           <Animated.View style={[styles.pallyContainer, { transform: [{ translateY: floatAnim }] }]}>
             <View style={styles.pallyStick} />
             <View style={styles.pallyDot} />
-            <Text style={styles.pallyEmoji}>🐿️</Text>
+            <View style={styles.pallyDot} />
+            <PallyIcon size={56} style={{ transform: [{ rotate: "-12deg" }] }} />
           </Animated.View>
         </View>
 

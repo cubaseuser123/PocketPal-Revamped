@@ -38,6 +38,9 @@ app.use((req, res, next) => {
   next();
 });
 
+// Static folder
+app.use("/uploads", express.static("uploads"));
+
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);

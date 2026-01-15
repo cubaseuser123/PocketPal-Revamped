@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRef, useEffect, useState } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { PallyIcon } from "../../components/ui/PallyIcon";
 
 export default function KYCPanScreen() {
   const router = useRouter();
@@ -111,7 +112,7 @@ export default function KYCPanScreen() {
                 <View style={styles.speechTail} />
               </View>
             </Animated.View>
-            <Text style={styles.mascotEmoji}>🐿️</Text>
+            <PallyIcon size={72} style={{ transform: [{ scaleX: -1 }] }} />
           </View>
         </View>
 

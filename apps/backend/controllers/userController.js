@@ -102,11 +102,46 @@ export const completeKyc = async (req, res) => {
     }
 
     user.kycCompleted = true;
+    
+    // Level Up Logic: KYC moves user to Level 2
+    if (user.level < 2) {
+      user.level = 2;
+      // Award XP/Coins for leveling up
+      user.coins = (user.coins || 0) + 500;
+    }
+    
     await user.save();
 
     return res.json({ message: "KYC completed", user });
   } catch (err) {
     console.error("completeKyc error:", err);
+    return res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
+// Upload Avatar
+export const uploadAvatar = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: "Please upload a file" });
+    }
+
+    // Store relative path to allow client to construct full URL based on its environment
+    // windows handle path separator
+    const relativePath = req.file.path.replace(/\\/g, "/");
+    const avatarUrl = `/${relativePath}`;
+
+    user.avatarUrl = avatarUrl;
+    await user.save();
+
+    return res.json({ message: "Avatar updated", avatarUrl, user });
+  } catch (err) {
+    console.error("uploadAvatar error:", err);
     return res.status(500).json({ message: "Server error", error: err.message });
   }
 };

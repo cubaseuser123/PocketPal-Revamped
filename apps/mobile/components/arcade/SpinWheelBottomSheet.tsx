@@ -4,6 +4,7 @@ import BottomSheet, { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import Svg, { Path, G, Text as SvgText, Circle } from "react-native-svg";
+import { PallyIcon } from "../ui/PallyIcon";
 
 interface SpinWheelBottomSheetProps {
   isOpen: boolean;
@@ -114,7 +115,9 @@ export function SpinWheelBottomSheet({
         <View style={styles.pallyFloating}>
            <View style={[styles.pallyStick, { transform: [{ rotate: "20deg" }] }]} />
            <View style={styles.pallyDot} />
-           <Text style={styles.pallyEmoji}>🐿️</Text>
+           <View style={{ zIndex: 10, transform: [{ rotate: "-12deg" }, { translateY: 8 }] }}>
+             <PallyIcon size={60} />
+           </View>
         </View>
 
         {/* Wheel Container */}

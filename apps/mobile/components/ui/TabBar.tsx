@@ -3,6 +3,7 @@ import { BlurView } from "expo-blur";
 import { MaterialIcons } from "@expo/vector-icons";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { usePally } from "../../contexts/PallyContext";
+import { PallyIcon } from "./PallyIcon";
 
 type TabRoute = "index" | "pally" | "arcade" | "goals" | "wallets";
 
@@ -11,7 +12,7 @@ const TAB_CONFIG: Record<
   { label: string; icon?: keyof typeof MaterialIcons.glyphMap; emoji?: string }
 > = {
   index: { label: "Home", icon: "home" },
-  pally: { label: "Pally", emoji: "🐿️" },
+  pally: { label: "Pally" },
   arcade: { label: "Arcade", icon: "sports-esports" },
   goals: { label: "Goals", icon: "flag" },
   wallets: { label: "Wallets", icon: "account-balance-wallet" },
@@ -94,7 +95,9 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
         className={`items-center justify-center ${isCenter ? "pb-1" : ""}`}
         style={isCenter ? {} : { opacity: isFocused ? 1 : 0.6 }}
       >
-        {config.emoji ? (
+        {route.name === "pally" ? (
+          <PallyIcon size={24} style={{ opacity: isFocused ? 1 : 0.7 }} />
+        ) : config.emoji ? (
           <Text
             className="text-xl"
             style={{ opacity: isFocused ? 1 : 0.7 }}

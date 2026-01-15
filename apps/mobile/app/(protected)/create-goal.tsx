@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useGoals } from "../../hooks/useApi";
+import { PallyIcon } from "../../components/ui/PallyIcon";
 
 // Available emojis for goals
 const EMOJIS = ["💻", "📱", "🎓", "✈️", "🏠", "🚗", "💍", "🎮", "📸", "🎸", "💊", "🎁"];
@@ -102,7 +103,7 @@ export default function CreateGoalScreen() {
           style={styles.tipCard}
         >
           <View style={styles.tipIcon}>
-            <Text style={styles.tipEmoji}>🐿️</Text>
+            <PallyIcon size={24} />
           </View>
           <Text style={styles.tipText}>
             Goals with clear targets are <Text style={styles.tipHighlight}>3x more likely</Text> to be achieved!

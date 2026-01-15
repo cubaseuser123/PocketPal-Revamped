@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { PallyIcon } from "../ui/PallyIcon";
 
 interface LevelProgressCardProps {
   level: number;
@@ -20,7 +21,9 @@ export function LevelProgressCard({
     <View style={styles.container}>
       {/* Pally message */}
       <View style={styles.messageRow}>
-        <Text style={styles.pallyEmoji}>🐿️</Text>
+        <View style={{ paddingTop: 4 }}>
+          <PallyIcon size={24} />
+        </View>
         <View style={styles.messageBubble}>
           <Text style={styles.messageText}>{pallyMessage}</Text>
         </View>

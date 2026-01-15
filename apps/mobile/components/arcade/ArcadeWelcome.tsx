@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
+import { PallyIcon } from "../ui/PallyIcon";
 
 interface ArcadeWelcomeProps {
   message?: string;
@@ -13,7 +14,7 @@ export function ArcadeWelcome({ message }: ArcadeWelcomeProps) {
 
       {/* Icon */}
       <View style={styles.iconContainer}>
-        <Text style={styles.squirrel}>🐿️</Text>
+        <PallyIcon size={28} />
         <View style={styles.gameBadge}>
           <Text style={styles.gameEmoji}>🎮</Text>
         </View>
@@ -24,7 +25,7 @@ export function ArcadeWelcome({ message }: ArcadeWelcomeProps) {
         <Text style={styles.text}>
           <Text style={styles.highlight}>Welcome to the Arcade!</Text>
           {"\n"}
-          {message || "Beat bad habits, earn coins, level up 🐿️🎮"}
+          {message || "Beat bad habits, earn coins, level up 🎮"}
         </Text>
       </View>
     </View>

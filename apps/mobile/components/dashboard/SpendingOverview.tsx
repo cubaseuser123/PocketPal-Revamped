@@ -1,6 +1,7 @@
 import { View, Text, TouchableOpacity } from "react-native";
-import { MaterialIcons } from "@expo/vector-icons";
-import Svg, { Path, Circle, Defs, LinearGradient, Stop } from "react-native-svg";
+import { LinearGradient as ExpoLinearGradient } from "expo-linear-gradient";
+import { PallyIcon } from "../ui/PallyIcon";
+import Svg, { Path, Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from "react-native-svg";
 
 type Period = "week" | "month" | "3m";
 
@@ -40,9 +41,7 @@ export function SpendingOverview({
       {/* Header */}
       <View className="flex-row justify-between items-center mb-4">
         <View className="flex-row items-center gap-2">
-          <View className="h-8 w-8 rounded-full bg-primary/10 items-center justify-center">
-            <MaterialIcons name="show-chart" size={18} color="#FF8C32" />
-          </View>
+
           <Text className="text-white font-bold text-lg">Spending Overview</Text>
         </View>
 
@@ -103,10 +102,10 @@ export function SpendingOverview({
         {/* SVG Chart */}
         <Svg width="100%" height="100%" viewBox="0 0 100 50" preserveAspectRatio="none">
           <Defs>
-            <LinearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+            <SvgLinearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
               <Stop offset="0%" stopColor="#FF8C32" stopOpacity={0.2} />
               <Stop offset="100%" stopColor="#FF8C32" stopOpacity={0} />
-            </LinearGradient>
+            </SvgLinearGradient>
           </Defs>
           
           {/* Line */}
@@ -141,7 +140,7 @@ export function SpendingOverview({
 
       {/* Pally hint */}
       <View className="bg-card-dark-secondary/50 rounded-xl p-3 flex-row items-center gap-2 border border-white/5">
-        <Text className="text-lg">🐿️</Text>
+        <PallyIcon size={20} />
         <Text className="text-xs text-text-secondary italic">
           Tap a wallet to see its story
         </Text>
