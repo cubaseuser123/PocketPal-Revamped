@@ -104,11 +104,11 @@ export default function WelcomeScreen() {
   });
 
   const handleGetStarted = () => {
-    router.push("/(auth)/login");
+    router.push("/(auth)/register"); // New user registration (name + phone)
   };
 
   const handleLogin = () => {
-    router.push("/(auth)/login");
+    router.push("/(auth)/login"); // Existing user login (phone only)
   };
 
   return (

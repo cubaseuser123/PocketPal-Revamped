@@ -1,10 +1,10 @@
-import { View, Text, TouchableOpacity, StyleSheet, Animated } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Animated, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRef, useEffect, useState } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { storage, useAuth } from "@repo/auth";
+import { storage, useAuth, userApi } from "@repo/auth";
 
 // Storage key for onboarding completion
 const ONBOARDING_COMPLETE_KEY = "onboarding_complete";
@@ -47,7 +47,18 @@ export default function KYCSelfieScreen() {
 
   const finishOnboarding = async () => {
     try {
-      // Mark onboarding as complete
+      // Call API to complete KYC
+      const baseUrl = Platform.OS === "android" ? "http://10.0.2.2:5757" : "http://localhost:5757";
+      
+      try {
+        await userApi.completeKyc(baseUrl);
+        console.log("✅ KYC marked complete in backend");
+      } catch (apiError) {
+        console.error("Error calling completeKyc API:", apiError);
+        // Continue even if API fails - user can complete later
+      }
+      
+      // Mark onboarding as complete locally
       await storage.set(ONBOARDING_COMPLETE_KEY, "true");
       
       // Navigate to add money screen after KYC completion

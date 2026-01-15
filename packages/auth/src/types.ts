@@ -6,6 +6,7 @@ export type AuthContextValue = {
   authenticated: boolean;
   setAuthenticated: React.Dispatch<React.SetStateAction<boolean>>;
   loading: boolean;
+  logout: () => Promise<void>;
 };
 
 export type RequestProps = {

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { AppState, AppStateStatus, Platform } from "react-native";
 import { storage } from "../storage/storage";
 import { AuthContextValue, AuthProviderProps } from "../types";
@@ -24,6 +24,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
 
     checkAuth();
+  }, []);
+
+  // Logout function - clears all auth-related storage
+  const logout = useCallback(async () => {
+    try {
+      console.log("[Auth] Logging out...");
+      await storage.remove("access_token");
+      await storage.remove("onboarding_complete");
+      setAuthenticated(false);
+      console.log("[Auth] Logout complete");
+    } catch (error) {
+      console.error("[Auth] Logout error:", error);
+    }
   }, []);
 
   useEffect(() => {
@@ -57,7 +70,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ authenticated, setAuthenticated, loading }}>
+    <AuthContext.Provider value={{ authenticated, setAuthenticated, loading, logout }}>
       {children}
     </AuthContext.Provider>
   );

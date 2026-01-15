@@ -28,9 +28,10 @@ const getApiUrl = () => {
 
 const API_BASE_URL = getApiUrl();
 
-export default function LoginScreen() {
+export default function RegisterScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -41,6 +42,10 @@ export default function LoginScreen() {
   };
 
   const handleSendOTP = async () => {
+    if (!name.trim()) {
+      setError("Please enter your name");
+      return;
+    }
     if (!phone.trim()) {
       setError("Please enter your phone number");
       return;
@@ -58,9 +63,8 @@ export default function LoginScreen() {
     try {
       const formattedPhone = phone.startsWith("+") ? phone : `+91${phone}`;
       
-      // For login, we don't send a name - backend will return error if user doesn't exist
       await auth.sendOtp({
-        name: "", // Empty name for login
+        name: name.trim(),
         phone: formattedPhone,
         baseUrl: API_BASE_URL,
       });
@@ -70,12 +74,7 @@ export default function LoginScreen() {
         params: { phone: formattedPhone },
       });
     } catch (err: any) {
-      // Check if this is a "new user" error
-      if (err.message?.includes("Name required") || err.data?.isNewUser) {
-        setError("Account not found. Please register first.");
-      } else {
-        setError(err.message || "Failed to send OTP");
-      }
+      setError(err.message || "Failed to send OTP");
     } finally {
       setLoading(false);
     }
@@ -85,8 +84,8 @@ export default function LoginScreen() {
     router.back();
   };
 
-  const handleRegister = () => {
-    router.push("/(auth)/register");
+  const handleLogin = () => {
+    router.push("/(auth)/login");
   };
 
   return (
@@ -105,14 +104,35 @@ export default function LoginScreen() {
 
         {/* Title */}
         <View style={styles.titleSection}>
-          <Text style={styles.title}>Welcome Back! 👋</Text>
+          <Text style={styles.title}>Create Account 🎉</Text>
           <Text style={styles.subtitle}>
-            Enter your phone number to login to your account
+            Enter your details to start your savings journey
           </Text>
         </View>
 
         {/* Form */}
         <View style={styles.form}>
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Name</Text>
+            <View style={styles.inputWrapper}>
+              <MaterialIcons
+                name="person-outline"
+                size={20}
+                color="#B0B0C3"
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your name"
+                placeholderTextColor="#6B6B7B"
+                value={name}
+                onChangeText={setName}
+                autoCapitalize="words"
+                autoCorrect={false}
+              />
+            </View>
+          </View>
+
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Phone Number</Text>
             <View style={styles.inputWrapper}>
@@ -172,11 +192,11 @@ export default function LoginScreen() {
             )}
           </TouchableOpacity>
 
-          {/* Register Link */}
-          <View style={styles.registerContainer}>
-            <Text style={styles.registerText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={handleRegister}>
-              <Text style={styles.registerLink}>Register</Text>
+          {/* Login Link */}
+          <View style={styles.loginContainer}>
+            <Text style={styles.loginText}>Already have an account? </Text>
+            <TouchableOpacity onPress={handleLogin}>
+              <Text style={styles.loginLink}>Log in</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -304,16 +324,16 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#FFFFFF",
   },
-  registerContainer: {
+  loginContainer: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
   },
-  registerText: {
+  loginText: {
     fontSize: 14,
     color: "#B0B0C3",
   },
-  registerLink: {
+  loginLink: {
     fontSize: 14,
     fontWeight: "700",
     color: "#FF8C32",

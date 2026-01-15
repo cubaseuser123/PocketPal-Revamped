@@ -4,7 +4,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useState } from "react";
-import { View, ActivityIndicator } from "react-native";
+import { View, ActivityIndicator, Platform } from "react-native";
 import {
   useFonts,
   Inter_400Regular,
@@ -26,23 +26,68 @@ function RootLayoutNav() {
   const router = useRouter();
   const segments = useSegments();
   const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(null);
+  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
 
-  // Check onboarding status on mount
+  // Check onboarding status - from backend user profile if authenticated, otherwise local storage
   useEffect(() => {
     const checkOnboarding = async () => {
+      setCheckingOnboarding(true);
       try {
-        const value = await storage.get(ONBOARDING_COMPLETE_KEY);
-        setOnboardingComplete(value === "true");
+        // First check local storage
+        const localValue = await storage.get(ONBOARDING_COMPLETE_KEY);
+        if (localValue === "true") {
+          setOnboardingComplete(true);
+          setCheckingOnboarding(false);
+          return;
+        }
+
+         // If authenticated, also check backend user profile
+        if (authContext?.authenticated) {
+          const token = await storage.get("access_token");
+          if (token) {
+            try {
+              // Use 10.0.2.2 for Android emulator, localhost for iOS
+              const baseUrl = Platform.OS === "android" ? "http://10.0.2.2:5757" : "http://localhost:5757";
+              const response = await fetch(`${baseUrl}/api/user/me`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              
+              if (response.ok) {
+                const data = await response.json();
+                const backendOnboarding = data.user?.onboardingCompleted === true;
+                
+                // Sync local storage with backend
+                if (backendOnboarding) {
+                  await storage.set(ONBOARDING_COMPLETE_KEY, "true");
+                }
+                
+                setOnboardingComplete(backendOnboarding);
+                setCheckingOnboarding(false);
+                return;
+              }
+            } catch (e) {
+              console.log("Could not check backend onboarding status:", e);
+            }
+          }
+        }
+
+        setOnboardingComplete(false);
       } catch {
         setOnboardingComplete(false);
+      } finally {
+        setCheckingOnboarding(false);
       }
     };
-    checkOnboarding();
-  }, []);
+    
+    // Re-check when auth status changes
+    if (!authContext?.loading) {
+      checkOnboarding();
+    }
+  }, [authContext?.authenticated, authContext?.loading]);
 
   useEffect(() => {
     // Wait for both auth loading and onboarding check
-    if (authContext?.loading || onboardingComplete === null) return;
+    if (authContext?.loading || checkingOnboarding) return;
 
     const inAuthGroup = segments[0] === "(auth)";
     const inProtectedGroup = segments[0] === "(protected)";
@@ -74,9 +119,9 @@ function RootLayoutNav() {
         router.replace("/(auth)/welcome");
       }
     }
-  }, [authContext?.authenticated, authContext?.loading, segments, onboardingComplete]);
+  }, [authContext?.authenticated, authContext?.loading, segments, onboardingComplete, checkingOnboarding]);
 
-  if (authContext?.loading || onboardingComplete === null) {
+  if (authContext?.loading || checkingOnboarding) {
     return (
       <View style={{ flex: 1, backgroundColor: "#0F0F14", alignItems: "center", justifyContent: "center" }}>
         <ActivityIndicator size="large" color="#FF8C32" />

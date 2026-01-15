@@ -1,9 +1,12 @@
-import { View, Text, TouchableOpacity, StyleSheet, Animated } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Animated, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRef, useEffect } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { storage, userApi } from "@repo/auth";
+
+const ONBOARDING_COMPLETE_KEY = "onboarding_complete";
 
 export default function OnboardingSuccessScreen() {
   const router = useRouter();
@@ -12,6 +15,22 @@ export default function OnboardingSuccessScreen() {
   const bounceAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    // Mark onboarding complete in backend and local storage
+    const completeOnboarding = async () => {
+      try {
+        const baseUrl = Platform.OS === "android" ? "http://10.0.2.2:5757" : "http://localhost:5757";
+        await userApi.completeOnboarding(baseUrl);
+        console.log("✅ Onboarding marked complete in backend");
+      } catch (error) {
+        console.error("Error marking onboarding complete:", error);
+      }
+      
+      // Always set local storage
+      await storage.set(ONBOARDING_COMPLETE_KEY, "true");
+    };
+    
+    completeOnboarding();
+    
     // Jump animation for Pally
     Animated.loop(
       Animated.sequence([

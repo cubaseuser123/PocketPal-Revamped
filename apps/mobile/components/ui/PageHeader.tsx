@@ -44,7 +44,7 @@ export function PageHeader({
     <View style={[styles.container, { paddingTop: insets.top + 12 }]}>
       {/* Left side */}
       <View style={styles.leftContent}>
-        {showAvatar && avatarUrl ? (
+        {showAvatar ? (
           // Home screen with avatar
           <View style={styles.avatarRow}>
             <TouchableOpacity
@@ -59,11 +59,19 @@ export function PageHeader({
                 style={styles.avatarGradient}
               >
                 <View style={styles.avatarInner}>
-                  <Image
-                    source={{ uri: avatarUrl }}
-                    style={styles.avatarImage}
-                    resizeMode="cover"
-                  />
+                  {avatarUrl ? (
+                    <Image
+                      source={{ uri: avatarUrl }}
+                      style={styles.avatarImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={styles.avatarPlaceholder}>
+                      <Text style={styles.avatarPlaceholderText}>
+                        {userName?.charAt(0)?.toUpperCase() || "👤"}
+                      </Text>
+                    </View>
+                  )}
                 </View>
               </LinearGradient>
               {userLevel !== undefined && (
@@ -74,7 +82,7 @@ export function PageHeader({
             </TouchableOpacity>
             <View style={styles.greetingContainer}>
               <Text style={styles.title}>
-                {getGreeting()}, {userName} 👋
+                Hey, {userName} 👋
               </Text>
               <Text style={styles.subtitle}>You're doing great today</Text>
             </View>
@@ -235,6 +243,18 @@ const styles = StyleSheet.create({
   coinsText: {
     color: "#FFFFFF",
     fontSize: 12,
+    fontWeight: "700",
+  },
+  avatarPlaceholder: {
+    width: "100%",
+    height: "100%",
+    backgroundColor: "#1A1A22",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarPlaceholderText: {
+    color: "#FFFFFF",
+    fontSize: 18,
     fontWeight: "700",
   },
 });

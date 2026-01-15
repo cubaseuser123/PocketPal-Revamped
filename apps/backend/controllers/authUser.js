@@ -2,15 +2,15 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import { sendVerificationOTP, checkVerificationOTP } from "../config/sendSms.js";
 
-// send-otp: create user if not exist, send OTP via Twilio Verify
+// send-otp: send OTP via Twilio Verify, name required only for new users
 export const sendOTP = async (req, res) => {
   try {
     console.log("📱 sendOTP called with body:", req.body);
     
     const { name, phone } = req.body;
-    if (!name || !phone) {
-      console.log("❌ Missing name or phone");
-      return res.status(400).json({ message: "Name and phone required" });
+    if (!phone) {
+      console.log("❌ Missing phone");
+      return res.status(400).json({ message: "Phone required" });
     }
 
     // Validate phone format
@@ -25,15 +25,24 @@ export const sendOTP = async (req, res) => {
     console.log("📞 Formatted phone:", formattedPhone);
 
     let user = await User.findOne({ phone: formattedPhone });
+    let isNewUser = false;
     console.log("👤 User found:", !!user);
 
     if (!user) {
+      // New user - name is required
+      if (!name) {
+        console.log("❌ New user but no name provided");
+        return res.status(400).json({ message: "Name required for new users", isNewUser: true });
+      }
+      
       user = await User.create({
         name,
         phone: formattedPhone,
       });
+      isNewUser = true;
       console.log("✅ New user created");
     } else if (name && name !== user.name) {
+      // Existing user can update their name
       user.name = name;
       await user.save();
       console.log("✅ User name updated");
@@ -50,7 +59,11 @@ export const sendOTP = async (req, res) => {
     }
 
     console.log("✅ OTP sent successfully");
-    return res.json({ message: "OTP sent to phone" });
+    return res.json({ 
+      message: "OTP sent to phone",
+      isNewUser,
+      userName: user.name,
+    });
   } catch (err) {
     console.error("❌ sendOTP error:", err);
     return res.status(500).json({ message: "Server error", error: err.message });

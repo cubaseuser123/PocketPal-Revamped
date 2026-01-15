@@ -8,6 +8,8 @@ interface OtherGoalCardProps {
   icon: string;
   color: string; // Tailwind color name like 'blue-500', we'll map or use hex
   progress: number;
+  onDelete?: () => void;
+  onPress?: () => void;
 }
 
 // Simple color mapping for demo
@@ -24,12 +26,14 @@ export function OtherGoalCard({
   icon,
   color,
   progress,
+  onDelete,
+  onPress,
 }: OtherGoalCardProps) {
   const percent = (progress * 100).toFixed(0);
   const barColor = colorMap[color] || color;
 
   return (
-    <TouchableOpacity style={styles.container} activeOpacity={0.8}>
+    <TouchableOpacity style={styles.container} activeOpacity={0.8} onPress={onPress}>
       <View style={styles.content}>
         <View style={styles.iconBox}>
           <Text style={styles.icon}>{icon}</Text>
@@ -51,7 +55,17 @@ export function OtherGoalCard({
           </View>
         </View>
       </View>
-      <MaterialIcons name="chevron-right" size={20} color="#B0B0C3" />
+      {onDelete ? (
+        <TouchableOpacity 
+          onPress={onDelete} 
+          style={styles.deleteBtn}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <MaterialIcons name="delete-outline" size={20} color="#EF4444" />
+        </TouchableOpacity>
+      ) : (
+        <MaterialIcons name="chevron-right" size={20} color="#B0B0C3" />
+      )}
     </TouchableOpacity>
   );
 }
@@ -117,5 +131,8 @@ const styles = StyleSheet.create({
   progressFill: {
     height: "100%",
     borderRadius: 3,
+  },
+  deleteBtn: {
+    padding: 8,
   },
 });

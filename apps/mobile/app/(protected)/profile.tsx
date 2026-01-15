@@ -1,7 +1,8 @@
-import { ScrollView, View, TouchableOpacity, Text, StyleSheet } from "react-native";
+import { ScrollView, View, TouchableOpacity, Text, StyleSheet, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useAuth } from "@repo/auth";
 
 import { ProfileHeader } from "../../components/profile/ProfileHeader";
 import { LevelProgressCard } from "../../components/profile/LevelProgressCard";
@@ -32,6 +33,7 @@ const MOCK_MENU_ITEMS = [
 export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const authContext = useAuth();
 
   const handleBack = () => {
     router.back();
@@ -50,7 +52,21 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = () => {
-    console.log("Logout");
+    Alert.alert(
+      "Log Out",
+      "Are you sure you want to log out?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Log Out", 
+          style: "destructive",
+          onPress: async () => {
+            await authContext?.logout();
+            router.replace("/(auth)/welcome");
+          }
+        },
+      ]
+    );
   };
 
   return (

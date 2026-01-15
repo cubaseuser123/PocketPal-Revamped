@@ -35,6 +35,20 @@ async function request({
   const response = await fetch(url, fetchOptions);
   const responseData = await response.json().catch(() => ({}));
 
+  console.log("Response:", {
+    status: response.status,
+    ok: response.ok,
+    data: responseData,
+  });
+
+  // Throw error for non-2xx responses
+  if (!response.ok) {
+    const error = new Error(responseData.message || `HTTP ${response.status}`);
+    (error as any).status = response.status;
+    (error as any).data = responseData;
+    throw error;
+  }
+
   return {
     status: response.status,
     headers: Object.fromEntries(response.headers.entries()),
@@ -49,4 +63,3 @@ export const api = {
   put: (url: string, data: any) => request({ method: "PUT", url, data }),
   delete: (url: string) => request({ method: "DELETE", url }),
 };
-

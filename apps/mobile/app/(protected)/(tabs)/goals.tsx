@@ -1,18 +1,56 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { GoalPallyTip } from "../../../components/goals/GoalPallyTip";
 import { FeaturedGoalCard } from "../../../components/goals/FeaturedGoalCard";
 import { OtherGoalCard } from "../../../components/goals/OtherGoalCard";
+import { useGoals, useUser } from "../../../hooks/useApi";
+
+// Helper to format currency
+const formatCurrency = (amount: number): string => {
+  if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)}L`;
+  if (amount >= 1000) return `₹${(amount / 1000).toFixed(0)}k`;
+  return `₹${amount}`;
+};
 
 export default function GoalsScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const { goals, loading, deleteGoal } = useGoals();
+  const { user } = useUser();
 
   const handleAddGoal = () => {
-    console.log("Add goal");
+    router.push("/(protected)/create-goal");
   };
+
+  const handleDeleteGoal = (goalId: string, goalName: string) => {
+    Alert.alert(
+      "Delete Goal",
+      `Are you sure you want to delete "${goalName}"? This action cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete", 
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteGoal(goalId);
+              console.log("Goal deleted:", goalId);
+            } catch (error) {
+              console.error("Delete failed:", error);
+              Alert.alert("Error", "Failed to delete goal");
+            }
+          }
+        },
+      ]
+    );
+  };
+
+  const featuredGoal = goals?.find(g => g.isFeatured);
+  const otherGoals = goals?.filter(g => !g.isFeatured) || [];
 
   // Custom add button for header
   const AddButton = (
@@ -25,14 +63,23 @@ export default function GoalsScreen() {
     </TouchableOpacity>
   );
 
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color="#FF8C32" />
+        <Text style={styles.loadingText}>Loading goals...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <PageHeader
         title="Goals"
         subtitle="What are you saving for?"
+        coins={user?.coins || 0}
         rightContent={AddButton}
       />
-      
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[
@@ -45,47 +92,62 @@ export default function GoalsScreen() {
         <GoalPallyTip />
 
         {/* Featured Goal */}
-        <FeaturedGoalCard 
-            title="Laptop Fund"
-            category="Tech Upgrade"
-            currentAmount={4800}
-            targetAmount={50000}
-            icon="💻"
-            color="#FF8C32"
-            progress={0.096}
-            onAdd={() => console.log("add")}
-            onView={() => console.log("view")}
-        />
+        {featuredGoal ? (
+          <FeaturedGoalCard 
+            title={featuredGoal.name}
+            category={featuredGoal.category}
+            currentAmount={featuredGoal.currentAmount}
+            targetAmount={featuredGoal.targetAmount}
+            icon={featuredGoal.emoji}
+            color={featuredGoal.color}
+            progress={featuredGoal.progress}
+            onAdd={() => {
+              router.push({ pathname: "/(protected)/goal-detail", params: { id: featuredGoal._id } });
+            }}
+            onView={() => router.push({ pathname: "/(protected)/goal-detail", params: { id: featuredGoal._id } })}
+          />
+        ) : (goals?.length || 0) > 0 ? (
+          // Show first goal as featured if none marked
+          <FeaturedGoalCard 
+            title={goals[0].name}
+            category={goals[0].category}
+            currentAmount={goals[0].currentAmount}
+            targetAmount={goals[0].targetAmount}
+            icon={goals[0].emoji}
+            color={goals[0].color}
+            progress={goals[0].progress}
+            onAdd={() => console.log("Add to goal")}
+            onView={() => console.log("View goal")}
+          />
+        ) : null}
 
         {/* Other Goals List */}
-        <View style={styles.otherGoalsSection}>
+        {otherGoals.length > 0 && (
+          <View style={styles.otherGoalsSection}>
             <Text style={styles.sectionTitle}>OTHER GOALS</Text>
             
-            <OtherGoalCard 
-                title="New Phone"
-                currentAmount="₹12k"
-                targetAmount="₹80k"
-                icon="📱"
-                color="blue-500"
-                progress={0.15}
-            />
-            
-             <OtherGoalCard 
-                title="Semester Fees"
-                currentAmount="₹25k"
-                targetAmount="₹100k"
-                icon="🎓"
-                color="purple-500"
-                progress={0.25}
-            />
-        </View>
+            {otherGoals.map(goal => (
+              <OtherGoalCard 
+                key={goal._id}
+                title={goal.name}
+                currentAmount={formatCurrency(goal.currentAmount)}
+                targetAmount={formatCurrency(goal.targetAmount)}
+                icon={goal.emoji}
+                color={goal.color}
+                progress={goal.progress}
+                onDelete={() => handleDeleteGoal(goal._id, goal.name)}
+                onPress={() => router.push({ pathname: "/(protected)/goal-detail", params: { id: goal._id } })}
+              />
+            ))}
+          </View>
+        )}
 
         {/* Create New Goal Button */}
         <TouchableOpacity style={styles.createBtn} activeOpacity={0.9} onPress={handleAddGoal}>
-            <View style={styles.createBtnIcon}>
-                <MaterialIcons name="add" size={14} color="#FFF" />
-            </View>
-            <Text style={styles.createBtnText}>Create a New Goal</Text>
+          <View style={styles.createBtnIcon}>
+            <MaterialIcons name="add" size={14} color="#FFF" />
+          </View>
+          <Text style={styles.createBtnText}>Create a New Goal</Text>
         </TouchableOpacity>
 
       </ScrollView>
@@ -97,6 +159,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#0F0F14",
+  },
+  centered: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadingText: {
+    color: "#FFFFFF",
+    marginTop: 16,
   },
   headerAddBtn: {
     height: 40,
