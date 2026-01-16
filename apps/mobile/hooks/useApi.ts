@@ -468,7 +468,7 @@ export function useBoss() {
     queryFn: async () => {
       const { auth } = await import("@repo/auth");
       const token = await auth.getToken();
-      const res = await fetch(`${API_URL}/api/boss/active`, {
+      const res = await fetch(`${API_URL}/api/v1/boss/active`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) return null;
@@ -481,7 +481,7 @@ export function useBoss() {
     mutationFn: async ({ bossId, amount }: { bossId: string; amount: number }) => {
       const { auth } = await import("@repo/auth");
       const token = await auth.getToken();
-      const res = await fetch(`${API_URL}/api/boss/${bossId}/damage`, {
+      const res = await fetch(`${API_URL}/api/v1/boss/${bossId}/damage`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ amount }),
@@ -522,7 +522,7 @@ export function useQuests() {
     queryFn: async () => {
       const { auth } = await import("@repo/auth");
       const token = await auth.getToken();
-      const res = await fetch(`${API_URL}/api/quests/my`, {
+      const res = await fetch(`${API_URL}/api/v1/quests/my`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return await res.json() as Quest[];
@@ -534,7 +534,7 @@ export function useQuests() {
     mutationFn: async () => {
       const { auth } = await import("@repo/auth");
       const token = await auth.getToken();
-      const res = await fetch(`${API_URL}/api/quests/assign`, {
+      const res = await fetch(`${API_URL}/api/v1/quests/assign`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ count: 3 }),
@@ -568,7 +568,7 @@ export function useWheel() {
     queryFn: async () => {
       const { auth } = await import("@repo/auth");
       const token = await auth.getToken();
-      const res = await fetch(`${API_URL}/api/wheel/status`, {
+      const res = await fetch(`${API_URL}/api/v1/wheel/status`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return await res.json() as WheelStatus;
@@ -579,7 +579,7 @@ export function useWheel() {
     mutationFn: async () => {
       const { auth } = await import("@repo/auth");
       const token = await auth.getToken();
-      const res = await fetch(`${API_URL}/api/wheel/spin`, {
+      const res = await fetch(`${API_URL}/api/v1/wheel/spin`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -641,7 +641,7 @@ export function useFriends() {
     queryFn: async () => {
       const { auth } = await import("@repo/auth");
       const token = await auth.getToken();
-      const res = await fetch(`${API_URL}/api/friends`, {
+      const res = await fetch(`${API_URL}/api/v1/friends`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return await res.json() as { friends: Friend[] };
@@ -654,7 +654,7 @@ export function useFriends() {
     queryFn: async () => {
       const { auth } = await import("@repo/auth");
       const token = await auth.getToken();
-      const res = await fetch(`${API_URL}/api/friends/pending`, {
+      const res = await fetch(`${API_URL}/api/v1/friends/pending`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return await res.json() as { requests: FriendRequest[] };
@@ -666,7 +666,7 @@ export function useFriends() {
     mutationFn: async (friendCode: string) => {
       const { auth } = await import("@repo/auth");
       const token = await auth.getToken();
-      const res = await fetch(`${API_URL}/api/friends/request`, {
+      const res = await fetch(`${API_URL}/api/v1/friends/request`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ friendCode }),
@@ -685,7 +685,7 @@ export function useFriends() {
     mutationFn: async (requestId: string) => {
       const { auth } = await import("@repo/auth");
       const token = await auth.getToken();
-      const res = await fetch(`${API_URL}/api/friends/accept/${requestId}`, {
+      const res = await fetch(`${API_URL}/api/v1/friends/accept/${requestId}`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -704,7 +704,7 @@ export function useFriends() {
     mutationFn: async (requestId: string) => {
       const { auth } = await import("@repo/auth");
       const token = await auth.getToken();
-      const res = await fetch(`${API_URL}/api/friends/reject/${requestId}`, {
+      const res = await fetch(`${API_URL}/api/v1/friends/reject/${requestId}`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -722,7 +722,7 @@ export function useFriends() {
     mutationFn: async (friendshipId: string) => {
       const { auth } = await import("@repo/auth");
       const token = await auth.getToken();
-      const res = await fetch(`${API_URL}/api/friends/${friendshipId}`, {
+      const res = await fetch(`${API_URL}/api/v1/friends/${friendshipId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -771,7 +771,7 @@ export function useLeaderboard(type: "coins" | "goals" = "coins") {
     queryFn: async () => {
       const { auth } = await import("@repo/auth");
       const token = await auth.getToken();
-      const res = await fetch(`${API_URL}/api/friends/leaderboard/${type}`, {
+      const res = await fetch(`${API_URL}/api/v1/friends/leaderboard/${type}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return await res.json() as { leaderboard: LeaderboardEntry[]; type: string };
@@ -780,6 +780,41 @@ export function useLeaderboard(type: "coins" | "goals" = "coins") {
 
   return {
     leaderboard: data?.leaderboard || [],
+    loading: isLoading,
+    error: error ? (error as Error).message : null,
+    refetch,
+  };
+}
+
+// Types for Badges
+export interface Badge {
+  id: string;
+  name: string;
+  emoji: string;
+  description: string;
+  category: string;
+  earned: boolean;
+  earnedAt: string | null;
+}
+
+// Hook for badges
+export function useBadges() {
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ["badges"],
+    queryFn: async () => {
+      const { auth } = await import("@repo/auth");
+      const token = await auth.getToken();
+      const res = await fetch(`${API_URL}/api/v1/badges/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return await res.json() as { badges: Badge[]; earnedCount: number; totalCount: number };
+    },
+  });
+
+  return {
+    badges: data?.badges || [],
+    earnedCount: data?.earnedCount || 0,
+    totalCount: data?.totalCount || 0,
     loading: isLoading,
     error: error ? (error as Error).message : null,
     refetch,

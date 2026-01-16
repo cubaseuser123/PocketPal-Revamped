@@ -112,6 +112,26 @@ export default function ArcadeScreen() {
           </View>
         </TouchableOpacity>
 
+        {/* Badges Card */}
+        <TouchableOpacity
+          onPress={() => router.push("/(protected)/badges")}
+          activeOpacity={0.8}
+          className="bg-surface-dark rounded-2xl p-4 border border-white/5"
+        >
+          <View className="flex-row items-center">
+            <View className="w-12 h-12 rounded-full bg-yellow-500/20 items-center justify-center mr-4">
+              <Text className="text-2xl">🏆</Text>
+            </View>
+            <View className="flex-1">
+              <Text className="text-white font-semibold text-lg">Badges</Text>
+              <Text className="text-text-muted text-sm">
+                Collect achievements
+              </Text>
+            </View>
+            <MaterialIcons name="chevron-right" size={24} color="#6B6B7B" />
+          </View>
+        </TouchableOpacity>
+
         {/* Streak Arena */}
         <StreakArena
           currentStreak={5}

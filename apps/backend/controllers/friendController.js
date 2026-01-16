@@ -1,5 +1,6 @@
 import Friend from "../models/Friend.js";
 import User from "../models/User.js";
+import { checkSocialBadges } from "./badgeController.js";
 
 // Send friend request by friend code
 export const sendRequest = async (req, res) => {
@@ -78,6 +79,10 @@ export const acceptRequest = async (req, res) => {
 
     request.status = "accepted";
     await request.save();
+
+    // Check for social badges for both users
+    await checkSocialBadges(request.requester);
+    await checkSocialBadges(request.recipient);
 
     res.json({ message: "Friend request accepted" });
   } catch (error) {

@@ -1,6 +1,8 @@
 import Goal from "../models/Goal.js";
 import Wallet from "../models/Wallet.js";
 import Transaction from "../models/Transaction.js";
+import User from "../models/User.js";
+import { awardBadge, checkSavingsBadges } from "./badgeController.js";
 
 // Get user's goals
 export const getGoals = async (req, res) => {
@@ -43,7 +45,14 @@ export const createGoal = async (req, res) => {
       isFeatured: isFeatured || false,
     });
 
-    return res.status(201).json({ message: "Goal created", goal });
+    // Award "first_saver" badge on first goal creation
+    const awardedBadge = await awardBadge(req.user.id, "first_saver");
+
+    return res.status(201).json({ 
+      message: "Goal created", 
+      goal,
+      badgeAwarded: awardedBadge || null, // Return badge for toast notification
+    });
   } catch (err) {
     console.error("createGoal error:", err);
     return res.status(500).json({ message: "Server error", error: err.message });
@@ -112,10 +121,20 @@ export const addToGoal = async (req, res) => {
 
     // Add to goal
     goal.currentAmount += amount;
-    if (goal.currentAmount >= goal.targetAmount) {
+    let newlyCompleted = false;
+    let badgesAwarded = [];
+    if (goal.currentAmount >= goal.targetAmount && !goal.isCompleted) {
       goal.isCompleted = true;
+      newlyCompleted = true;
     }
     await goal.save();
+
+    // If goal just completed, check for badges
+    if (newlyCompleted) {
+      await User.findByIdAndUpdate(req.user.id, { $inc: { totalGoalsCompleted: 1 } });
+      const user = await User.findById(req.user.id);
+      badgesAwarded = await checkSavingsBadges(req.user.id, user.totalGoalsCompleted);
+    }
 
     // Create transaction
     await Transaction.create({
@@ -128,9 +147,11 @@ export const addToGoal = async (req, res) => {
     });
 
     return res.json({
-      message: "Added to goal",
+      message: newlyCompleted ? "Goal completed!" : "Added to goal",
       goal,
       savingsBalance: savingsWallet.balance,
+      goalCompleted: newlyCompleted,
+      badgesAwarded: badgesAwarded.length > 0 ? badgesAwarded : null,
     });
   } catch (err) {
     console.error("addToGoal error:", err);
