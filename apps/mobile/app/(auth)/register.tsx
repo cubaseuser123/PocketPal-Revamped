@@ -14,19 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { auth } from "@repo/auth";
-
-// Use 10.0.2.2 for Android emulator, localhost for iOS/web
-const getApiUrl = () => {
-  if (process.env.EXPO_PUBLIC_API_URL) {
-    return process.env.EXPO_PUBLIC_API_URL;
-  }
-  if (Platform.OS === "android") {
-    return "http://10.0.2.2:5757";
-  }
-  return "http://localhost:5757";
-};
-
-const API_BASE_URL = getApiUrl();
+import { API_URL } from "../../hooks/useApi";
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -35,6 +23,7 @@ export default function RegisterScreen() {
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
 
   const formatPhoneNumber = (value: string) => {
     const cleaned = value.replace(/[^\d+]/g, "");
@@ -66,13 +55,14 @@ export default function RegisterScreen() {
       await auth.sendOtp({
         name: name.trim(),
         phone: formattedPhone,
-        baseUrl: API_BASE_URL,
+        baseUrl: API_URL,
       });
       
-      router.push({
-        pathname: "/(auth)/verify",
-        params: { phone: formattedPhone },
-      });
+      // Show success and redirect to login
+      setSuccess(true);
+      setTimeout(() => {
+        router.replace("/(auth)/login");
+      }, 2000);
     } catch (err: any) {
       setError(err.message || "Failed to send OTP");
     } finally {
@@ -201,6 +191,19 @@ export default function RegisterScreen() {
           </View>
         </View>
       </View>
+
+      {/* Success Toast */}
+      {success && (
+        <View style={styles.successToast}>
+          <View style={styles.successToastContent}>
+            <MaterialIcons name="check-circle" size={24} color="#3DDC97" />
+            <View style={styles.successToastText}>
+              <Text style={styles.successToastTitle}>Account Created! 🎉</Text>
+              <Text style={styles.successToastSubtitle}>Redirecting to login...</Text>
+            </View>
+          </View>
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -337,5 +340,41 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     color: "#FF8C32",
+  },
+  successToast: {
+    position: "absolute",
+    bottom: 120,
+    left: 24,
+    right: 24,
+    zIndex: 9999,
+  },
+  successToastContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#1A1A22",
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#3DDC97",
+    gap: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  successToastText: {
+    flex: 1,
+    gap: 2,
+  },
+  successToastTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  successToastSubtitle: {
+    fontSize: 13,
+    color: "#B0B0C3",
   },
 });

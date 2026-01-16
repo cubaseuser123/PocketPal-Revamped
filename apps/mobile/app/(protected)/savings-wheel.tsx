@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet, Animated, Alert, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Animated, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -7,6 +7,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { PallyIcon } from "../../components/ui/PallyIcon";
 import Svg, { Path, G } from "react-native-svg";
 import { useWheel, useUser } from "../../hooks/useApi";
+import { useCustomAlert } from "../../contexts/CustomAlertContext";
 
 // Wheel segments configuration
 const WHEEL_SEGMENTS = [
@@ -24,6 +25,7 @@ export default function SavingsWheelScreen() {
   const floatAnim = useRef(new Animated.Value(0)).current;
   const spinAnim = useRef(new Animated.Value(0)).current;
   const [isSpinning, setIsSpinning] = useState(false);
+  const { showAlert } = useCustomAlert();
   
   const { wheelStatus, spin, refetch } = useWheel();
   const { user } = useUser();
@@ -61,20 +63,20 @@ export default function SavingsWheelScreen() {
 
   const handleSpin = async () => {
     if (!wheelStatus?.canSpin || isSpinning) {
-      Alert.alert("Daily Limit", "You've already spun the wheel today! Come back tomorrow.");
+      showAlert("Daily Limit", "You've already spun the wheel today! Come back tomorrow.");
       return;
     }
     
     setIsSpinning(true);
     try {
       const result = await spin();
-      Alert.alert(
+      showAlert(
         "🎉 Congratulations!",
         result.message || `You won ${result.coinsWon} coins!`,
         [{ text: "Awesome!", onPress: () => refetch() }]
       );
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to spin");
+      showAlert("Error", error.message || "Failed to spin");
     } finally {
       setIsSpinning(false);
     }

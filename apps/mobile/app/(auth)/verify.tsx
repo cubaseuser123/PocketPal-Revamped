@@ -14,22 +14,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { auth, useAuth, storage } from "@repo/auth";
+import { API_URL } from "../../hooks/useApi";
 
-
-
-// Use 10.0.2.2 for Android emulator, localhost for iOS/web
-const getApiUrl = () => {
-  if (process.env.EXPO_PUBLIC_API_URL) {
-    return process.env.EXPO_PUBLIC_API_URL;
-  }
-  // Android emulator needs 10.0.2.2 to reach host machine
-  if (Platform.OS === "android") {
-    return "http://10.0.2.2:5757";
-  }
-  return "http://localhost:5757";
-};
-
-const API_BASE_URL = getApiUrl();
 const ONBOARDING_COMPLETE_KEY = "onboarding_complete";
 
 export default function VerifyScreen() {
@@ -85,23 +71,27 @@ export default function VerifyScreen() {
     setError("");
 
     try {
-      await auth.verifyOtp({
+      const response = await auth.verifyOtp({
         phone: phone || "",
         otp: otpString,
-        baseUrl: API_BASE_URL,
+        baseUrl: API_URL,
       });
       
       // Update auth context
       authContext?.setAuthenticated(true);
       
-      // Check if user has already completed onboarding
-      const onboardingComplete = await storage.get(ONBOARDING_COMPLETE_KEY);
+      // Check if user has completed onboarding from backend response
+      // Backend returns false if: never completed OR completed > 30 days ago
+      const user = (response as any)?.user;
+      const onboardingComplete = user?.onboardingCompleted === true;
       
-      if (onboardingComplete === "true") {
+      if (onboardingComplete) {
+        // Sync local storage
+        await storage.set(ONBOARDING_COMPLETE_KEY, "true");
         // Returning user - skip to main app
         router.replace("/(protected)/(tabs)");
       } else {
-        // New user - show onboarding
+        // New user or needs re-onboarding - show onboarding
         router.replace("/(auth)/onboarding");
       }
     } catch (err: any) {
@@ -119,7 +109,7 @@ export default function VerifyScreen() {
       await auth.sendOtp({
         name: "",
         phone: phone || "",
-        baseUrl: API_BASE_URL,
+        baseUrl: API_URL,
       });
       setError("");
     } catch (err: any) {

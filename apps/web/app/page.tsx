@@ -97,7 +97,7 @@ export default function Home() {
                 </p>
               </div>
               <div className="dark:bg-surface-dark flex flex-col items-center rounded-2xl border border-gray-200 bg-white p-6 text-center shadow-lg md:block md:text-left dark:border-white/10">
-                <div className="bg-primary shadow-glow mb-6 flex h-12 w-12 items-center justify-center rounded-full text-xl font-bold text-white">
+                <div className="bg-accent-gold shadow-glow mb-6 flex h-12 w-12 items-center justify-center rounded-full text-xl font-bold text-gray-900">
                   2
                 </div>
                 <h4 className="mb-2 text-lg font-bold dark:text-white">
@@ -109,7 +109,7 @@ export default function Home() {
                 </p>
               </div>
               <div className="dark:bg-surface-dark flex flex-col items-center rounded-2xl border border-gray-200 bg-white p-6 text-center shadow-lg md:block md:text-left dark:border-white/10">
-                <div className="bg-accent-gold shadow-glow mb-6 flex h-12 w-12 items-center justify-center rounded-full text-xl font-bold text-gray-900">
+                <div className="bg-primary shadow-glow mb-6 flex h-12 w-12 items-center justify-center rounded-full text-xl font-bold text-white">
                   3
                 </div>
                 <h4 className="mb-2 text-lg font-bold dark:text-white">

@@ -1,15 +1,17 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert, Modal, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Modal, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useState } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSubscriptions } from "../../hooks/useApi";
+import { useCustomAlert } from "../../contexts/CustomAlertContext";
 
 export default function SubscriptionsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { subscriptions, loading, addSubscription, cancelSubscription, refetch } = useSubscriptions();
+  const { showAlert } = useCustomAlert();
   
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [newSubName, setNewSubName] = useState("");
@@ -24,7 +26,7 @@ export default function SubscriptionsScreen() {
 
   const handleAddSubscription = async () => {
     if (!newSubName || !newSubPrice || !newSubDate) {
-      Alert.alert("Error", "Please fill in all fields");
+      showAlert("Error", "Please fill in all fields");
       return;
     }
 
@@ -43,14 +45,14 @@ export default function SubscriptionsScreen() {
       setNewSubCycle("monthly");
       // Refetch is handled by query invalidation in hook
     } catch (error) {
-      Alert.alert("Error", "Failed to add subscription");
+      showAlert("Error", "Failed to add subscription");
     } finally {
       setAdding(false);
     }
   };
 
   const handleCancelSubscription = (id: string, name: string) => {
-    Alert.alert(
+    showAlert(
       "Cancel Subscription",
       `Are you sure you want to cancel ${name}?`,
       [
@@ -62,7 +64,7 @@ export default function SubscriptionsScreen() {
              try {
                await cancelSubscription(id);
              } catch (e) {
-               Alert.alert("Error", "Failed to cancel subscription");
+               showAlert("Error", "Failed to cancel subscription");
              }
           }
         }

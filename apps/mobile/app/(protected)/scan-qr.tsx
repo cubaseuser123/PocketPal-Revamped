@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { CameraView, Camera } from "expo-camera";
 import { LinearGradient } from "expo-linear-gradient";
 import { useWallets } from "../../hooks/useApi";
+import { useCustomAlert } from "../../contexts/CustomAlertContext";
 
 export default function ScanQRScreen() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export default function ScanQRScreen() {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scanned, setScanned] = useState(false);
   const { wallets, loading } = useWallets();
+  const { showAlert } = useCustomAlert();
 
   // Check KYC status
   const isKycCompleted = wallets?.kycCompleted === true;
@@ -38,7 +40,7 @@ export default function ScanQRScreen() {
         const payeeName = params.get("pn") || "Unknown";
         const amount = params.get("am");
         
-        Alert.alert(
+        showAlert(
           "Payment Details",
           `Pay to: ${payeeName}\nVPA: ${payeeVpa}\nAmount: ${amount ? `₹${amount}` : "Enter amount"}`,
           [
@@ -56,12 +58,12 @@ export default function ScanQRScreen() {
           ]
         );
       } catch (e) {
-        Alert.alert("Invalid QR", "Could not parse UPI QR code.", [
+        showAlert("Invalid QR", "Could not parse UPI QR code.", [
           { text: "Try Again", onPress: () => setScanned(false) }
         ]);
       }
     } else {
-      Alert.alert("Not a UPI QR", "Please scan a valid UPI QR code.", [
+      showAlert("Not a UPI QR", "Please scan a valid UPI QR code.", [
         { text: "OK", onPress: () => setScanned(false) }
       ]);
     }

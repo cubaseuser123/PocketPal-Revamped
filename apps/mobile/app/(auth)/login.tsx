@@ -14,19 +14,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { auth } from "@repo/auth";
+import { API_URL } from "../../hooks/useApi";
 
-// Use 10.0.2.2 for Android emulator, localhost for iOS/web
-const getApiUrl = () => {
-  if (process.env.EXPO_PUBLIC_API_URL) {
-    return process.env.EXPO_PUBLIC_API_URL;
-  }
-  if (Platform.OS === "android") {
-    return "http://10.0.2.2:5757";
-  }
-  return "http://localhost:5757";
-};
-
-const API_BASE_URL = getApiUrl();
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -62,7 +51,7 @@ export default function LoginScreen() {
       await auth.sendOtp({
         name: "", // Empty name for login
         phone: formattedPhone,
-        baseUrl: API_BASE_URL,
+        baseUrl: API_URL,
       });
       
       router.push({

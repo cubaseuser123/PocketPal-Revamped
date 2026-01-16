@@ -4,7 +4,7 @@
     "slug": "pocket-pal",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/pally-logo.png",
     "scheme": "pocketpal",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -45,6 +45,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "512aff5f-3032-4c4d-bee2-a674e5c4c612"
+      }
     }
   }
 }

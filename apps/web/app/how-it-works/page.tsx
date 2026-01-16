@@ -53,20 +53,20 @@ export default function HowItWorks() {
 
             {/* Step 2 */}
              <div className="relative flex flex-col md:flex-row items-center justify-between mb-24 md:mb-32">
-                 <div className="order-2 md:w-5/12 pr-0 md:pr-12">
+                 <div className="order-2 md:order-1 md:w-5/12 pr-0 md:pr-12">
                       <div className="bg-surface-dark p-6 rounded-2xl border border-white/5 shadow-lg transform -rotate-2 hover:rotate-0 transition-transform duration-500">
                          <div className="flex justify-between items-center mb-4">
                              <span className="text-white font-bold">New Laptop Goal</span>
-                             <span className="text-primary font-bold">₹45,000</span>
+                             <span className="text-accent-gold font-bold">₹45,000</span>
                          </div>
                          <div className="h-3 w-full bg-white/10 rounded-full overflow-hidden mb-2">
-                             <div className="h-full w-1/3 bg-primary rounded-full"></div>
+                             <div className="h-full w-1/3 bg-accent-gold rounded-full"></div>
                          </div>
                          <p className="text-muted-dark text-xs">Target: Dec 2024</p>
                      </div>
                  </div>
-                 <div className="order-1 z-10 mb-8 md:mb-0">
-                    <div className="w-16 h-16 bg-primary border-4 border-surface-dark rounded-full flex items-center justify-center text-white font-bold text-2xl shadow-glow">
+                 <div className="order-1 md:order-2 z-10 mb-8 md:mb-0">
+                    <div className="w-16 h-16 bg-accent-gold border-4 border-surface-dark rounded-full flex items-center justify-center text-gray-900 font-bold text-2xl shadow-glow">
                         2
                     </div>
                  </div>
@@ -87,7 +87,7 @@ export default function HowItWorks() {
                     </p>
                  </div>
                  <div className="order-1 md:order-2 z-10 mb-8 md:mb-0">
-                    <div className="w-16 h-16 bg-accent-gold border-4 border-surface-dark rounded-full flex items-center justify-center text-gray-900 font-bold text-2xl shadow-glow">
+                    <div className="w-16 h-16 bg-primary border-4 border-surface-dark rounded-full flex items-center justify-center text-white font-bold text-2xl shadow-glow">
                         3
                     </div>
                  </div>
@@ -95,7 +95,7 @@ export default function HowItWorks() {
                      <div className="bg-surface-dark p-6 rounded-2xl border border-white/5 shadow-lg transform rotate-3 hover:rotate-0 transition-transform duration-500 text-center">
                          <img src="/pally-mascot-2.png" alt="Level Up Mascot" className="w-24 h-24 object-contain drop-shadow-lg mx-auto mb-2" />
                          <p className="text-white font-bold text-xl">Level Up!</p>
-                         <p className="text-accent-gold text-base font-bold">+500 XP Earned</p>
+                         <p className="text-primary text-base font-bold">+500 XP Earned</p>
                      </div>
                  </div>
             </div>

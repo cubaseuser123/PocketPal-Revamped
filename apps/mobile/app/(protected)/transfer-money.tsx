@@ -1,17 +1,19 @@
 import { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, TextInput, StyleSheet, ScrollView, ActivityIndicator, Modal, Alert } from "react-native";
+import { View, Text, TouchableOpacity, TextInput, StyleSheet, ScrollView, ActivityIndicator, Modal } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useWallets, useGoals } from "../../hooks/useApi";
 import { PallyIcon } from "../../components/ui/PallyIcon";
+import { useCustomAlert } from "../../contexts/CustomAlertContext";
 
 export default function TransferMoneyScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { wallets, loading: walletsLoading, transfer } = useWallets();
   const { goals, addToGoal } = useGoals();
+  const { showAlert } = useCustomAlert();
   
   const [amount, setAmount] = useState("");
   const [transferring, setTransferring] = useState(false);
@@ -64,7 +66,7 @@ export default function TransferMoneyScreen() {
         if (selectedGoal) {
           // If a specific goal is selected, add to that goal
           await addToGoal(selectedGoal, amountNum);
-          Alert.alert("Success! 🎉", `₹${amountNum} transferred and added to ${displayGoal?.name}!`);
+          showAlert("Success! 🎉", `₹${amountNum} transferred and added to ${displayGoal?.name}!`);
         } else if (goals && goals.length > 0) {
           // Distribute equally among ALL goals
           const amountPerGoal = Math.floor(amountNum / goals.length);
@@ -78,24 +80,24 @@ export default function TransferMoneyScreen() {
           
           await Promise.all(promises);
           
-          Alert.alert(
+          showAlert(
             "Success! 💰", 
             `₹${amountNum} distributed equally to ${goals.length} goals!`
           );
         } else {
-          Alert.alert("Success! 💰", `₹${amountNum} transferred to savings!`);
+          showAlert("Success! 💰", `₹${amountNum} transferred to savings!`);
         }
       } else {
         // Savings -> Expense logic (Withdrawal)
         // Pass selectedGoal as sourceGoalId if set
         const result = await transfer("savings", "primary", amountNum, selectedGoal || undefined);
-        Alert.alert("Success", result.message || "Withdrawal successful");
+        showAlert("Success", result.message || "Withdrawal successful");
       }
       
       router.back();
     } catch (error: any) {
       console.error("Transfer failed:", error);
-      Alert.alert("Error", error.message || "Transfer failed");
+      showAlert("Error", error.message || "Transfer failed");
     } finally {
       setTransferring(false);
     }

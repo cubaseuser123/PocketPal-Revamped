@@ -1,10 +1,11 @@
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, TextInput, ScrollView } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useState } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useWallets } from "../../hooks/useApi";
+import { useCustomAlert } from "../../contexts/CustomAlertContext";
 
 type PaymentMethod = "upi" | "debit" | "netbanking" | null;
 
@@ -12,6 +13,7 @@ export default function LoadMoneyScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { wallets, addMoney } = useWallets();
+  const { showAlert } = useCustomAlert();
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>("upi");
   const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(false);
@@ -21,16 +23,16 @@ export default function LoadMoneyScreen() {
 
   const handleAddMoney = async (value: number) => {
     if (value <= 0) {
-      Alert.alert("Invalid Amount", "Please enter a valid amount");
+      showAlert("Invalid Amount", "Please enter a valid amount");
       return;
     }
     setLoading(true);
     try {
       await addMoney(value);
-      Alert.alert("Success! 🎉", `₹${value} added to your Expense Wallet!`);
+      showAlert("Success! 🎉", `₹${value} added to your Expense Wallet!`);
       router.back();
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to add money");
+      showAlert("Error", error.message || "Failed to add money");
     } finally {
       setLoading(false);
     }
@@ -39,7 +41,7 @@ export default function LoadMoneyScreen() {
   const handleContinue = () => {
     const amountNum = parseInt(amount) || 0;
     if (amountNum <= 0) {
-      Alert.alert("Invalid Amount", "Please enter an amount greater than 0");
+      showAlert("Invalid Amount", "Please enter an amount greater than 0");
       return;
     }
     handleAddMoney(amountNum);

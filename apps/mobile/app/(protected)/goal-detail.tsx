@@ -1,16 +1,18 @@
 import { useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, Modal, TextInput } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Modal, TextInput } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useGoals } from "../../hooks/useApi";
+import { useCustomAlert } from "../../contexts/CustomAlertContext";
 
 export default function GoalDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ id: string }>();
   const { goals, loading, deleteGoal, addToGoal, updateGoal } = useGoals();
+  const { showAlert } = useCustomAlert();
   const [adding, setAdding] = useState(false);
   
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
@@ -53,14 +55,14 @@ export default function GoalDetailScreen() {
     try {
       await addToGoal(goal._id, amount);
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to add money");
+      showAlert("Error", error.message || "Failed to add money");
     } finally {
       setAdding(false);
     }
   };
 
   const handleDelete = () => {
-    Alert.alert(
+    showAlert(
       "Delete Goal",
       `Are you sure you want to delete "${goal.name}"? This action cannot be undone.`,
       [
@@ -73,7 +75,7 @@ export default function GoalDetailScreen() {
               await deleteGoal(goal._id);
               router.back();
             } catch (error) {
-              Alert.alert("Error", "Failed to delete goal");
+              showAlert("Error", "Failed to delete goal");
             }
           }
         },

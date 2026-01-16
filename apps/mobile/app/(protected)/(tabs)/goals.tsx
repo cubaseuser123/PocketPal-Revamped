@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -8,6 +8,7 @@ import { GoalPallyTip } from "../../../components/goals/GoalPallyTip";
 import { FeaturedGoalCard } from "../../../components/goals/FeaturedGoalCard";
 import { OtherGoalCard } from "../../../components/goals/OtherGoalCard";
 import { useGoals, useUser } from "../../../hooks/useApi";
+import { useCustomAlert } from "../../../contexts/CustomAlertContext";
 
 // Helper to format currency
 const formatCurrency = (amount: number): string => {
@@ -21,13 +22,14 @@ export default function GoalsScreen() {
   const router = useRouter();
   const { goals, loading, deleteGoal } = useGoals();
   const { user } = useUser();
+  const { showAlert } = useCustomAlert();
 
   const handleAddGoal = () => {
     router.push("/(protected)/create-goal");
   };
 
   const handleDeleteGoal = (goalId: string, goalName: string) => {
-    Alert.alert(
+    showAlert(
       "Delete Goal",
       `Are you sure you want to delete "${goalName}"? This action cannot be undone.`,
       [
@@ -41,7 +43,7 @@ export default function GoalsScreen() {
               console.log("Goal deleted:", goalId);
             } catch (error) {
               console.error("Delete failed:", error);
-              Alert.alert("Error", "Failed to delete goal");
+              showAlert("Error", "Failed to delete goal");
             }
           }
         },

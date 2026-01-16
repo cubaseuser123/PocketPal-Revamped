@@ -14,6 +14,15 @@ export const getProfile = async (req, res) => {
     const primaryWallet = wallets.find(w => w.type === "primary");
     const savingsWallet = wallets.find(w => w.type === "savings");
 
+    // Check if onboarding should be shown again (> 30 days since completion)
+    let shouldShowOnboarding = !user.onboardingCompleted;
+    if (user.onboardingCompleted && user.onboardingCompletedAt) {
+      const daysSinceOnboarding = (Date.now() - new Date(user.onboardingCompletedAt).getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSinceOnboarding > 30) {
+        shouldShowOnboarding = true;
+      }
+    }
+
     return res.json({
       user: {
         id: user._id,
@@ -23,7 +32,7 @@ export const getProfile = async (req, res) => {
         coins: user.coins,
         avatarUrl: user.avatarUrl,
         kycCompleted: user.kycCompleted,
-        onboardingCompleted: user.onboardingCompleted,
+        onboardingCompleted: !shouldShowOnboarding, // Return false if should show again
       },
       wallets: {
         primary: primaryWallet?.balance || 0,
@@ -67,6 +76,7 @@ export const completeOnboarding = async (req, res) => {
     }
 
     user.onboardingCompleted = true;
+    user.onboardingCompletedAt = new Date();
     
     // Award coins for completing onboarding
     user.coins = (user.coins || 0) + 20;

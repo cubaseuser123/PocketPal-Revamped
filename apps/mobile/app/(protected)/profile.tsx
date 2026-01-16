@@ -1,4 +1,5 @@
-import { ScrollView, View, TouchableOpacity, Text, StyleSheet, Alert, Modal, TextInput, ActivityIndicator, Image } from "react-native";
+import { ScrollView, View, TouchableOpacity, Text, StyleSheet, Modal, TextInput, ActivityIndicator } from "react-native";
+import { Image } from "expo-image";
 import { useState } from "react";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -6,6 +7,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth, storage } from "@repo/auth";
 import { useUser, API_URL, getFullAvatarUrl } from "../../hooks/useApi";
 import * as ImagePicker from 'expo-image-picker';
+import { useCustomAlert } from "../../contexts/CustomAlertContext";
 
 import { ProfileHeader } from "../../components/profile/ProfileHeader";
 import { LevelProgressCard } from "../../components/profile/LevelProgressCard";
@@ -39,6 +41,7 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const authContext = useAuth();
   const { user, updateUser, refetch } = useUser();
+  const { showAlert } = useCustomAlert();
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [editName, setEditName] = useState("");
   const [editAvatar, setEditAvatar] = useState("");
@@ -65,7 +68,7 @@ export default function ProfileScreen() {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     
     if (permissionResult.granted === false) {
-      Alert.alert("Permission Required", "You've refused to allow this app to access your photos!");
+      showAlert("Permission Required", "You've refused to allow this app to access your photos!");
       return;
     }
 
@@ -113,10 +116,10 @@ export default function ProfileScreen() {
 
       setEditAvatar(data.avatarUrl);
       refetch(); // Refresh user data
-      Alert.alert("Success", "Profile picture updated!");
+      showAlert("Success", "Profile picture updated!");
       
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to upload image");
+      showAlert("Error", error.message || "Failed to upload image");
     } finally {
       setUpdating(false);
     }
@@ -132,7 +135,7 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert(
+    showAlert(
       "Log Out",
       "Are you sure you want to log out?",
       [
@@ -281,7 +284,7 @@ export default function ProfileScreen() {
                     setIsEditModalVisible(false);
                     refetch();
                   } catch (e) {
-                    Alert.alert("Error", "Failed to update profile");
+                    showAlert("Error", "Failed to update profile");
                   } finally {
                     setUpdating(false);
                   }

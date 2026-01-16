@@ -49,10 +49,10 @@ export default function KYCSelfieScreen() {
   const finishOnboarding = async () => {
     try {
       // Call API to complete KYC
-      const baseUrl = Platform.OS === "android" ? "http://10.0.2.2:5757" : "http://localhost:5757";
+      const { API_URL } = await import("../../hooks/useApi");
       
       try {
-        await userApi.completeKyc(baseUrl);
+        await userApi.completeKyc(API_URL);
         console.log("✅ KYC marked complete in backend");
       } catch (apiError) {
         console.error("Error calling completeKyc API:", apiError);

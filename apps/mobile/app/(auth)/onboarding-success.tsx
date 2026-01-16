@@ -19,8 +19,8 @@ export default function OnboardingSuccessScreen() {
     // Mark onboarding complete in backend and local storage
     const completeOnboarding = async () => {
       try {
-        const baseUrl = Platform.OS === "android" ? "http://10.0.2.2:5757" : "http://localhost:5757";
-        await userApi.completeOnboarding(baseUrl);
+        const { API_URL } = await import("../../hooks/useApi");
+        await userApi.completeOnboarding(API_URL);
         console.log("✅ Onboarding marked complete in backend");
       } catch (error) {
         console.error("Error marking onboarding complete:", error);

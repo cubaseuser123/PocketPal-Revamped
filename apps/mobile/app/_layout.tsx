@@ -41,14 +41,12 @@ function RootLayoutNav() {
           return;
         }
 
-         // If authenticated, also check backend user profile
-        if (authContext?.authenticated) {
+         if (authContext?.authenticated) {
           const token = await storage.get("access_token");
           if (token) {
             try {
-              // Use 10.0.2.2 for Android emulator, localhost for iOS
-              const baseUrl = Platform.OS === "android" ? "http://10.0.2.2:5757" : "http://localhost:5757";
-              const response = await fetch(`${baseUrl}/api/user/me`, {
+              const { API_URL } = await import("../hooks/useApi");
+              const response = await fetch(`${API_URL}/api/user/me`, {
                 headers: { Authorization: `Bearer ${token}` },
               });
               
@@ -142,7 +140,21 @@ function RootLayoutNav() {
   );
 }
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { onlineManager } from "@tanstack/react-query";
+import NetInfo from "@react-native-community/netinfo";
+import { OfflineNotice } from "../components/OfflineNotice";
+import { CustomAlertProvider } from "../contexts/CustomAlertContext";
+
+// Sync online status with NetInfo
+onlineManager.setEventListener((setOnline) => {
+  return NetInfo.addEventListener((state) => {
+    setOnline(!!state.isConnected);
+  });
+});
 
 // Create a client
 const queryClient = new QueryClient({
@@ -150,8 +162,15 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: Infinity, // Data remains fresh indefinitely by default
       retry: 2,
+      gcTime: 1000 * 60 * 60 * 24 * 7, // 7 days
     },
   },
+});
+
+// Create persister
+const asyncStoragePersister = createAsyncStoragePersister({
+  storage: AsyncStorage,
+  key: "POCKETPAL_QUERY_CACHE",
 });
 
 export default function RootLayout() {
@@ -175,15 +194,21 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#0F0F14" }}>
-      <QueryClientProvider client={queryClient}>
+      <PersistQueryClientProvider
+        client={queryClient}
+        persistOptions={{ persister: asyncStoragePersister }}
+      >
         <SafeAreaProvider>
-          <AuthProvider>
-            <BottomSheetModalProvider>
-              <RootLayoutNav />
-            </BottomSheetModalProvider>
-          </AuthProvider>
+          <CustomAlertProvider>
+            <AuthProvider>
+              <BottomSheetModalProvider>
+                <RootLayoutNav />
+                <OfflineNotice />
+              </BottomSheetModalProvider>
+            </AuthProvider>
+          </CustomAlertProvider>
         </SafeAreaProvider>
-      </QueryClientProvider>
+      </PersistQueryClientProvider>
     </GestureHandlerRootView>
   );
 }

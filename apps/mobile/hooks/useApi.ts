@@ -4,14 +4,25 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { userApi, walletApi, transactionApi, goalApi, categoryApi, subscriptionApi } from "@repo/auth";
 
 // Get API base URL based on platform
+// For physical device: use ngrok URL
+// For emulator/web: use localhost
+const NGROK_URL = "https://transformational-philatelically-fiona.ngrok-free.dev";
+
 const getApiUrl = (): string => {
   if (process.env.EXPO_PUBLIC_API_URL) {
     return process.env.EXPO_PUBLIC_API_URL;
   }
-  // Android emulator needs 10.0.2.2 to reach host machine
+  // For physical Android device, use ngrok
   if (Platform.OS === "android") {
-    return "http://10.0.2.2:5757";
+    // Check if running on emulator (10.0.2.2 works) or physical device (needs ngrok)
+    // Using ngrok for now - physical device can't reach localhost
+    return NGROK_URL;
   }
+  // iOS physical device also needs ngrok
+  if (Platform.OS === "ios") {
+    return NGROK_URL;
+  }
+  // Web uses localhost
   return "http://localhost:5757";
 };
 
@@ -80,6 +91,8 @@ export interface Goal {
   isFeatured: boolean;
   progress: number;
   isCompleted?: boolean;
+  createdAt?: string;
+  _isOffline?: boolean; // Marks optimistically created goals
 }
 
 export interface Category {
@@ -231,9 +244,54 @@ export function useGoals() {
     }) => {
       return await goalApi.create(API_URL, goalData);
     },
+    // Optimistic update - add goal to cache immediately
+    onMutate: async (newGoal) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["goals"] });
+      
+      // Snapshot the previous value
+      const previousGoals = queryClient.getQueryData<Goal[]>(["goals"]);
+      
+      // Optimistically update to the new value
+      const optimisticGoal: Goal = {
+        _id: `temp-${Date.now()}`, // Temporary ID
+        name: newGoal.name,
+        emoji: newGoal.emoji || "🎯",
+        category: newGoal.category || "General",
+        color: newGoal.color || "#FF8C32",
+        targetAmount: newGoal.targetAmount,
+        currentAmount: 0,
+        progress: 0,
+        isFeatured: newGoal.isFeatured || false,
+        isCompleted: false,
+        createdAt: new Date().toISOString(),
+        _isOffline: true, // Mark as offline-created
+      };
+      
+      queryClient.setQueryData<Goal[]>(["goals"], (old) => 
+        old ? [...old, optimisticGoal] : [optimisticGoal]
+      );
+      
+      // Return context for rollback
+      return { previousGoals };
+    },
+    onError: (err, newGoal, context) => {
+      // If the mutation fails, use context returned from onMutate to roll back
+      if (context?.previousGoals) {
+        queryClient.setQueryData(["goals"], context.previousGoals);
+      }
+      console.error("Goal creation failed, will retry when online:", err);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["goals"] });
     },
+    onSettled: () => {
+      // Always refetch after error or success to sync
+      queryClient.invalidateQueries({ queryKey: ["goals"] });
+    },
+    // Retry configuration for network failures
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
   const addToGoalMutation = useMutation({
@@ -314,6 +372,7 @@ export function useSubscriptions() {
       const data = await subscriptionApi.getActive(API_URL);
       return data.subscriptions as Subscription[];
     },
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
   const addSubscriptionMutation = useMutation({
@@ -326,10 +385,42 @@ export function useSubscriptions() {
     }) => {
       return await subscriptionApi.add(API_URL, data);
     },
+    // Optimistic update - add subscription immediately
+    onMutate: async (newSub) => {
+      await queryClient.cancelQueries({ queryKey: ["subscriptions"] });
+      const previousSubs = queryClient.getQueryData<Subscription[]>(["subscriptions"]);
+      
+      const optimisticSub: Subscription = {
+        _id: `temp-${Date.now()}`,
+        name: newSub.name,
+        price: newSub.price,
+        category: newSub.category || "general",
+        startDate: newSub.startDate,
+        renewalCycle: newSub.renewalCycle || "monthly",
+        status: "active",
+        nextRenewal: newSub.startDate, // Will be corrected on sync
+      };
+      
+      queryClient.setQueryData<Subscription[]>(["subscriptions"], (old) =>
+        old ? [...old, optimisticSub] : [optimisticSub]
+      );
+      
+      return { previousSubs };
+    },
+    onError: (err, newSub, context) => {
+      if (context?.previousSubs) {
+        queryClient.setQueryData(["subscriptions"], context.previousSubs);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
       queryClient.invalidateQueries({ queryKey: ["spendingSummary"] });
     },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+    },
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
   const cancelSubscriptionMutation = useMutation({
@@ -394,6 +485,7 @@ export function useBoss() {
       if (!res.ok) return null;
       return await res.json() as BossBattle;
     },
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
   const dealDamageMutation = useMutation({
@@ -446,6 +538,7 @@ export function useQuests() {
       });
       return await res.json() as Quest[];
     },
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
   const assignQuestsMutation = useMutation({
