@@ -5,6 +5,7 @@ import express from "express";
 import connectDB from "./config/db.js";
 import cors from "cors";
 import * as Sentry from "@sentry/node";
+import rateLimit from "express-rate-limit";
 import swaggerDocs from "./config/swagger.js";
 import authRoutes from "./routes/authRoutes.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
@@ -34,14 +35,46 @@ Sentry.init({
 
 // Middlewares
 app.use(express.json());
+const allowedOrigins = [
+  "http://localhost:3000", // Web
+  "http://localhost:8081", // Mobile (Expo)
+  // Add production domains here
+  "https://pocketpal.app"
+];
+
 app.use(
   cors({
-    origin: true, // Allow all origins in development (mobile apps)
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) === -1) {
+        // In dev, we might want to be lenient, but for "hardcore" audit compliance:
+        if (process.env.NODE_ENV === "development") return callback(null, true);
+        
+        var msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+        return callback(new Error(msg), false);
+      }
+      return callback(null, true);
+    },
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   }),
 );
+
+// Rate Limiter for Auth
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // Limit each IP to 20 requests per windowMs
+  message: "Too many login attempts, please try again later"
+});
+
+// Stricter limiter for OTP
+const otpLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // Limit each IP to 5 OTP requests per hour
+  message: "Too many OTP requests, please try again later"
+});
 
 // Swagger
 swaggerDocs(app);
@@ -71,7 +104,8 @@ app.get("/health", (req, res) => {
 app.use("/uploads", express.static("uploads"));
 
 // API v1 Routes
-app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/auth/send-otp", otpLimiter); // Apply specifically to OTP
+app.use("/api/v1/auth", authLimiter, authRoutes); // Apply general auth limit
 app.use("/api/v1/subscriptions", subscriptionRoutes);
 app.use("/api/v1/user", userRoutes);
 app.use("/api/v1/wallets", walletRoutes);

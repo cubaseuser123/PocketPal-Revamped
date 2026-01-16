@@ -40,7 +40,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const authContext = useAuth();
-  const { user, updateUser, refetch } = useUser();
+  const { user, updateUser, uploadAvatar, refetch } = useUser();
   const { showAlert } = useCustomAlert();
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [editName, setEditName] = useState("");
@@ -86,38 +86,17 @@ export default function ProfileScreen() {
   };
 
   const uploadImage = async (uri: string) => {
-    const token = await storage.get("access_token");
-    if (!token) return;
-    
     setUpdating(true);
     try {
-      const formData = new FormData();
-      // @ts-ignore
-      formData.append('image', {
-        uri,
-        name: `profile-${Date.now()}.jpg`,
-        type: 'image/jpeg',
-      });
-
-      const response = await fetch(`${API_URL}/api/user/avatar`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data',
-        },
-        body: formData,
-      });
-
-      const data = await response.json();
+      await uploadAvatar(uri);
+      // Avatar update handled by refetch in hook onSuccess?
+      // Actually we might need to manually set it if optimistic not set, 
+      // but invalidation handles it.
+      // We can also setEditAvatar here for immediate feedback if needed but 
+      // refetch() should propagate via 'user' prop.
       
-      if (!response.ok) {
-        throw new Error(data.message || 'Upload failed');
-      }
-
-      setEditAvatar(data.avatarUrl);
-      refetch(); // Refresh user data
       showAlert("Success", "Profile picture updated!");
-      
+      refetch();
     } catch (error: any) {
       showAlert("Error", error.message || "Failed to upload image");
     } finally {

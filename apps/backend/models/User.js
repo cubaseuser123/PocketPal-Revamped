@@ -33,8 +33,11 @@ userSchema.pre("save", async function(next) {
   if (!this.friendCode) {
     let code;
     let isUnique = false;
+    let attempts = 0;
+    const MAX_ATTEMPTS = 5;
     
-    while (!isUnique) {
+    while (!isUnique && attempts < MAX_ATTEMPTS) {
+      attempts++;
       // Generate 6-character alphanumeric code
       code = Math.random().toString(36).substring(2, 8).toUpperCase();
       // Check if code already exists
@@ -42,6 +45,11 @@ userSchema.pre("save", async function(next) {
       if (!existing) {
         isUnique = true;
       }
+    }
+    
+    if (!isUnique) {
+      // Fallback: append timestamp if collision persists
+      code = `PCKT${Date.now().toString().slice(-4)}`;
     }
     
     this.friendCode = code;

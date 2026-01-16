@@ -46,13 +46,11 @@ function RootLayoutNav() {
           if (token) {
             try {
               const { API_URL } = await import("../hooks/useApi");
-              const response = await fetch(`${API_URL}/api/user/me`, {
-                headers: { Authorization: `Bearer ${token}` },
-              });
+              const { userApi } = await import("@repo/auth");
               
-              if (response.ok) {
-                const data = await response.json();
-                const backendOnboarding = data.user?.onboardingCompleted === true;
+              const data = await userApi.getProfile(API_URL);
+              if (data && data.user) {
+                const backendOnboarding = data.user.onboardingCompleted === true;
                 
                 // Sync local storage with backend
                 if (backendOnboarding) {

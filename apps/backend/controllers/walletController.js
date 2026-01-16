@@ -1,7 +1,9 @@
+import mongoose from "mongoose";
 import Wallet, { PPI_LIMITS } from "../models/Wallet.js";
 import Transaction from "../models/Transaction.js";
 import User from "../models/User.js";
 import Goal from "../models/Goal.js";
+import TransferService from "../services/TransferService.js";
 
 // Get user's wallets with PPI info
 export const getWallets = async (req, res) => {
@@ -60,26 +62,32 @@ export const getWallets = async (req, res) => {
 
 // Add money to primary wallet (with PPI limit checks)
 export const addMoney = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const { amount } = req.body;
     
     if (!amount || amount <= 0) {
-      return res.status(400).json({ message: "Invalid amount" });
+      throw new Error("Invalid amount");
     }
 
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user.id).session(session);
     const ppiType = user?.kycCompleted ? "full_kyc_ppi" : "small_ppi";
     
-    let wallet = await Wallet.findOne({ userId: req.user.id, type: "primary" });
+    let wallet = await Wallet.findOne({ userId: req.user.id, type: "primary" }).session(session);
     
+    // Create wallet if needed (rare case in flows, but handled)
     if (!wallet) {
-      wallet = await Wallet.create({ 
+      // Create options require array for session support in create ([doc], { session })
+      const [newWallet] = await Wallet.create([{ 
         userId: req.user.id, 
         type: "primary", 
         balance: 0,
         ppiType: ppiType,
         ppiId: `MOCK_PPI_${Date.now()}`,
-      });
+      }], { session });
+      wallet = newWallet;
     }
 
     // Update PPI type if KYC was completed after wallet creation
@@ -90,6 +98,7 @@ export const addMoney = async (req, res) => {
     // Check PPI limits
     const canLoadResult = wallet.canLoad(amount);
     if (!canLoadResult.allowed) {
+      await session.abortTransaction();
       return res.status(400).json({ 
         message: canLoadResult.reason,
         maxAllowed: canLoadResult.maxAllowed,
@@ -101,6 +110,7 @@ export const addMoney = async (req, res) => {
     // Check per-transaction limit
     const limits = PPI_LIMITS[wallet.ppiType];
     if (amount > limits.perTxnLimit) {
+      await session.abortTransaction();
       return res.status(400).json({ 
         message: `Per transaction limit ₹${limits.perTxnLimit} exceeded`,
         perTxnLimit: limits.perTxnLimit,
@@ -109,17 +119,19 @@ export const addMoney = async (req, res) => {
 
     wallet.balance += amount;
     wallet.monthlyLoaded += amount;
-    await wallet.save();
+    await wallet.save({ session });
 
     // Create transaction record
-    await Transaction.create({
+    await Transaction.create([{
       userId: req.user.id,
       walletId: wallet._id,
       name: "Added money",
       emoji: "💵",
       amount: amount,
       type: "income",
-    });
+    }], { session });
+
+    await session.commitTransaction();
 
     return res.json({ 
       message: "Money added successfully", 
@@ -128,8 +140,13 @@ export const addMoney = async (req, res) => {
       remainingMonthlyLoad: wallet.remainingMonthlyLoad,
     });
   } catch (err) {
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
     console.error("addMoney error:", err);
-    return res.status(500).json({ message: "Server error", error: err.message });
+    return res.status(500).json({ message: err.message || "Server error" }); // Return generic error unless specific message
+  } finally {
+    session.endSession();
   }
 };
 
@@ -178,18 +195,22 @@ export const upgradePpi = async (req, res) => {
 
 // Transfer between wallets
 export const transfer = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const { from, to, amount } = req.body;
     
     if (!from || !to || !amount || amount <= 0) {
-      return res.status(400).json({ message: "Invalid transfer parameters" });
+      throw new Error("Invalid transfer parameters");
     }
 
-    const user = await User.findById(req.user.id);
-    const fromWallet = await Wallet.findOne({ userId: req.user.id, type: from });
-    const toWallet = await Wallet.findOne({ userId: req.user.id, type: to });
+    const user = await User.findById(req.user.id).session(session);
+    const fromWallet = await Wallet.findOne({ userId: req.user.id, type: from }).session(session);
+    const toWallet = await Wallet.findOne({ userId: req.user.id, type: to }).session(session);
 
     if (!fromWallet || !toWallet) {
+      await session.abortTransaction();
       return res.status(404).json({ message: "Wallet not found" });
     }
 
@@ -203,12 +224,14 @@ export const transfer = async (req, res) => {
 
       // CASE 1: Withdraw from SPECIFIC GOAL
       if (sourceGoalId) {
-        const goal = await Goal.findOne({ _id: sourceGoalId, userId: req.user.id });
+        const goal = await Goal.findOne({ _id: sourceGoalId, userId: req.user.id }).session(session);
         if (!goal) {
+           await session.abortTransaction();
            return res.status(404).json({ message: "Source goal not found" });
         }
 
         if (goal.currentAmount < amount) {
+           await session.abortTransaction();
            return res.status(400).json({ 
              message: `Insufficient funds in ${goal.name}. Available: ₹${goal.currentAmount}` 
            });
@@ -218,6 +241,7 @@ export const transfer = async (req, res) => {
         if (!goal.isCompleted) {
           const coinCost = 10;
           if (user.coins < coinCost) {
+            await session.abortTransaction();
             return res.status(400).json({ 
                message: `Early withdrawal from incomplete goal '${goal.name}' costs ${coinCost} coins. Balance: ${user.coins}`,
                coinsRequired: coinCost
@@ -226,94 +250,64 @@ export const transfer = async (req, res) => {
           user.coins -= coinCost;
           coinsDeducted = coinCost;
           penalty = true;
-          await user.save();
+          await user.save({ session });
         }
 
         // Deduct from goal
         goal.currentAmount -= amount;
-        await goal.save();
+        await goal.save({ session });
 
       } else {
-        // CASE 2: Distribute deduction across ALL goals (Existing Logic)
-        const goals = await Goal.find({ userId: req.user.id });
+        // CASE 2: Distribute deduction across ALL goals
+        const goals = await Goal.find({ userId: req.user.id }).session(session);
         const totalGoalAmount = goals.reduce((sum, g) => sum + g.currentAmount, 0);
         const totalAvailable = fromWallet.balance + totalGoalAmount;
 
         if (totalAvailable < amount) {
+          await session.abortTransaction();
           return res.status(400).json({ message: "Insufficient balance (Savings + Goals)" });
         }
 
-        // Check for coin penalty (if ANY goal is incomplete)
-        const incompleteGoals = goals.filter(g => !g.isCompleted);
-        if (incompleteGoals.length > 0) {
+        // Check for coin penalty using Service
+        if (TransferService.shouldApplyPenalty(goals)) {
           const coinCost = 10;
           if (user.coins < coinCost) {
-            return res.status(400).json({ 
-              message: `Early withdrawal costs ${coinCost} coins. You only have ${user.coins} coins.`,
-              coinsRequired: coinCost,
-              currentCoins: user.coins,
-            });
+             await session.abortTransaction();
+             return res.status(400).json({ 
+               message: `Early withdrawal costs ${coinCost} coins. You only have ${user.coins} coins.`,
+               coinsRequired: coinCost,
+               currentCoins: user.coins,
+             });
           }
-          user.coins -= coinCost;
-          await user.save();
-          coinsDeducted = coinCost;
-          penalty = true;
+           user.coins -= coinCost;
+           await user.save({ session });
+           coinsDeducted = coinCost;
+           penalty = true;
         }
 
-        let remainingToDeduct = amount;
-        let deductedFromGoals = 0;
+        // Use Service for distribution
+        const { goalsToUpdate, remaining } = TransferService.calculateGoalDistribution(amount, goals);
         
-        // Single pass "best effort" distribution
-        if (goals.length > 0) {
-           // Sort by amount descending to take from biggest pots first? 
-           // Or just raw loops. Let's do raw loop to match "equal" intent best we can.
-           const share = amount / goals.length;
-           
-           for (const g of goals) {
-              const deduction = Math.min(g.currentAmount, share); // Take share or whatever is available
-              if (deduction > 0) {
-                  g.currentAmount -= deduction;
-                  remainingToDeduct -= deduction;
-                  deductedFromGoals += deduction;
-                  await g.save();
-              }
-           }
-           
-           // If first pass left remainder (due to small goals), take from others?
-           // For simplicity and to avoid complexity, we take remainder from unallocated savings below.
-           // Or we could loop again. Let's stick to unallocated fallback for now to prevent infinite loops.
+        for (const update of goalsToUpdate) {
+             update.goal.currentAmount -= update.deduction;
+             await update.goal.save({ session });
         }
 
-        // If we still need money (goals exhausted or capped by share), take from unallocated savings
-        const stillNeeded = amount - deductedFromGoals;
-        if (stillNeeded > 0) {
-           if (fromWallet.balance < stillNeeded) {
-               // Should be rare if total check passed, but possible due to share logic mismatch?
-               // Actually if totalAvailable >= amount, this should be mathematically safe unless
-               // we artificially limited goal deduction.
-               // We should force take from goals if savings is empty?
-               // Let's just deduct from savings. If negative, it means our "share" logic was too conservative.
-               // Let's force valid state:
-               let moreNeeded = stillNeeded - fromWallet.balance;
-               fromWallet.balance = 0; // Take all savings
-               
-               for (const g of goals) {
-                   if (moreNeeded <= 0) break;
-                   const canTake = g.currentAmount; 
-                   const taking = Math.min(canTake, moreNeeded);
-                   g.currentAmount -= taking;
-                   moreNeeded -= taking;
-                   await g.save();
-               }
-           } else {
-               fromWallet.balance -= stillNeeded;
-           }
-           await fromWallet.save();
+        // If we still need money (goals exhausted), take from unallocated savings
+        if (remaining > 0) {
+            // Note: totalAvailable check ensures this logic holds, checking balance anyway for safety
+            if (fromWallet.balance < remaining) {
+                // This shouldn't theoretically happen if totalAvailable check passed, but strictly safe
+                await session.abortTransaction();
+                return res.status(400).json({ message: "Calculation error: insufficient funds during distribution" });
+            }
+            fromWallet.balance -= remaining;
+            await fromWallet.save({ session });
         }
       } // Closes the `else` block for `sourceGoalId`
 
       toWallet.balance += amount;
-      await toWallet.save();
+      await toWallet.save({ session });
 
       // Transaction records...
       await Transaction.create([
@@ -333,7 +327,9 @@ export const transfer = async (req, res) => {
           amount: amount,
           type: "transfer",
         },
-      ]);
+      ], { session });
+      
+      await session.commitTransaction();
 
       return res.json({
         message: penalty 
@@ -348,13 +344,14 @@ export const transfer = async (req, res) => {
     } else {
       // Standard Transfer (Primary -> Savings or others)
       if (fromWallet.balance < amount) {
+          await session.abortTransaction();
           return res.status(400).json({ message: "Insufficient balance" });
       }
       fromWallet.balance -= amount;
       toWallet.balance += amount;
       
-      await fromWallet.save();
-      await toWallet.save();
+      await fromWallet.save({ session });
+      await toWallet.save({ session });
     
       // Create transaction records
       await Transaction.create([
@@ -374,7 +371,9 @@ export const transfer = async (req, res) => {
           amount: amount,
           type: "transfer",
         },
-      ]);
+      ], { session, ordered: true });
+
+      await session.commitTransaction();
 
       return res.json({
         message: "Transfer successful",
@@ -383,7 +382,12 @@ export const transfer = async (req, res) => {
       });
     }
   } catch (err) {
+    if (session.inTransaction()) {
+        await session.abortTransaction();
+    }
     console.error("transfer error:", err);
-    return res.status(500).json({ message: "Server error", error: err.message });
+    return res.status(500).json({ message: err.message || "Server error" });
+  } finally {
+    session.endSession();
   }
 };

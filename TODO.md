@@ -13,12 +13,12 @@
 - [ ] Category-based analytics
 
 ## Social & Gamification (Priority)
-- [ ] Friends/leaderboard system
-- [ ] Achievement badges
-- [ ] Push notifications
+- [X] Friends/leaderboard system
+- [X] Achievement badges
+- [X] Push notifications
 
 ## Technical
-- [ ] Admin dashboard
-- [ ] API versioning (`/api/v1/`)
-- [ ] Health check endpoint (`/health`)
-- [ ] Error tracking (Sentry)
+- [X] Admin dashboard
+- [X] API versioning (`/api/v1/`)
+- [X] Health check endpoint (`/health`)
+- [X] Error tracking (Sentry)

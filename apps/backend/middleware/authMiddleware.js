@@ -4,10 +4,7 @@ import User from "../models/User.js";
 export const protect = async (req, res, next) => {
   try {
     let token;
-    if (process.env.NODE_ENV !== 'production') {
-      console.log("🟡 protect middleware HIT");
-      console.log("🟡 Authorization header:", req.headers.authorization);
-    }
+
 
     if (
       req.headers.authorization &&
@@ -23,7 +20,7 @@ export const protect = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // Fetch user
-    const user = await User.findById(decoded.id);
+    const user = await User.findById(decoded.id).select("-password -kycSelfie -onboardingCompletedAt");
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
