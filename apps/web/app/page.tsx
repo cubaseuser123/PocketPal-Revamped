@@ -168,7 +168,7 @@ export default function Home() {
                 Meet Pally.
               </h2>
               <p className="mb-8 text-lg leading-relaxed text-gray-400">
-                Pally isn t just a mascot. He's your coach. He celebrates your
+                Pally isn't just a mascot. He's your coach. He celebrates your
                 wins, nudges you when you're off track, and gives you
                 personalized tips to stretch your budget further.
               </p>

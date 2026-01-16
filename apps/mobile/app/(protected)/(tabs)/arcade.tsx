@@ -1,6 +1,7 @@
-import { ScrollView, View, Text, ActivityIndicator } from "react-native";
+import { ScrollView, View, Text, ActivityIndicator, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { MaterialIcons } from "@expo/vector-icons";
 
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { ArcadeWelcome } from "../../../components/arcade/ArcadeWelcome";
@@ -8,7 +9,7 @@ import { StreakArena } from "../../../components/arcade/StreakArena";
 import { BossBattles } from "../../../components/arcade/BossBattles";
 import { NoSpendQuests } from "../../../components/arcade/NoSpendQuests";
 import { SavingsWheel } from "../../../components/arcade/SavingsWheel";
-import { useUser, useBoss, useQuests } from "../../../hooks/useApi";
+import { useUser, useBoss, useQuests, useFriends } from "../../../hooks/useApi";
 
 export default function ArcadeScreen() {
   const insets = useSafeAreaInsets();
@@ -18,6 +19,7 @@ export default function ArcadeScreen() {
   const { user } = useUser();
   const { boss, loading: bossLoading } = useBoss();
   const { quests, loading: questsLoading, assignQuests } = useQuests();
+  const { friends, pendingRequests } = useFriends();
 
   // Transform boss data for BossBattles component
   const bossesForDisplay = boss ? [{
@@ -65,6 +67,10 @@ export default function ArcadeScreen() {
     });
   };
 
+  const handleFriendsPress = () => {
+    router.push("/(protected)/friends");
+  };
+
   return (
     <View className="flex-1 bg-background-dark">
       <PageHeader
@@ -85,6 +91,26 @@ export default function ArcadeScreen() {
       >
         {/* Welcome */}
         <ArcadeWelcome />
+
+        {/* Friends Card */}
+        <TouchableOpacity
+          onPress={handleFriendsPress}
+          activeOpacity={0.8}
+          className="bg-surface-dark rounded-2xl p-4 border border-white/5"
+        >
+          <View className="flex-row items-center">
+            <View className="w-12 h-12 rounded-full bg-primary/20 items-center justify-center mr-4">
+              <Text className="text-2xl">👥</Text>
+            </View>
+            <View className="flex-1">
+              <Text className="text-white font-semibold text-lg">Friends</Text>
+              <Text className="text-text-muted text-sm">
+                {friends.length} friends • {pendingRequests.length} pending
+              </Text>
+            </View>
+            <MaterialIcons name="chevron-right" size={24} color="#6B6B7B" />
+          </View>
+        </TouchableOpacity>
 
         {/* Streak Arena */}
         <StreakArena

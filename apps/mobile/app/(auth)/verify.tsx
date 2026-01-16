@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -27,8 +27,17 @@ export default function VerifyScreen() {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(30); // Start with cooldown
   
   const inputRefs = useRef<(TextInput | null)[]>([]);
+
+  // Resend cooldown timer
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
 
   const handleOtpChange = (value: string, index: number) => {
     if (value.length > 1) {
@@ -102,6 +111,8 @@ export default function VerifyScreen() {
   };
 
   const handleResend = async () => {
+    if (resendCooldown > 0) return;
+    
     setLoading(true);
     setError("");
     
@@ -112,6 +123,7 @@ export default function VerifyScreen() {
         baseUrl: API_URL,
       });
       setError("");
+      setResendCooldown(30); // Start cooldown after successful resend
     } catch (err: any) {
       setError(err.message || "Failed to resend OTP");
     } finally {
@@ -185,10 +197,12 @@ export default function VerifyScreen() {
         <TouchableOpacity
           style={styles.resendButton}
           onPress={handleResend}
-          disabled={loading}
+          disabled={loading || resendCooldown > 0}
         >
           <Text style={styles.resendText}>Didn't receive the code? </Text>
-          <Text style={styles.resendLink}>Resend</Text>
+          <Text style={[styles.resendLink, resendCooldown > 0 && { opacity: 0.5 }]}>
+            {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend"}
+          </Text>
         </TouchableOpacity>
 
         {/* Spacer */}

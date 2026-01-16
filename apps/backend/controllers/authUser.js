@@ -5,33 +5,35 @@ import { sendVerificationOTP, checkVerificationOTP } from "../config/sendSms.js"
 // send-otp: send OTP via Twilio Verify, name required only for new users
 export const sendOTP = async (req, res) => {
   try {
-    console.log("📱 sendOTP called with body:", req.body);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log("📱 sendOTP called with body:", req.body);
+    }
     
     const { name, phone } = req.body;
     if (!phone) {
-      console.log("❌ Missing phone");
+      if (process.env.NODE_ENV !== 'production') console.log("❌ Missing phone");
       return res.status(400).json({ message: "Phone required" });
     }
 
     // Validate phone format
     const phoneRegex = /^\+?[1-9]\d{9,14}$/;
     if (!phoneRegex.test(phone.replace(/\s/g, ""))) {
-      console.log("❌ Invalid phone format:", phone);
+      if (process.env.NODE_ENV !== 'production') console.log("❌ Invalid phone format:", phone);
       return res.status(400).json({ message: "Invalid phone number format" });
     }
 
     // Ensure phone has + prefix
     const formattedPhone = phone.startsWith("+") ? phone : `+${phone}`;
-    console.log("📞 Formatted phone:", formattedPhone);
+    if (process.env.NODE_ENV !== 'production') console.log("📞 Formatted phone:", formattedPhone);
 
     let user = await User.findOne({ phone: formattedPhone });
     let isNewUser = false;
-    console.log("👤 User found:", !!user);
+    if (process.env.NODE_ENV !== 'production') console.log("👤 User found:", !!user);
 
     if (!user) {
       // New user - name is required
       if (!name) {
-        console.log("❌ New user but no name provided");
+        if (process.env.NODE_ENV !== 'production') console.log("❌ New user but no name provided");
         return res.status(400).json({ message: "Name required for new users", isNewUser: true });
       }
       
@@ -40,25 +42,26 @@ export const sendOTP = async (req, res) => {
         phone: formattedPhone,
       });
       isNewUser = true;
-      console.log("✅ New user created");
+      if (process.env.NODE_ENV !== 'production') console.log("✅ New user created");
     } else if (name && name !== user.name) {
       // Existing user can update their name
       user.name = name;
       await user.save();
-      console.log("✅ User name updated");
+      if (process.env.NODE_ENV !== 'production') console.log("✅ User name updated");
     }
 
-    // Send OTP via Twilio Verify
-    console.log("📤 Sending OTP to:", formattedPhone);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log("📤 Sending OTP to:", formattedPhone);
+    }
     const result = await sendVerificationOTP(formattedPhone);
-    console.log("📬 Twilio result:", result);
+    if (process.env.NODE_ENV !== 'production') console.log("📬 Twilio result:", result);
     
     if (!result.success) {
-      console.log("❌ Twilio failed:", result.error);
+      if (process.env.NODE_ENV !== 'production') console.log("❌ Twilio failed:", result.error);
       return res.status(500).json({ message: "Failed to send OTP", error: result.error });
     }
 
-    console.log("✅ OTP sent successfully");
+    if (process.env.NODE_ENV !== 'production') console.log("✅ OTP sent successfully");
     return res.json({ 
       message: "OTP sent to phone",
       isNewUser,
@@ -102,7 +105,7 @@ export const verifyOTP = async (req, res) => {
 // getMe (protected)
 export const getMe = async (req, res) => {
   try {
-    console.log("🟢 getMe controller reached");
+    if (process.env.NODE_ENV !== 'production') console.log("🟢 getMe controller reached");
 
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: "User not found" });

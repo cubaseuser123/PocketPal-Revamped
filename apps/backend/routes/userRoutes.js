@@ -12,39 +12,45 @@ import {
 
 const router = express.Router();
 
-// Multer Config
+// Multer Config with security enhancements
 const storage = multer.diskStorage({
   destination(req, file, cb) {
     cb(null, "uploads/");
   },
   filename(req, file, cb) {
-    cb(
-      null,
-      `${req.user.id}-${Date.now()}${path.extname(file.originalname)}`
-    );
+    // Sanitize filename: remove special characters, keep only alphanumeric and extension
+    const ext = path.extname(file.originalname).toLowerCase();
+    const sanitizedName = `${req.user.id}-${Date.now()}${ext}`;
+    cb(null, sanitizedName);
   },
 });
 
-const upload = multer({
-  storage,
-  fileFilter: function (req, file, cb) {
-    checkFileType(file, cb);
-  },
-});
+// Allowed file types
+const ALLOWED_TYPES = /jpg|jpeg|png|webp/;
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 function checkFileType(file, cb) {
-  const filetypes = /jpg|jpeg|png/;
-  const extname = filetypes.test(
+  const extname = ALLOWED_TYPES.test(
     path.extname(file.originalname).toLowerCase()
   );
-  const mimetype = filetypes.test(file.mimetype);
+  const mimetype = /image\/(jpeg|jpg|png|webp)/.test(file.mimetype);
 
   if (extname && mimetype) {
     return cb(null, true);
   } else {
-    cb("Images only!");
+    cb(new Error("Only image files (jpg, jpeg, png, webp) are allowed"));
   }
 }
+
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: MAX_FILE_SIZE,
+  },
+  fileFilter: function (req, file, cb) {
+    checkFileType(file, cb);
+  },
+});
 
 /**
  * @swagger

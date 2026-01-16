@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -23,6 +23,15 @@ export default function LoginScreen() {
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [cooldown, setCooldown] = useState(0);
+
+  // Cooldown timer effect
+  useEffect(() => {
+    if (cooldown > 0) {
+      const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [cooldown]);
 
   const formatPhoneNumber = (value: string) => {
     const cleaned = value.replace(/[^\d+]/g, "");
@@ -58,6 +67,9 @@ export default function LoginScreen() {
         pathname: "/(auth)/verify",
         params: { phone: formattedPhone },
       });
+      
+      // Start 30-second cooldown
+      setCooldown(30);
     } catch (err: any) {
       // Check if this is a "new user" error
       if (err.message?.includes("Name required") || err.data?.isNewUser) {
@@ -140,9 +152,9 @@ export default function LoginScreen() {
         {/* Bottom Section */}
         <View style={[styles.bottomSection, { paddingBottom: insets.bottom + 24 }]}>
           <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
+            style={[styles.button, (loading || cooldown > 0) && styles.buttonDisabled]}
             onPress={handleSendOTP}
-            disabled={loading}
+            disabled={loading || cooldown > 0}
             activeOpacity={0.8}
           >
             <LinearGradient
@@ -153,6 +165,8 @@ export default function LoginScreen() {
             />
             {loading ? (
               <ActivityIndicator color="#FFFFFF" />
+            ) : cooldown > 0 ? (
+              <Text style={styles.buttonText}>Wait {cooldown}s</Text>
             ) : (
               <>
                 <Text style={styles.buttonText}>Send OTP</Text>

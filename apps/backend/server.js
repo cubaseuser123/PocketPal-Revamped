@@ -15,6 +15,7 @@ import categoryRoutes from "./routes/categoryRoutes.js";
 import bossRoutes from "./routes/bossRoutes.js";
 import questRoutes from "./routes/questRoutes.js";
 import wheelRoutes from "./routes/wheelRoutes.js";
+import friendRoutes from "./routes/friendRoutes.js";
 
 
 const app = express();
@@ -36,10 +37,13 @@ swaggerDocs(app);
 // MongoDB
 connectDB();
 
-app.use((req, res, next) => {
-  console.log("REQUEST:", req.method, req.url, "Origin:", req.headers.origin);
-  next();
-});
+// Request logging (disabled in production)
+if (process.env.NODE_ENV !== 'production') {
+  app.use((req, res, next) => {
+    console.log("REQUEST:", req.method, req.url, "Origin:", req.headers.origin);
+    next();
+  });
+}
 
 // Static folder
 app.use("/uploads", express.static("uploads"));
@@ -55,6 +59,7 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/boss", bossRoutes);
 app.use("/api/quests", questRoutes);
 app.use("/api/wheel", wheelRoutes);
+app.use("/api/friends", friendRoutes);
 
 app.get("/", (req, res) => {
   res.send("PocketPal API running");

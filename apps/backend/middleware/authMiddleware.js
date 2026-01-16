@@ -4,8 +4,10 @@ import User from "../models/User.js";
 export const protect = async (req, res, next) => {
   try {
     let token;
-    console.log("🟡 protect middleware HIT");
-    console.log("🟡 Authorization header:", req.headers.authorization);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log("🟡 protect middleware HIT");
+      console.log("🟡 Authorization header:", req.headers.authorization);
+    }
 
     if (
       req.headers.authorization &&

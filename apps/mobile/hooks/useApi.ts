@@ -4,25 +4,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { userApi, walletApi, transactionApi, goalApi, categoryApi, subscriptionApi } from "@repo/auth";
 
 // Get API base URL based on platform
-// For physical device: use ngrok URL
-// For emulator/web: use localhost
-const NGROK_URL = "https://transformational-philatelically-fiona.ngrok-free.dev";
-
+// Set EXPO_PUBLIC_API_URL in .env for physical device testing (e.g., ngrok URL)
 const getApiUrl = (): string => {
   if (process.env.EXPO_PUBLIC_API_URL) {
     return process.env.EXPO_PUBLIC_API_URL;
   }
-  // For physical Android device, use ngrok
-  if (Platform.OS === "android") {
-    // Check if running on emulator (10.0.2.2 works) or physical device (needs ngrok)
-    // Using ngrok for now - physical device can't reach localhost
-    return NGROK_URL;
-  }
-  // iOS physical device also needs ngrok
-  if (Platform.OS === "ios") {
-    return NGROK_URL;
-  }
-  // Web uses localhost
+  // Fallback to localhost for development
   return "http://localhost:5757";
 };
 
@@ -46,6 +33,8 @@ export interface User {
   avatarUrl: string | null;
   kycCompleted: boolean;
   onboardingCompleted: boolean;
+  friendCode?: string;
+  totalGoalsCompleted?: number;
 }
 
 export interface WalletData {
@@ -607,6 +596,194 @@ export function useWheel() {
   }, [spinMutation]);
 
   return { wheelStatus, loading: isLoading, error: error ? (error as Error).message : null, refetch, spin };
+}
+
+// Types for Friends
+export interface Friend {
+  friendshipId: string;
+  _id: string;
+  name: string;
+  avatarUrl: string | null;
+  level: number;
+  coins: number;
+  totalGoalsCompleted: number;
+}
+
+export interface FriendRequest {
+  id: string;
+  from: {
+    _id: string;
+    name: string;
+    avatarUrl: string | null;
+    level: number;
+  };
+  createdAt: string;
+}
+
+export interface LeaderboardEntry {
+  rank: number;
+  _id: string;
+  name: string;
+  avatarUrl: string | null;
+  level: number;
+  coins: number;
+  totalGoalsCompleted: number;
+  isCurrentUser: boolean;
+}
+
+// Hook for friends
+export function useFriends() {
+  const queryClient = useQueryClient();
+
+  // Get friends list
+  const { data: friendsData, isLoading: friendsLoading, refetch: refetchFriends } = useQuery({
+    queryKey: ["friends"],
+    queryFn: async () => {
+      const { auth } = await import("@repo/auth");
+      const token = await auth.getToken();
+      const res = await fetch(`${API_URL}/api/friends`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return await res.json() as { friends: Friend[] };
+    },
+  });
+
+  // Get pending requests
+  const { data: pendingData, isLoading: pendingLoading, refetch: refetchPending } = useQuery({
+    queryKey: ["friendRequests"],
+    queryFn: async () => {
+      const { auth } = await import("@repo/auth");
+      const token = await auth.getToken();
+      const res = await fetch(`${API_URL}/api/friends/pending`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return await res.json() as { requests: FriendRequest[] };
+    },
+  });
+
+  // Send friend request
+  const sendRequestMutation = useMutation({
+    mutationFn: async (friendCode: string) => {
+      const { auth } = await import("@repo/auth");
+      const token = await auth.getToken();
+      const res = await fetch(`${API_URL}/api/friends/request`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ friendCode }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to send request");
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["friends"] });
+    },
+  });
+
+  // Accept friend request
+  const acceptRequestMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      const { auth } = await import("@repo/auth");
+      const token = await auth.getToken();
+      const res = await fetch(`${API_URL}/api/friends/accept/${requestId}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to accept");
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["friends"] });
+      queryClient.invalidateQueries({ queryKey: ["friendRequests"] });
+    },
+  });
+
+  // Reject friend request
+  const rejectRequestMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      const { auth } = await import("@repo/auth");
+      const token = await auth.getToken();
+      const res = await fetch(`${API_URL}/api/friends/reject/${requestId}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to reject");
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["friendRequests"] });
+    },
+  });
+
+  // Remove friend
+  const removeFriendMutation = useMutation({
+    mutationFn: async (friendshipId: string) => {
+      const { auth } = await import("@repo/auth");
+      const token = await auth.getToken();
+      const res = await fetch(`${API_URL}/api/friends/${friendshipId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to remove");
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["friends"] });
+    },
+  });
+
+  const sendRequest = useCallback(async (friendCode: string) => {
+    return await sendRequestMutation.mutateAsync(friendCode);
+  }, [sendRequestMutation]);
+
+  const acceptRequest = useCallback(async (requestId: string) => {
+    return await acceptRequestMutation.mutateAsync(requestId);
+  }, [acceptRequestMutation]);
+
+  const rejectRequest = useCallback(async (requestId: string) => {
+    return await rejectRequestMutation.mutateAsync(requestId);
+  }, [rejectRequestMutation]);
+
+  const removeFriend = useCallback(async (friendshipId: string) => {
+    return await removeFriendMutation.mutateAsync(friendshipId);
+  }, [removeFriendMutation]);
+
+  return {
+    friends: friendsData?.friends || [],
+    pendingRequests: pendingData?.requests || [],
+    loading: friendsLoading || pendingLoading,
+    refetchFriends,
+    refetchPending,
+    sendRequest,
+    acceptRequest,
+    rejectRequest,
+    removeFriend,
+  };
+}
+
+// Hook for friends leaderboard
+export function useLeaderboard(type: "coins" | "goals" = "coins") {
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ["leaderboard", type],
+    queryFn: async () => {
+      const { auth } = await import("@repo/auth");
+      const token = await auth.getToken();
+      const res = await fetch(`${API_URL}/api/friends/leaderboard/${type}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return await res.json() as { leaderboard: LeaderboardEntry[]; type: string };
+    },
+  });
+
+  return {
+    leaderboard: data?.leaderboard || [],
+    loading: isLoading,
+    error: error ? (error as Error).message : null,
+    refetch,
+  };
 }
 
 // Export API URL for direct use

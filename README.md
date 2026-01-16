@@ -5,7 +5,7 @@ PocketPal is a **cross-platform financial tracking app** built using a **Turbore
 It contains:
 
 - **Web App** → Next.js
-- **Mobile App** → Ionic + Capacitor + React
+- **Mobile App** → Expo + React Native
 - **Backend API** → Express.js
 - **Shared Packages** → UI, TS Config, ESLint Config
 - **Package Manager** → pnpm
@@ -22,7 +22,7 @@ pocketpal/
 │
 ├── apps/
 │   ├── backend/            # Express.js API server
-│   ├── mobile/             # Ionic + Capacitor (React) mobile app
+│   ├── mobile/             # Expo React Native mobile app
 │   └── web/                # Next.js web app
 │
 ├── packages/
@@ -52,10 +52,10 @@ pocketpal/
 
 ### **Mobile (apps/mobile)**
 
-- Ionic Framework
-- React
-- Capacitor
-- TailwindCSS
+- Expo
+- React Native
+- NativeWind (TailwindCSS for RN)
+- Expo Router
 
 ### **Backend (apps/backend)**
 
@@ -84,8 +84,8 @@ Make sure you have the following installed:
 | **Node.js**                | v20+                         |
 | **pnpm**                   | v8+                          |
 | **Git**                    | Any recent version           |
-| **Android Studio**         | For running mobile builds    |
-| **Ionic CLI**              | _(optional but recommended)_ |
+| **Android Studio**         | For running Android builds |
+| **Xcode**                   | For running iOS builds (Mac only) |
 
 Install pnpm if needed:
 
@@ -93,11 +93,6 @@ Install pnpm if needed:
 npm install -g pnpm
 ```
 
-Install Ionic CLI:
-
-```
-npm install -g @ionic/cli
-```
 
 ---
 
@@ -153,7 +148,7 @@ Or:
 
 ```
 cd apps/mobile
-pnpm dev
+npx expo start
 ```
 
 ### Run on Android:
@@ -162,8 +157,24 @@ pnpm dev
 
 ```
 cd apps/mobile
-pnpm cap sync android
-pnpm cap open android
+npx expo run:android
+```
+
+### Run on iOS:
+
+**Xcode must be installed (Mac only).**
+
+```
+cd apps/mobile
+npx expo run:ios
+```
+
+### Build for Production:
+
+```
+cd apps/mobile
+eas build --platform android
+eas build --platform ios
 ```
 
 ---
