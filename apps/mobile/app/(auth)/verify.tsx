@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Keyboard,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -16,16 +17,17 @@ import { LinearGradient } from "expo-linear-gradient";
 import { auth, useAuth, storage } from "@repo/auth";
 import { API_URL } from "../../hooks/useApi";
 
-const ONBOARDING_COMPLETE_KEY = "onboarding_complete";
+
 
 export default function VerifyScreen() {
   const router = useRouter();
-  const { phone } = useLocalSearchParams<{ phone: string }>();
+  const { phone, source } = useLocalSearchParams<{ phone: string; source: string }>();
   const insets = useSafeAreaInsets();
   const authContext = useAuth();
   
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
   const [resendCooldown, setResendCooldown] = useState(30); // Start with cooldown
   
@@ -79,6 +81,9 @@ export default function VerifyScreen() {
     setLoading(true);
     setError("");
 
+    let shouldStopLoading = true;
+    Keyboard.dismiss();
+
     try {
       const response = await auth.verifyOtp({
         phone: phone || "",
@@ -86,27 +91,43 @@ export default function VerifyScreen() {
         baseUrl: API_URL,
       });
       
-      // Update auth context
-      authContext?.setAuthenticated(true);
       
-      // Check if user has completed onboarding from backend response
-      // Backend returns false if: never completed OR completed > 30 days ago
-      const user = (response as any)?.user;
-      const onboardingComplete = user?.onboardingCompleted === true;
-      
-      if (onboardingComplete) {
-        // Sync local storage
-        await storage.set(ONBOARDING_COMPLETE_KEY, "true");
-        // Returning user - skip to main app
-        router.replace("/(protected)/(tabs)");
+      if (source === "register") {
+        // Registration flow: Show success toast then redirect to login
+        // DO NOT set authenticated=true here, enabling it triggers auto-navigation to onboarding
+        
+        // Clear token immediately so we ensure we are clean
+        await storage.remove("access_token");
+        
+        setSuccess(true);
+        shouldStopLoading = false; // Keep loading spinner showing (or toast visible)
+
+        setTimeout(() => {
+          router.replace("/(auth)/login");
+        }, 2000);
       } else {
-        // New user or needs re-onboarding - show onboarding
-        router.replace("/(auth)/onboarding");
+        // Normal login flow
+        authContext?.setAuthenticated(true);
+
+        const user = (response as any)?.user;
+        const onboardingComplete = user?.onboardingCompleted === true;
+
+        // Small delay to allow auth state to propagate to useAuthNavigation
+        // preventing race condition where router moves before auth=true is seen
+        setTimeout(() => {
+          if (onboardingComplete) {
+            router.replace("/(protected)/(tabs)");
+          } else {
+            router.replace("/(auth)/onboarding");
+          }
+        }, 500);
       }
     } catch (err: any) {
       setError(err.message || "Invalid OTP");
     } finally {
-      setLoading(false);
+      if (shouldStopLoading) {
+        setLoading(false);
+      }
     }
   };
 
@@ -233,6 +254,19 @@ export default function VerifyScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Success Toast */}
+      {success && (
+        <View style={styles.successToast}>
+          <View style={styles.successToastContent}>
+            <MaterialIcons name="check-circle" size={24} color="#3DDC97" />
+            <View style={styles.successToastText}>
+              <Text style={styles.successToastTitle}>Account Verified! 🎉</Text>
+              <Text style={styles.successToastSubtitle}>Redirecting to login...</Text>
+            </View>
+          </View>
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -362,5 +396,41 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "700",
     color: "#FFFFFF",
+  },
+  successToast: {
+    position: "absolute",
+    bottom: 50,
+    left: 24,
+    right: 24,
+    zIndex: 9999,
+  },
+  successToastContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#1A1A22",
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#3DDC97",
+    gap: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  successToastText: {
+    flex: 1,
+    gap: 2,
+  },
+  successToastTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  successToastSubtitle: {
+    fontSize: 13,
+    color: "#B0B0C3",
   },
 });

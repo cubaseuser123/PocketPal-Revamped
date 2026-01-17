@@ -9,6 +9,19 @@ export const getProfile = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    // Ensure friend code exists (lazy migration for existing users)
+    if (!user.friendCode) {
+       let code;
+       let unique = false;
+       while(!unique) {
+          code = Math.random().toString(36).substring(2, 8).toUpperCase();
+          const exists = await User.findOne({ friendCode: code });
+          if(!exists) unique = true;
+       }
+       user.friendCode = code;
+       await user.save();
+    }
+
     // Get user's wallets
     const wallets = await Wallet.find({ userId: user._id });
     const primaryWallet = wallets.find(w => w.type === "primary");
@@ -33,6 +46,7 @@ export const getProfile = async (req, res) => {
         avatarUrl: user.avatarUrl,
         kycCompleted: user.kycCompleted,
         onboardingCompleted: !shouldShowOnboarding, // Return false if should show again
+        friendCode: user.friendCode,
       },
       wallets: {
         primary: primaryWallet?.balance || 0,
@@ -83,13 +97,44 @@ export const completeOnboarding = async (req, res) => {
     
     await user.save();
 
-    // Create wallets if they don't exist
+    const { amount } = req.body;
+    const initialBalance = amount ? parseInt(amount) : 0;
+
+    // Create or Get wallets
+    let primaryWallet;
     const existingWallets = await Wallet.find({ userId: user._id });
+    
     if (existingWallets.length === 0) {
-      await Wallet.create([
-        { userId: user._id, type: "primary", balance: 0 },
-        { userId: user._id, type: "savings", balance: 0 },
-      ]);
+        const newWallets = await Wallet.create([
+            { userId: user._id, type: "primary", balance: initialBalance },
+            { userId: user._id, type: "savings", balance: 0 },
+        ]);
+        primaryWallet = newWallets.find(w => w.type === "primary");
+    } else {
+        primaryWallet = existingWallets.find(w => w.type === "primary");
+        if (primaryWallet && initialBalance > 0) {
+            // Edge case: Wallet exists but user is re-onboarding with money
+            primaryWallet.balance += initialBalance;
+            await primaryWallet.save();
+        }
+    }
+
+    // Create Initial Transaction if amount > 0
+    if (initialBalance > 0 && primaryWallet) {
+        const Transaction = (await import("../models/Transaction.js")).default;
+        await Transaction.create({
+            userId: user._id,
+            walletId: primaryWallet._id,
+            amount: initialBalance,
+            type: "income", // Money coming IN
+            category: null, // Initial deposit might not have a category or we can look it up if needed, but schema allows ref/null? 
+                            // Schema says categoryId is ref "Category", not required. 
+                            // But name is required. Keep "Initial Deposit".
+            name: "Initial Deposit",
+            emoji: "💰",
+            status: "completed",
+            date: new Date()
+        });
     }
 
     return res.json({ 
@@ -111,14 +156,14 @@ export const completeKyc = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    if (user.kycCompleted) {
+      return res.status(400).json({ message: "KYC already completed" });
+    }
+
     user.kycCompleted = true;
     
-    // Level Up Logic: KYC moves user to Level 2
-    if (user.level < 2) {
-      user.level = 2;
-      // Award XP/Coins for leveling up
-      user.coins = (user.coins || 0) + 500;
-    }
+    // Award 100 XP/Coins for KYC
+    user.coins = (user.coins || 0) + 100;
     
     await user.save();
 
@@ -152,6 +197,32 @@ export const uploadAvatar = async (req, res) => {
     return res.json({ message: "Avatar updated", avatarUrl, user });
   } catch (err) {
     console.error("uploadAvatar error:", err);
+    return res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
+// Delete User Account
+export const deleteUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Delete associated wallets
+    await Wallet.deleteMany({ userId: user._id });
+
+    // Delete associated transactions (optional, depending on retention policy, but usually good to clean up)
+    const Transaction = (await import("../models/Transaction.js")).default;
+    await Transaction.deleteMany({ userId: user._id });
+
+    // Delete the user
+    await User.findByIdAndDelete(user._id);
+
+    return res.json({ message: "User deleted successfully" });
+  } catch (err) {
+    console.error("deleteUser error:", err);
     return res.status(500).json({ message: "Server error", error: err.message });
   }
 };

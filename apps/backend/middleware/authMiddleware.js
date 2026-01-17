@@ -14,6 +14,7 @@ export const protect = async (req, res, next) => {
     }
 
     if (!token) {
+      console.log("❌ protect middleware: No token received. Headers:", req.headers);
       return res.status(401).json({ message: "Not authorized, no token" });
     }
 
@@ -29,6 +30,7 @@ export const protect = async (req, res, next) => {
     req.user = user; // attach full user object
     next(); // VERY IMPORTANT
   } catch (error) {
+    console.error("❌ protect middleware error:", error.message);
     return res.status(401).json({
       message: "Not authorized",
       error: error.message,

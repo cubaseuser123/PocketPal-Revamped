@@ -8,22 +8,27 @@ import { api as httpApi } from "./http";
 // User API
 export const userApi = {
   getProfile: async (baseUrl: string) => {
-    const response = await httpApi.get(`${baseUrl}/api/user/me`);
+    const response = await httpApi.get(`${baseUrl}/api/v1/user/me`);
     return response.data;
   },
 
   updateProfile: async (baseUrl: string, data: { name?: string; avatarUrl?: string }) => {
-    const response = await httpApi.put(`${baseUrl}/api/user/me`, data);
+    const response = await httpApi.put(`${baseUrl}/api/v1/user/me`, data);
     return response.data;
   },
 
-  completeOnboarding: async (baseUrl: string) => {
-    const response = await httpApi.post(`${baseUrl}/api/user/complete-onboarding`, {});
+  completeOnboarding: async (baseUrl: string, amount?: string) => {
+    const response = await httpApi.post(`${baseUrl}/api/v1/user/complete-onboarding`, { amount });
     return response.data;
   },
 
   completeKyc: async (baseUrl: string) => {
-    const response = await httpApi.post(`${baseUrl}/api/user/complete-kyc`, {});
+    const response = await httpApi.post(`${baseUrl}/api/v1/user/complete-kyc`, {});
+    return response.data;
+  },
+
+  deleteAccount: async (baseUrl: string) => {
+    const response = await httpApi.delete(`${baseUrl}/api/v1/user/me`);
     return response.data;
   },
 };
@@ -31,22 +36,22 @@ export const userApi = {
 // Wallet API
 export const walletApi = {
   get: async (baseUrl: string) => {
-    const response = await httpApi.get(`${baseUrl}/api/wallets`);
+    const response = await httpApi.get(`${baseUrl}/api/v1/wallets`);
     return response.data;
   },
 
   addMoney: async (baseUrl: string, amount: number) => {
-    const response = await httpApi.post(`${baseUrl}/api/wallets/add-money`, { amount });
+    const response = await httpApi.post(`${baseUrl}/api/v1/wallets/add-money`, { amount });
     return response.data;
   },
 
   transfer: async (baseUrl: string, from: string, to: string, amount: number, sourceGoalId?: string) => {
-    const response = await httpApi.post(`${baseUrl}/api/wallets/transfer`, { from, to, amount, sourceGoalId });
+    const response = await httpApi.post(`${baseUrl}/api/v1/wallets/transfer`, { from, to, amount, sourceGoalId });
     return response.data;
   },
 
   upgradePpi: async (baseUrl: string) => {
-    const response = await httpApi.post(`${baseUrl}/api/wallets/upgrade-ppi`, {});
+    const response = await httpApi.post(`${baseUrl}/api/v1/wallets/upgrade-ppi`, {});
     return response.data;
   },
 };
@@ -59,7 +64,7 @@ export const transactionApi = {
     if (params?.offset) queryParams.append("offset", params.offset.toString());
     if (params?.walletType) queryParams.append("walletType", params.walletType);
     
-    const url = `${baseUrl}/api/transactions${queryParams.toString() ? `?${queryParams}` : ""}`;
+    const url = `${baseUrl}/api/v1/transactions${queryParams.toString() ? `?${queryParams}` : ""}`;
     const response = await httpApi.get(url);
     return response.data;
   },
@@ -71,12 +76,12 @@ export const transactionApi = {
     categoryId?: string;
     walletType?: string;
   }) => {
-    const response = await httpApi.post(`${baseUrl}/api/transactions`, data);
+    const response = await httpApi.post(`${baseUrl}/api/v1/transactions`, data);
     return response.data;
   },
 
   summary: async (baseUrl: string, period: "week" | "month" | "3m" = "week") => {
-    const response = await httpApi.get(`${baseUrl}/api/transactions/summary?period=${period}`);
+    const response = await httpApi.get(`${baseUrl}/api/v1/transactions/summary?period=${period}`);
     return response.data;
   },
 };
@@ -84,7 +89,7 @@ export const transactionApi = {
 // Goal API
 export const goalApi = {
   list: async (baseUrl: string) => {
-    const response = await httpApi.get(`${baseUrl}/api/goals`);
+    const response = await httpApi.get(`${baseUrl}/api/v1/goals`);
     return response.data;
   },
 
@@ -96,7 +101,7 @@ export const goalApi = {
     targetAmount: number;
     isFeatured?: boolean;
   }) => {
-    const response = await httpApi.post(`${baseUrl}/api/goals`, data);
+    const response = await httpApi.post(`${baseUrl}/api/v1/goals`, data);
     return response.data;
   },
 
@@ -108,17 +113,17 @@ export const goalApi = {
     targetAmount: number;
     isFeatured: boolean;
   }>) => {
-    const response = await httpApi.put(`${baseUrl}/api/goals/${id}`, data);
+    const response = await httpApi.put(`${baseUrl}/api/v1/goals/${id}`, data);
     return response.data;
   },
 
   addToGoal: async (baseUrl: string, id: string, amount: number) => {
-    const response = await httpApi.post(`${baseUrl}/api/goals/${id}/add`, { amount });
+    const response = await httpApi.post(`${baseUrl}/api/v1/goals/${id}/add`, { amount });
     return response.data;
   },
 
   delete: async (baseUrl: string, id: string) => {
-    const response = await httpApi.delete(`${baseUrl}/api/goals/${id}`);
+    const response = await httpApi.delete(`${baseUrl}/api/v1/goals/${id}`);
     return response.data;
   },
 };
@@ -126,7 +131,7 @@ export const goalApi = {
 // Category API
 export const categoryApi = {
   list: async (baseUrl: string) => {
-    const response = await httpApi.get(`${baseUrl}/api/categories`);
+    const response = await httpApi.get(`${baseUrl}/api/v1/categories`);
     return response.data;
   },
 };
@@ -140,32 +145,32 @@ export const subscriptionApi = {
     startDate: string;
     renewalCycle?: string;
   }) => {
-    const response = await httpApi.post(`${baseUrl}/api/subscriptions/add`, data);
+    const response = await httpApi.post(`${baseUrl}/api/v1/subscriptions/add`, data);
     return response.data;
   },
 
   getAll: async (baseUrl: string) => {
-    const response = await httpApi.get(`${baseUrl}/api/subscriptions`);
+    const response = await httpApi.get(`${baseUrl}/api/v1/subscriptions`);
     return response.data;
   },
 
   getActive: async (baseUrl: string) => {
-    const response = await httpApi.get(`${baseUrl}/api/subscriptions/active`);
+    const response = await httpApi.get(`${baseUrl}/api/v1/subscriptions/active`);
     return response.data;
   },
 
   getUpcoming: async (baseUrl: string) => {
-    const response = await httpApi.get(`${baseUrl}/api/subscriptions/upcoming`);
+    const response = await httpApi.get(`${baseUrl}/api/v1/subscriptions/upcoming`);
     return response.data;
   },
 
   getCancelled: async (baseUrl: string) => {
-    const response = await httpApi.get(`${baseUrl}/api/subscriptions/cancelled`);
+    const response = await httpApi.get(`${baseUrl}/api/v1/subscriptions/cancelled`);
     return response.data;
   },
 
   cancel: async (baseUrl: string, id: string) => {
-    const response = await httpApi.put(`${baseUrl}/api/subscriptions/cancel/${id}`, {});
+    const response = await httpApi.put(`${baseUrl}/api/v1/subscriptions/cancel/${id}`, {});
     return response.data;
   },
 };

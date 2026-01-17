@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, Platform } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
-type Status = "on-track" | "at-risk" | "unlikely";
+type Status = "on-track" | "at-risk" | "unlikely" | "no-goal";
 
 interface WeeklySavingGoalProps {
   currentAmount: number;
@@ -32,6 +32,13 @@ const STATUS_CONFIG = {
     textColor: "#FF4B4B",
     dotColor: "#FF4B4B",
   },
+  "no-goal": {
+    label: "No Goal Set",
+    bgColor: "rgba(176, 176, 195, 0.1)",
+    borderColor: "rgba(176, 176, 195, 0.2)",
+    textColor: "#B0B0C3",
+    dotColor: "#B0B0C3",
+  },
 };
 
 export function WeeklySavingGoal({
@@ -40,7 +47,7 @@ export function WeeklySavingGoal({
   status,
   todaySaved,
 }: WeeklySavingGoalProps) {
-  const progress = Math.min((currentAmount / targetAmount) * 100, 100);
+  const progress = targetAmount > 0 ? Math.min((currentAmount / targetAmount) * 100, 100) : 0;
   const config = STATUS_CONFIG[status];
 
   return (

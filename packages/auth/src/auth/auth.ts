@@ -5,6 +5,7 @@ interface SendOtpParams {
   name: string;
   phone: string;
   baseUrl: string;
+  action?: "register" | "login";
 }
 
 interface VerifyOtpParams {
@@ -20,13 +21,14 @@ interface AuthResponse {
 }
 
 export const auth = {
-  sendOtp: async ({ name, phone, baseUrl }: SendOtpParams): Promise<void> => {
+  sendOtp: async ({ name, phone, baseUrl, action }: SendOtpParams): Promise<any> => {
     try {
-      console.log("[Auth] Sending OTP to:", phone);
+      console.log("[Auth] Sending OTP to:", phone, "Action:", action);
 
-      const response = await api.post(`${baseUrl}/api/auth/send-otp`, {
+      const response = await api.post(`${baseUrl}/api/v1/auth/send-otp`, {
         name,
         phone,
+        action,
       });
 
       if (response.status !== 200) {
@@ -34,6 +36,7 @@ export const auth = {
       }
 
       console.log("[Auth] OTP sent successfully");
+      return response.data;
     } catch (error: any) {
       console.error("[Auth] Send OTP error:", error);
       throw new Error(error.message || "Failed to send OTP");
@@ -44,11 +47,11 @@ export const auth = {
     phone,
     otp,
     baseUrl,
-  }: VerifyOtpParams): Promise<void> => {
+  }: VerifyOtpParams): Promise<any> => {
     try {
       console.log("[Auth] Verifying OTP for:", phone);
 
-      const response = await api.post(`${baseUrl}/api/auth/verify-otp`, {
+      const response = await api.post(`${baseUrl}/api/v1/auth/verify-otp`, {
         phone,
         otp,
       });
@@ -67,6 +70,7 @@ export const auth = {
 
       await storage.set("access_token", token);
       console.log("[Auth] Token stored successfully");
+      return data;
     } catch (error: any) {
       console.error("[Auth] Verify OTP error:", error);
       throw new Error(error.message || "Failed to verify OTP");

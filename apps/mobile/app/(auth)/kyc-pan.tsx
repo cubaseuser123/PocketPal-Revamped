@@ -67,7 +67,8 @@ export default function KYCPanScreen() {
                 <View style={styles.progressBarFill} />
               </View>
             </View>
-            <View style={{ width: 24 }} /> {/* Spacer for centering */}
+            {/* Spacer for centering */}
+            <View style={{ width: 24 }} />
           </View>
 
           <Text style={styles.title}>What is your PAN?</Text>

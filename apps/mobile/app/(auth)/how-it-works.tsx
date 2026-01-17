@@ -8,7 +8,7 @@ import { storage, useAuth } from "@repo/auth";
 import { PallyIcon } from "../../components/ui/PallyIcon";
 
 // Storage key for onboarding completion
-const ONBOARDING_COMPLETE_KEY = "onboarding_complete";
+
 
 const STEPS = [
   {

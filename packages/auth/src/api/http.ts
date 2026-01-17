@@ -1,6 +1,7 @@
 import { RequestProps, HttpResponse } from "../types";
 import { storage } from "../storage/storage";
 import { Platform } from "react-native";
+import { authEvents } from "../events";
 
 async function request({
   method,
@@ -43,6 +44,13 @@ async function request({
 
   // Throw error for non-2xx responses
   if (!response.ok) {
+    // Handle 401 Unauthorized
+    if (response.status === 401) {
+      console.log("⚠️ 401 Unauthorized - Clearing token");
+      await storage.remove("access_token");
+      authEvents.emit("logout");
+    }
+
     const error = new Error(responseData.message || `HTTP ${response.status}`);
     (error as any).status = response.status;
     (error as any).data = responseData;

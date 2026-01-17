@@ -8,6 +8,7 @@ import {
   completeOnboarding,
   completeKyc,
   uploadAvatar,
+  deleteUser,
 } from "../controllers/userController.js";
 
 const router = express.Router();
@@ -116,5 +117,16 @@ router.post("/complete-kyc", protect, completeKyc);
  *       - bearerAuth: []
  */
 router.post("/avatar", protect, upload.single("image"), uploadAvatar);
+
+/**
+ * @swagger
+ * /api/user/me:
+ *   delete:
+ *     tags: [User]
+ *     summary: Delete user account
+ *     security:
+ *       - bearerAuth: []
+ */
+router.delete("/me", protect, deleteUser);
 
 export default router;

@@ -8,7 +8,7 @@ import { storage, useAuth, userApi } from "@repo/auth";
 import { PallyIcon } from "../../components/ui/PallyIcon";
 
 // Storage key for onboarding completion
-const ONBOARDING_COMPLETE_KEY = "onboarding_complete";
+
 
 export default function KYCSelfieScreen() {
   const router = useRouter();
@@ -60,7 +60,7 @@ export default function KYCSelfieScreen() {
       }
       
       // Mark onboarding as complete locally
-      await storage.set(ONBOARDING_COMPLETE_KEY, "true");
+
       
       // Navigate to add money screen after KYC completion
       router.replace("/(auth)/add-money");

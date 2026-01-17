@@ -1,5 +1,5 @@
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useState } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -12,9 +12,14 @@ export default function PaymentMethodScreen() {
   const insets = useSafeAreaInsets();
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>("upi");
 
+  const { amount } = useLocalSearchParams<{ amount: string }>();
+
   const handleContinue = () => {
     // Navigate to onboarding success screen
-    router.replace("/(auth)/onboarding-success");
+    router.replace({
+      pathname: "/(auth)/onboarding-success",
+      params: { amount }
+    });
   };
 
   return (

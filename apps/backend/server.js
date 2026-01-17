@@ -22,6 +22,7 @@ import badgeRoutes from "./routes/badgeRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 
 const app = express();
+app.set("trust proxy", 1); // Trust first proxy (fix for rate limit error)
 const startTime = Date.now();
 
 // Sentry Init
@@ -104,8 +105,9 @@ app.get("/health", (req, res) => {
 app.use("/uploads", express.static("uploads"));
 
 // API v1 Routes
-app.use("/api/v1/auth/send-otp", otpLimiter); // Apply specifically to OTP
-app.use("/api/v1/auth", authLimiter, authRoutes); // Apply general auth limit
+// app.use("/api/v1/auth/send-otp", otpLimiter); // Apply specifically to OTP
+// app.use("/api/v1/auth", authLimiter, authRoutes); // Apply general auth limit
+app.use("/api/v1/auth", authRoutes); // Temporarily removed limiters
 app.use("/api/v1/subscriptions", subscriptionRoutes);
 app.use("/api/v1/user", userRoutes);
 app.use("/api/v1/wallets", walletRoutes);

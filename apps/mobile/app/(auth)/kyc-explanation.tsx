@@ -8,7 +8,7 @@ import { storage, useAuth } from "@repo/auth";
 import { PallyIcon } from "../../components/ui/PallyIcon";
 
 // Storage key for onboarding completion
-const ONBOARDING_COMPLETE_KEY = "onboarding_complete";
+
 
 export default function KYCExplanationScreen() {
   const router = useRouter();
@@ -47,7 +47,7 @@ export default function KYCExplanationScreen() {
   const finishOnboarding = async () => {
     try {
       // Mark onboarding as complete
-      await storage.set(ONBOARDING_COMPLETE_KEY, "true");
+
       
       // Navigate to main app after onboarding
       router.replace("/(protected)/(tabs)");

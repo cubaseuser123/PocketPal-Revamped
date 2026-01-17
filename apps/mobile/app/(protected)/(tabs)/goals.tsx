@@ -7,6 +7,7 @@ import { PageHeader } from "../../../components/ui/PageHeader";
 import { GoalPallyTip } from "../../../components/goals/GoalPallyTip";
 import { FeaturedGoalCard } from "../../../components/goals/FeaturedGoalCard";
 import { OtherGoalCard } from "../../../components/goals/OtherGoalCard";
+import { SavingsGraph } from "../../../components/goals/SavingsGraph";
 import { useGoals, useUser } from "../../../hooks/useApi";
 import { useCustomAlert } from "../../../contexts/CustomAlertContext";
 
@@ -92,6 +93,9 @@ export default function GoalsScreen() {
       >
         {/* Pally Tip */}
         <GoalPallyTip />
+
+        {/* Savings Graph */}
+        <SavingsGraph />
 
         {/* Featured Goal */}
         {featuredGoal ? (

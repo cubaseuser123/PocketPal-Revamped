@@ -332,11 +332,12 @@ export function useBadges() {
       },
     });
   
-    const earnedCount = badges?.filter((b) => b.earned).length || 0;
-    const totalCount = badges?.length || 0;
+    const safeBadges = Array.isArray(badges) ? badges : [];
+    const earnedCount = safeBadges.filter((b) => b.earned).length || 0;
+    const totalCount = safeBadges.length || 0;
   
     return { 
-      badges: badges || [], 
+      badges: safeBadges, 
       earnedCount, 
       totalCount, 
       loading: isLoading, 

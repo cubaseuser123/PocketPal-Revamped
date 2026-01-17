@@ -12,7 +12,10 @@ export default function AddMoneyScreen() {
   const handleAddMoney = () => {
     if (!amount || parseInt(amount) < 1) return;
     // Navigate to payment method selection
-    router.push("/(auth)/payment-method");
+    router.push({
+      pathname: "/(auth)/payment-method",
+      params: { amount }
+    });
   };
 
   const formatAmount = (value: string) => {

@@ -61,18 +61,27 @@ export default function RegisterScreen() {
     try {
       const formattedPhone = phone.startsWith("+") ? phone : `+91${phone}`;
       
-      await auth.sendOtp({
+      const response = await auth.sendOtp({
         name: name.trim(),
         phone: formattedPhone,
         baseUrl: API_URL,
+        action: "register",
       });
+
+      // Check if user already exists
+      if (!response.isNewUser) {
+        setError("Account already exists. Please log in.");
+        return;
+      }
       
       // Show success and redirect to login
-      setSuccess(true);
       setCooldown(30); // Start cooldown in case user comes back
-      setTimeout(() => {
-        router.replace("/(auth)/login");
-      }, 2000);
+      
+      // Navigate to verify screen immediately
+      router.push({
+        pathname: "/(auth)/verify",
+        params: { phone: formattedPhone, source: "register" },
+      });
     } catch (err: any) {
       setError(err.message || "Failed to send OTP");
     } finally {

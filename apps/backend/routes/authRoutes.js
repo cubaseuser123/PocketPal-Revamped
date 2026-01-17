@@ -65,7 +65,7 @@ const verifyOtpValidation = [
  *       200:
  *         description: OTP sent to phone
  */
-router.post("/send-otp", otpLimiter, sendOtpValidation, handleValidationErrors, sendOTP);
+router.post("/send-otp", /* otpLimiter, */ sendOtpValidation, handleValidationErrors, sendOTP);
 
 /**
  * @swagger
@@ -93,7 +93,7 @@ router.post("/send-otp", otpLimiter, sendOtpValidation, handleValidationErrors, 
  *       200:
  *         description: OTP verified, returns token and user
  */
-router.post("/verify-otp", otpLimiter, verifyOtpValidation, handleValidationErrors, verifyOTP);
+router.post("/verify-otp", /* otpLimiter, */ verifyOtpValidation, handleValidationErrors, verifyOTP);
 
 /**
  * @swagger

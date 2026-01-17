@@ -1,10 +1,10 @@
-import { Stack, useRouter, useSegments } from "expo-router";
+import { Stack } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect, useState } from "react";
-import { View, ActivityIndicator, Platform } from "react-native";
+import { useEffect } from "react";
+import { View, ActivityIndicator } from "react-native";
 import {
   useFonts,
   Inter_400Regular,
@@ -13,111 +13,17 @@ import {
   Inter_700Bold,
   Inter_800ExtraBold,
 } from "@expo-google-fonts/inter";
-import { AuthProvider, useAuth, storage } from "@repo/auth";
+import { AuthProvider } from "@repo/auth";
 import "./globals.css";
+import { useAuthNavigation } from "../hooks/useAuthNavigation";
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
 
-const ONBOARDING_COMPLETE_KEY = "onboarding_complete";
-
 function RootLayoutNav() {
-  const authContext = useAuth();
-  const router = useRouter();
-  const segments = useSegments();
-  const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(null);
-  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
+  const { isLoading } = useAuthNavigation();
 
-  // Check onboarding status - from backend user profile if authenticated, otherwise local storage
-  useEffect(() => {
-    const checkOnboarding = async () => {
-      setCheckingOnboarding(true);
-      try {
-        // First check local storage
-        const localValue = await storage.get(ONBOARDING_COMPLETE_KEY);
-        if (localValue === "true") {
-          setOnboardingComplete(true);
-          setCheckingOnboarding(false);
-          return;
-        }
-
-         if (authContext?.authenticated) {
-          const token = await storage.get("access_token");
-          if (token) {
-            try {
-              const { API_URL } = await import("../hooks/useApi");
-              const { userApi } = await import("@repo/auth");
-              
-              const data = await userApi.getProfile(API_URL);
-              if (data && data.user) {
-                const backendOnboarding = data.user.onboardingCompleted === true;
-                
-                // Sync local storage with backend
-                if (backendOnboarding) {
-                  await storage.set(ONBOARDING_COMPLETE_KEY, "true");
-                }
-                
-                setOnboardingComplete(backendOnboarding);
-                setCheckingOnboarding(false);
-                return;
-              }
-            } catch (e) {
-              console.log("Could not check backend onboarding status:", e);
-            }
-          }
-        }
-
-        setOnboardingComplete(false);
-      } catch {
-        setOnboardingComplete(false);
-      } finally {
-        setCheckingOnboarding(false);
-      }
-    };
-    
-    // Re-check when auth status changes
-    if (!authContext?.loading) {
-      checkOnboarding();
-    }
-  }, [authContext?.authenticated, authContext?.loading]);
-
-  useEffect(() => {
-    // Wait for both auth loading and onboarding check
-    if (authContext?.loading || checkingOnboarding) return;
-
-    const inAuthGroup = segments[0] === "(auth)";
-    const inProtectedGroup = segments[0] === "(protected)";
-    
-    // Check which auth screen the user is on
-    const currentScreen = segments[1];
-    const isOnOnboardingFlow = ["onboarding", "how-it-works", "wallet-explanation", 
-      "kyc-explanation", "kyc-steps", "kyc-pan", "kyc-details", "kyc-selfie",
-      "add-money", "add-money-limited", "payment-method", "onboarding-success"].includes(currentScreen as string);
-
-    if (authContext?.authenticated) {
-      if (inAuthGroup) {
-        if (onboardingComplete) {
-          // User is authenticated AND has completed onboarding - go to protected
-          router.replace("/(protected)/(tabs)");
-        }
-        // If not onboarding complete, let them stay on auth screens (onboarding flow)
-      }
-    } else {
-      // User is not authenticated
-      if (inProtectedGroup) {
-        // Redirect to welcome if trying to access protected
-        router.replace("/(auth)/welcome");
-      } else if (!inAuthGroup) {
-        // Redirect to welcome if not in any group
-        router.replace("/(auth)/welcome");
-      } else if (isOnOnboardingFlow) {
-        // User is not authenticated but on onboarding flow - redirect to login
-        router.replace("/(auth)/welcome");
-      }
-    }
-  }, [authContext?.authenticated, authContext?.loading, segments, onboardingComplete, checkingOnboarding]);
-
-  if (authContext?.loading || checkingOnboarding) {
+  if (isLoading) {
     return (
       <View style={{ flex: 1, backgroundColor: "#0F0F14", alignItems: "center", justifyContent: "center" }}>
         <ActivityIndicator size="large" color="#FF8C32" />
@@ -190,6 +96,11 @@ export default function RootLayout() {
     return null;
   }
 
+  const handleLogout = async () => {
+    console.log("[App] Clearing query cache on logout");
+    queryClient.removeQueries();
+  };
+
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#0F0F14" }}>
       <PersistQueryClientProvider
@@ -198,7 +109,7 @@ export default function RootLayout() {
       >
         <SafeAreaProvider>
           <CustomAlertProvider>
-            <AuthProvider>
+            <AuthProvider onLogout={handleLogout}>
               <BottomSheetModalProvider>
                 <RootLayoutNav />
                 <OfflineNotice />

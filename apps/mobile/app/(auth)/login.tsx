@@ -65,7 +65,7 @@ export default function LoginScreen() {
       
       router.push({
         pathname: "/(auth)/verify",
-        params: { phone: formattedPhone },
+        params: { phone: formattedPhone, source: "login" },
       });
       
       // Start 30-second cooldown

@@ -40,7 +40,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const authContext = useAuth();
-  const { user, updateUser, uploadAvatar, refetch } = useUser();
+  const { user, updateUser, uploadAvatar, deleteAccount, refetch } = useUser();
   const { showAlert } = useCustomAlert();
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [editName, setEditName] = useState("");
@@ -131,6 +131,30 @@ export default function ProfileScreen() {
     );
   };
 
+  const handleDeleteAccount = () => {
+    showAlert(
+      "Delete Account",
+      "Are you sure you want to delete your account? This action is irreversible and all your data will be lost forever.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete Forever", 
+          style: "destructive",
+          onPress: async () => {
+             try {
+               await deleteAccount();
+               await authContext?.logout();
+               router.replace("/(auth)/welcome");
+               // Small delay to ensure alert is closed before the next one (if any) or navigation handles it
+             } catch (error: any) {
+               showAlert("Error", error.message || "Failed to delete account");
+             }
+          }
+        },
+      ]
+    );
+  };
+
   const displayAvatar = getFullAvatarUrl(user?.avatarUrl) || "https://api.dicebear.com/7.x/avataaars/png?seed=PocketPal";
 
   return (
@@ -186,6 +210,12 @@ export default function ProfileScreen() {
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <MaterialIcons name="logout" size={20} color="#EF4444" />
           <Text style={styles.logoutText}>Log Out</Text>
+        </TouchableOpacity>
+
+        {/* Delete Account Button */}
+        <TouchableOpacity style={[styles.logoutButton, { borderColor: "rgba(239, 68, 68, 0.1)", backgroundColor: "rgba(239, 68, 68, 0.05)", marginTop: -8 }]} onPress={handleDeleteAccount}>
+          <MaterialIcons name="delete-forever" size={20} color="#EF4444" />
+          <Text style={styles.logoutText}>Delete Account</Text>
         </TouchableOpacity>
       </ScrollView>
 

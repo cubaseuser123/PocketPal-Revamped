@@ -2,10 +2,11 @@ import { createContext, useContext, useState, useEffect, useCallback } from "rea
 import { AppState, AppStateStatus, Platform } from "react-native";
 import { storage } from "../storage/storage";
 import { AuthContextValue, AuthProviderProps } from "../types";
+import { authEvents } from "../events";
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-export function AuthProvider({ children }: AuthProviderProps) {
+export function AuthProvider({ children, onLogout }: AuthProviderProps) {
   const [authenticated, setAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -30,14 +31,33 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const logout = useCallback(async () => {
     try {
       console.log("[Auth] Logging out...");
+      
+      // External cleanup first (e.g. query cache)
+      if (onLogout) {
+        await onLogout();
+      }
+
       await storage.remove("access_token");
-      await storage.remove("onboarding_complete");
       setAuthenticated(false);
       console.log("[Auth] Logout complete");
     } catch (error) {
       console.error("[Auth] Logout error:", error);
     }
-  }, []);
+  }, [onLogout]);
+
+  useEffect(() => {
+    // Listen for forced logout events (e.g. 401 from API)
+    const unsubscribe = authEvents.on("logout", async () => {
+      console.log("[Auth] Received logout event");
+      
+      if (onLogout) {
+        await onLogout();
+      }
+      
+      setAuthenticated(false);
+    });
+    return unsubscribe;
+  }, [onLogout]);
 
   useEffect(() => {
     const handleAppStateChange = async (nextAppState: AppStateStatus) => {

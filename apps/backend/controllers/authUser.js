@@ -30,6 +30,17 @@ export const sendOTP = async (req, res) => {
     let isNewUser = false;
     if (process.env.NODE_ENV !== 'production') console.log("👤 User found:", !!user);
 
+    // If attempting to register but user exists, return early without sending OTP
+    const { action } = req.body;
+    if (user && action === 'register') {
+      if (process.env.NODE_ENV !== 'production') console.log("⚠️ Registration blocked: User already exists");
+      return res.json({
+        message: "User already exists",
+        isNewUser: false,
+        userName: user.name,
+      });
+    }
+
     if (!user) {
       // New user - name is required
       if (!name) {

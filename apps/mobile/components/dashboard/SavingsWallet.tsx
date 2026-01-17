@@ -8,6 +8,7 @@ interface SavingsWalletProps {
   goalEmoji: string;
   targetAmount: number;
   onAddToSavings: () => void;
+  hasGoal?: boolean;
 }
 
 export function SavingsWallet({
@@ -16,8 +17,9 @@ export function SavingsWallet({
   goalEmoji,
   targetAmount,
   onAddToSavings,
+  hasGoal = true,
 }: SavingsWalletProps) {
-  const progress = Math.min((balance / targetAmount) * 100, 100);
+  const progress = (hasGoal && targetAmount > 0) ? Math.min((balance / targetAmount) * 100, 100) : 0;
   const circumference = 2 * Math.PI * 15.9155;
   const strokeDasharray = `${(progress / 100) * circumference}, ${circumference}`;
 
@@ -38,9 +40,11 @@ export function SavingsWallet({
           <Text className="text-white text-lg font-bold">
             {goalName} {goalEmoji}
           </Text>
-          <Text className="text-text-secondary text-xs">
-            Target: ₹{targetAmount.toLocaleString()}
-          </Text>
+          {hasGoal && (
+            <Text className="text-text-secondary text-xs">
+              Target: ₹{targetAmount.toLocaleString()}
+            </Text>
+          )}
         </View>
 
         {/* Circular progress */}
@@ -88,8 +92,8 @@ export function SavingsWallet({
         onPress={onAddToSavings}
         className="w-full bg-transparent border-2 border-indigo-500/50 py-3 px-4 rounded-xl flex-row items-center justify-center gap-2 active:bg-indigo-500/10"
       >
-        <MaterialIcons name="payments" size={20} color="#A5B4FC" />
-        <Text className="text-indigo-300 font-semibold">Add to Savings</Text>
+        <MaterialIcons name={hasGoal ? "payments" : "add-circle-outline"} size={20} color="#A5B4FC" />
+        <Text className="text-indigo-300 font-semibold">{hasGoal ? "Add to Savings" : "Create Goal"}</Text>
       </TouchableOpacity>
     </View>
   );

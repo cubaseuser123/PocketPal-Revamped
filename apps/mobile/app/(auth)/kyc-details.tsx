@@ -33,7 +33,7 @@ export default function KYCDetailsScreen() {
   }, []);
 
   const handleContinue = () => {
-    if (name.length < 3 || dob.length < 8) return;
+    if (name.length < 3 || dob.length < 10) return;
     
     setLoading(true);
     // Mock API call
@@ -42,6 +42,22 @@ export default function KYCDetailsScreen() {
       // Navigate to next step
       router.push("/(auth)/kyc-selfie");
     }, 1000);
+  };
+
+  const handleDateChange = (text: string) => {
+    // Remove any non-numeric characters
+    const cleaned = text.replace(/[^0-9]/g, "");
+    
+    // Auto-format with slashes
+    let formatted = cleaned;
+    if (cleaned.length > 2) {
+      formatted = `${cleaned.slice(0, 2)}/${cleaned.slice(2)}`;
+    }
+    if (cleaned.length > 4) {
+      formatted = `${formatted.slice(0, 5)}/${cleaned.slice(4, 8)}`;
+    }
+
+    setDob(formatted);
   };
 
   return (
@@ -101,7 +117,7 @@ export default function KYCDetailsScreen() {
               placeholder="DD/MM/YYYY"
               placeholderTextColor="#50505E"
               value={dob}
-              onChangeText={setDob}
+              onChangeText={handleDateChange}
               keyboardType="numeric"
               maxLength={10}
             />
@@ -139,10 +155,10 @@ export default function KYCDetailsScreen() {
 
         {/* Button */}
         <TouchableOpacity
-          style={[styles.button, (name.length < 3 || dob.length < 8) && styles.buttonDisabled]}
+          style={[styles.button, (name.length < 3 || dob.length < 10) && styles.buttonDisabled]}
           onPress={handleContinue}
           activeOpacity={0.8}
-          disabled={name.length < 3 || dob.length < 8 || loading}
+          disabled={name.length < 3 || dob.length < 10 || loading}
         >
           {loading ? (
             <Text style={styles.buttonText}>Saving...</Text>

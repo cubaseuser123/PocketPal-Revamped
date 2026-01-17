@@ -1,5 +1,5 @@
 import { View, Text, TouchableOpacity, StyleSheet, Animated, Platform } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRef, useEffect } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -7,7 +7,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { storage, userApi } from "@repo/auth";
 import { PallyIcon } from "../../components/ui/PallyIcon";
 
-const ONBOARDING_COMPLETE_KEY = "onboarding_complete";
+
 
 export default function OnboardingSuccessScreen() {
   const router = useRouter();
@@ -15,19 +15,21 @@ export default function OnboardingSuccessScreen() {
   const jumpAnim = useRef(new Animated.Value(0)).current;
   const bounceAnim = useRef(new Animated.Value(0)).current;
 
+  const { amount } = useLocalSearchParams<{ amount: string }>();
+
   useEffect(() => {
     // Mark onboarding complete in backend and local storage
     const completeOnboarding = async () => {
       try {
         const { API_URL } = await import("../../hooks/useApi");
-        await userApi.completeOnboarding(API_URL);
-        console.log("✅ Onboarding marked complete in backend");
+        await userApi.completeOnboarding(API_URL, amount);
+        console.log("✅ Onboarding marked complete in backend with amount:", amount);
       } catch (error) {
         console.error("Error marking onboarding complete:", error);
       }
       
       // Always set local storage
-      await storage.set(ONBOARDING_COMPLETE_KEY, "true");
+
     };
     
     completeOnboarding();
@@ -187,13 +189,7 @@ export default function OnboardingSuccessScreen() {
           <Text style={styles.primaryButtonText}>Go to Home</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.secondaryButton}
-          onPress={handleSetGoal}
-          activeOpacity={0.6}
-        >
-          <Text style={styles.secondaryButtonText}>Set my first saving goal</Text>
-        </TouchableOpacity>
+
       </View>
     </View>
   );

@@ -1,5 +1,6 @@
 export type AuthProviderProps = {
   children: React.ReactNode;
+  onLogout?: () => void | Promise<void>;
 };
 
 export type AuthContextValue = {

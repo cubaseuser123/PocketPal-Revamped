@@ -1,7 +1,7 @@
 
 import { useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { userApi, storage } from "@repo/auth";
+import { userApi, storage, api } from "@repo/auth";
 
 // Get API base URL based on platform
 const getApiUrl = (): string => {
@@ -69,7 +69,7 @@ export function useUser() {
         type: 'image/jpeg',
       });
 
-      const response = await fetch(`${API_URL}/api/user/avatar`, {
+      const response = await fetch(`${API_URL}/api/v1/user/avatar`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -93,5 +93,20 @@ export function useUser() {
     return await uploadAvatarMutation.mutateAsync(uri);
   }, [uploadAvatarMutation]);
 
-  return { user, loading: isLoading, error: error ? (error as Error).message : null, refetch, updateUser, uploadAvatar };
+  const deleteAccountMutation = useMutation({
+    mutationFn: async () => {
+      // Use generic api wrapper directly to avoid needing to rebuild auth package
+      // wrapper handles token retrieval automatically
+      return await api.delete(`${API_URL}/api/v1/user/me`);
+    },
+    onSuccess: () => {
+        // No need to invalidate queries as user is deleted, logout should happen in component
+    }
+  });
+
+  const deleteAccount = useCallback(async () => {
+    return await deleteAccountMutation.mutateAsync();
+  }, [deleteAccountMutation]);
+
+  return { user, loading: isLoading, error: error ? (error as Error).message : null, refetch, updateUser, uploadAvatar, deleteAccount };
 }

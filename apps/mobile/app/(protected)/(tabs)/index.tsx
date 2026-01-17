@@ -83,6 +83,10 @@ export default function HomeScreen() {
   };
 
   const handleAddToSavings = () => {
+    if (!featuredGoal) {
+      router.push("/(protected)/(tabs)/goals");
+      return;
+    }
     router.push("/(protected)/transfer-money");
   };
 
@@ -133,8 +137,8 @@ export default function HomeScreen() {
         {/* Weekly Saving Goal */}
         <WeeklySavingGoal
           currentAmount={wallets?.savings?.balance || 0}
-          targetAmount={featuredGoal?.targetAmount || 2000}
-          status="on-track"
+          targetAmount={featuredGoal?.targetAmount || 0}
+          status={!featuredGoal ? "no-goal" : "on-track"}
           todaySaved={0}
         />
 
@@ -162,10 +166,11 @@ export default function HomeScreen() {
         {/* Savings Wallet */}
         <SavingsWallet
           balance={wallets?.savings?.balance || 0}
-          goalName={featuredGoal?.name || "Your Goal"}
+          goalName={featuredGoal?.name || "Make your first goal"}
           goalEmoji={featuredGoal?.emoji || "🎯"}
-          targetAmount={featuredGoal?.targetAmount || 50000}
+          targetAmount={featuredGoal?.targetAmount || 0}
           onAddToSavings={handleAddToSavings}
+          hasGoal={!!featuredGoal}
         />
 
         {/* Arcade Teaser */}
