@@ -1,10 +1,10 @@
 import dotenv from "dotenv";
-dotenv.config();
+// dotenv.config();
 
 import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
-import connectDB from "./config/db.js";
+
 import cors from "cors";
 import * as Sentry from "@sentry/node";
 // import rateLimit from "express-rate-limit";
@@ -44,7 +44,7 @@ const allowedOrigins = [
   "http://localhost:3000", // Web
   "http://localhost:8081", // Mobile (Expo)
   // Add production domains here
-  "https://pocketpal.app"
+  "https://pocketpal.app",
 ];
 
 app.use(
@@ -52,12 +52,20 @@ app.use(
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
-      
-      if (allowedOrigins.includes(origin) || process.env.NODE_ENV !== "production") {
+
+      if (
+        allowedOrigins.includes(origin) ||
+        process.env.NODE_ENV !== "production"
+      ) {
         return callback(null, true);
       }
-      
-      return callback(new Error('The CORS policy for this site does not allow access from the specified Origin.'), false);
+
+      return callback(
+        new Error(
+          "The CORS policy for this site does not allow access from the specified Origin.",
+        ),
+        false,
+      );
     },
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -69,15 +77,15 @@ const io = new Server(httpServer, {
   cors: {
     origin: allowedOrigins,
     methods: ["GET", "POST"],
-    credentials: true
-  }
+    credentials: true,
+  },
 });
 
 app.set("io", io);
 
 io.on("connection", (socket) => {
   console.log(`Socket connected: ${socket.id}`);
-  
+
   socket.on("join_group", (groupId) => {
     socket.join(groupId);
     console.log(`Socket ${socket.id} joined group ${groupId}`);
@@ -109,11 +117,21 @@ const otpLimiter = rateLimit({
 // Swagger
 swaggerDocs(app);
 
-// MongoDB
-connectDB();
+// Database Connection
+// Database Connection
+const checkAvailable = async () => {
+  try {
+    await import("./config/db.js");
+    console.log("PostgreSQL Connected successfully via Drizzle");
+  } catch (error) {
+    console.error("Database connection error:", error);
+    process.exit(1);
+  }
+};
+checkAvailable();
 
 // Request logging (disabled in production)
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== "production") {
   app.use((req, res, next) => {
     console.log("REQUEST:", req.method, req.url, "Origin:", req.headers.origin);
     next();

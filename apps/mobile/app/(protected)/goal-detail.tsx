@@ -1,5 +1,14 @@
 import { useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Modal, TextInput } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  ActivityIndicator,
+  Modal,
+  TextInput,
+} from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -14,18 +23,18 @@ export default function GoalDetailScreen() {
   const { goals, loading, deleteGoal, addToGoal, updateGoal } = useGoals();
   const { showAlert } = useCustomAlert();
   const [adding, setAdding] = useState(false);
-  
+
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [editName, setEditName] = useState("");
   const [editAmount, setEditAmount] = useState("");
   const [updating, setUpdating] = useState(false);
-  
-  const goal = goals?.find(g => g._id === params.id);
 
-  // Initialize edit state when goal is found (or when modal opens, handled in useEffect/handler conceptually, 
+  const goal = goals?.find((g) => g.id === params.id);
+
+  // Initialize edit state when goal is found (or when modal opens, handled in useEffect/handler conceptually,
   // but simpler to just set defaults or use effects. Let's use a side effect for simplicity or just init when button pressed)
   // Actually, better to just set it when button is pressed. Let's update the button press handler.
-  
+
   if (loading) {
     return (
       <View style={[styles.container, styles.centered]}>
@@ -45,15 +54,14 @@ export default function GoalDetailScreen() {
     );
   }
 
-  const progress = goal.targetAmount > 0 
-    ? (goal.currentAmount / goal.targetAmount) * 100 
-    : 0;
+  const progress =
+    goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) * 100 : 0;
   const remaining = goal.targetAmount - goal.currentAmount;
 
   const handleAddMoney = async (amount: number) => {
     setAdding(true);
     try {
-      await addToGoal(goal._id, amount);
+      await addToGoal(goal.id, amount);
     } catch (error: any) {
       showAlert("Error", error.message || "Failed to add money");
     } finally {
@@ -67,19 +75,19 @@ export default function GoalDetailScreen() {
       `Are you sure you want to delete "${goal.name}"? This action cannot be undone.`,
       [
         { text: "Cancel", style: "cancel" },
-        { 
-          text: "Delete", 
+        {
+          text: "Delete",
           style: "destructive",
           onPress: async () => {
             try {
-              await deleteGoal(goal._id);
+              await deleteGoal(goal.id);
               router.back();
             } catch (error) {
               showAlert("Error", "Failed to delete goal");
             }
-          }
+          },
         },
-      ]
+      ],
     );
   };
 
@@ -87,13 +95,16 @@ export default function GoalDetailScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
           <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Goal Details</Text>
         <View style={{ flexDirection: "row", gap: 8 }}>
-          <TouchableOpacity 
-            style={styles.editButton} 
+          <TouchableOpacity
+            style={styles.editButton}
             onPress={() => {
               if (goal) {
                 setEditName(goal.name);
@@ -110,14 +121,19 @@ export default function GoalDetailScreen() {
         </View>
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.content, { paddingBottom: 120 + insets.bottom }]}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: 120 + insets.bottom },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* Goal Icon and Name */}
         <View style={[styles.iconCard, { borderColor: goal.color }]}>
-          <View style={[styles.iconCircle, { backgroundColor: `${goal.color}20` }]}>
+          <View
+            style={[styles.iconCircle, { backgroundColor: `${goal.color}20` }]}
+          >
             <Text style={styles.iconEmoji}>{goal.emoji}</Text>
           </View>
           <Text style={styles.goalName}>{goal.name}</Text>
@@ -135,7 +151,10 @@ export default function GoalDetailScreen() {
           <View style={styles.progressBar}>
             <LinearGradient
               colors={[goal.color, goal.color]}
-              style={[styles.progressFill, { width: `${Math.min(progress, 100)}%` }]}
+              style={[
+                styles.progressFill,
+                { width: `${Math.min(progress, 100)}%` },
+              ]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             />
@@ -143,18 +162,24 @@ export default function GoalDetailScreen() {
           <View style={styles.amountsRow}>
             <View>
               <Text style={styles.amountLabel}>Saved</Text>
-              <Text style={styles.amountValue}>₹{goal.currentAmount.toLocaleString()}</Text>
+              <Text style={styles.amountValue}>
+                ₹{goal.currentAmount.toLocaleString()}
+              </Text>
             </View>
             <View style={styles.amountRight}>
               <Text style={styles.amountLabel}>Target</Text>
-              <Text style={styles.amountValue}>₹{goal.targetAmount.toLocaleString()}</Text>
+              <Text style={styles.amountValue}>
+                ₹{goal.targetAmount.toLocaleString()}
+              </Text>
             </View>
           </View>
         </View>
 
         {/* Remaining Card */}
         <View style={styles.remainingCard}>
-          <Text style={styles.remainingLabel}>Remaining to reach your goal</Text>
+          <Text style={styles.remainingLabel}>
+            Remaining to reach your goal
+          </Text>
           <Text style={[styles.remainingAmount, { color: goal.color }]}>
             ₹{remaining.toLocaleString()}
           </Text>
@@ -164,8 +189,8 @@ export default function GoalDetailScreen() {
         <View style={styles.quickAddSection}>
           <Text style={styles.sectionTitle}>QUICK ADD</Text>
           <View style={styles.quickAddButtons}>
-            {[100, 500, 1000, 2000].map(amount => (
-              <TouchableOpacity 
+            {[100, 500, 1000, 2000].map((amount) => (
+              <TouchableOpacity
                 key={amount}
                 style={styles.quickAddBtn}
                 onPress={() => handleAddMoney(amount)}
@@ -179,8 +204,10 @@ export default function GoalDetailScreen() {
       </ScrollView>
 
       {/* Bottom Add Button */}
-      <View style={[styles.bottomSection, { paddingBottom: insets.bottom + 20 }]}>
-        <TouchableOpacity 
+      <View
+        style={[styles.bottomSection, { paddingBottom: insets.bottom + 20 }]}
+      >
+        <TouchableOpacity
           style={[styles.addButton, { backgroundColor: goal.color }]}
           onPress={() => handleAddMoney(500)}
           disabled={adding}

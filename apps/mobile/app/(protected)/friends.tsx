@@ -24,15 +24,15 @@ export default function FriendsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { showAlert } = useCustomAlert();
-  
+
   const { user } = useUser();
-  const { 
-    friends, 
-    pendingRequests, 
-    loading, 
-    sendRequest, 
-    acceptRequest, 
-    rejectRequest, 
+  const {
+    friends,
+    pendingRequests,
+    loading,
+    sendRequest,
+    acceptRequest,
+    rejectRequest,
     removeFriend,
     refetchFriends,
     refetchPending,
@@ -101,7 +101,7 @@ export default function FriendsScreen() {
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -132,7 +132,10 @@ export default function FriendsScreen() {
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Friends</Text>
         </View>
-        <TouchableOpacity onPress={handleViewLeaderboard} style={styles.leaderboardButton}>
+        <TouchableOpacity
+          onPress={handleViewLeaderboard}
+          style={styles.leaderboardButton}
+        >
           <MaterialIcons name="leaderboard" size={20} color="#FF8C32" />
         </TouchableOpacity>
       </View>
@@ -144,7 +147,10 @@ export default function FriendsScreen() {
             <Text style={styles.codeLabel}>Your Friend Code</Text>
             <Text style={styles.codeText}>{user?.friendCode || "------"}</Text>
           </View>
-          <TouchableOpacity onPress={handleShareCode} style={styles.shareButton}>
+          <TouchableOpacity
+            onPress={handleShareCode}
+            style={styles.shareButton}
+          >
             <MaterialIcons name="share" size={18} color="#FF8C32" />
             <Text style={styles.shareButtonText}>Share</Text>
           </TouchableOpacity>
@@ -159,7 +165,12 @@ export default function FriendsScreen() {
             onPress={() => setActiveTab(tab)}
             style={[styles.tab, activeTab === tab && styles.activeTab]}
           >
-            <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === tab && styles.activeTabText,
+              ]}
+            >
               {tab === "requests"
                 ? `Requests${pendingRequests.length > 0 ? ` (${pendingRequests.length})` : ""}`
                 : tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -170,9 +181,18 @@ export default function FriendsScreen() {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 + insets.bottom }]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: 100 + insets.bottom },
+        ]}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF8C32" />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#FF8C32"
+          />
+        }
       >
         {loading ? (
           <View style={styles.centerContainer}>
@@ -182,12 +202,14 @@ export default function FriendsScreen() {
           friends.length === 0 ? (
             <View style={styles.centerContainer}>
               <MaterialIcons name="people-outline" size={48} color="#6B6B7B" />
-              <Text style={styles.emptyText}>No friends yet.{"\n"}Share your code to add friends!</Text>
+              <Text style={styles.emptyText}>
+                No friends yet.{"\n"}Share your code to add friends!
+              </Text>
             </View>
           ) : (
             <View style={styles.listContainer}>
               {friends.map((friend) => (
-                <View key={friend._id} style={styles.friendCard}>
+                <View key={friend.id} style={styles.friendCard}>
                   <View style={styles.avatarContainer}>
                     {friend.avatarUrl ? (
                       <Image
@@ -202,10 +224,14 @@ export default function FriendsScreen() {
                   </View>
                   <View style={styles.friendInfo}>
                     <Text style={styles.friendName}>{friend.name}</Text>
-                    <Text style={styles.friendMeta}>Level {friend.level} • {friend.coins} coins</Text>
+                    <Text style={styles.friendMeta}>
+                      Level {friend.level} • {friend.coins} coins
+                    </Text>
                   </View>
                   <TouchableOpacity
-                    onPress={() => handleRemove(friend.friendshipId, friend.name)}
+                    onPress={() =>
+                      handleRemove(friend.friendshipId, friend.name)
+                    }
                     style={styles.moreButton}
                   >
                     <MaterialIcons name="more-vert" size={20} color="#6B6B7B" />
@@ -238,13 +264,21 @@ export default function FriendsScreen() {
                   </View>
                   <View style={styles.friendInfo}>
                     <Text style={styles.friendName}>{req.from.name}</Text>
-                    <Text style={styles.friendMeta}>Level {req.from.level}</Text>
+                    <Text style={styles.friendMeta}>
+                      Level {req.from.level}
+                    </Text>
                   </View>
                   <View style={styles.actionButtons}>
-                    <TouchableOpacity onPress={() => handleReject(req.id)} style={styles.rejectButton}>
+                    <TouchableOpacity
+                      onPress={() => handleReject(req.id)}
+                      style={styles.rejectButton}
+                    >
                       <MaterialIcons name="close" size={20} color="#FF4B4B" />
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => handleAccept(req.id)} style={styles.acceptButton}>
+                    <TouchableOpacity
+                      onPress={() => handleAccept(req.id)}
+                      style={styles.acceptButton}
+                    >
                       <MaterialIcons name="check" size={20} color="#3DDC97" />
                     </TouchableOpacity>
                   </View>
@@ -266,7 +300,11 @@ export default function FriendsScreen() {
                 autoCapitalize="characters"
                 maxLength={6}
               />
-              <TouchableOpacity onPress={handleSendRequest} disabled={sending} style={styles.sendButton}>
+              <TouchableOpacity
+                onPress={handleSendRequest}
+                disabled={sending}
+                style={styles.sendButton}
+              >
                 {sending ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
@@ -276,7 +314,8 @@ export default function FriendsScreen() {
             </View>
             <View style={styles.helpCard}>
               <Text style={styles.helpText}>
-                Ask your friends for their 6-character code, or share yours above to connect!
+                Ask your friends for their 6-character code, or share yours
+                above to connect!
               </Text>
             </View>
           </View>

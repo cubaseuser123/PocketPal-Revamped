@@ -1,5 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
-import { ScrollView, View, ActivityIndicator, Text, TouchableOpacity, RefreshControl } from "react-native";
+import {
+  ScrollView,
+  View,
+  ActivityIndicator,
+  Text,
+  TouchableOpacity,
+  RefreshControl,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -14,7 +21,14 @@ import { ExpenseWallet } from "../../../components/dashboard/ExpenseWallet";
 import { SavingsWallet } from "../../../components/dashboard/SavingsWallet";
 import { ArcadeTeaser } from "../../../components/dashboard/ArcadeTeaser";
 import { ActiveSplitGroups } from "../../../components/dashboard/ActiveSplitGroups";
-import { useUser, useWallets, useSpendingSummary, useCategories, useGoals, getFullAvatarUrl } from "../../../hooks/useApi";
+import {
+  useUser,
+  useWallets,
+  useSpendingSummary,
+  useCategories,
+  useGoals,
+  getFullAvatarUrl,
+} from "../../../hooks/useApi";
 
 // Static spending chart data (would come from analytics API in future)
 const SPENDING_CHART_DATA = {
@@ -38,12 +52,19 @@ const SPENDING_CHART_DATA = {
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const [selectedPeriod, setSelectedPeriod] = useState<"week" | "month" | "3m">("week");
+  const [selectedPeriod, setSelectedPeriod] = useState<"week" | "month" | "3m">(
+    "week",
+  );
 
   // API hooks
   const { user, loading: userLoading, refetch: refetchUser } = useUser();
-  const { wallets, loading: walletsLoading, refetch: refetchWallets } = useWallets();
-  const { summary, refetch: refetchSummary } = useSpendingSummary(selectedPeriod);
+  const {
+    wallets,
+    loading: walletsLoading,
+    refetch: refetchWallets,
+  } = useWallets();
+  const { summary, refetch: refetchSummary } =
+    useSpendingSummary(selectedPeriod);
   const { categories } = useCategories();
   const { goals, refetch: refetchGoals } = useGoals();
 
@@ -51,7 +72,12 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([refetchUser(), refetchWallets(), refetchSummary(), refetchGoals()]);
+    await Promise.all([
+      refetchUser(),
+      refetchWallets(),
+      refetchSummary(),
+      refetchGoals(),
+    ]);
     setRefreshing(false);
   }, [refetchUser, refetchWallets, refetchSummary, refetchGoals]);
 
@@ -61,25 +87,25 @@ export default function HomeScreen() {
   }, [selectedPeriod]);
 
   // Get featured goal for savings widget
-  const featuredGoal = goals?.find(g => g.isFeatured) || goals?.[0];
+  const featuredGoal = goals?.find((g) => g.isFeatured) || goals?.[0];
 
   // Build spending data from API
   const spendingData = {
     week: {
-      spent: selectedPeriod === "week" ? (summary?.totalSpent || 0) : 0,
-      avgPerDay: selectedPeriod === "week" ? (summary?.avgPerDay || 0) : 0,
+      spent: selectedPeriod === "week" ? summary?.totalSpent || 0 : 0,
+      avgPerDay: selectedPeriod === "week" ? summary?.avgPerDay || 0 : 0,
       label: "This week spent",
       ...SPENDING_CHART_DATA.week,
     },
     month: {
-      spent: selectedPeriod === "month" ? (summary?.totalSpent || 0) : 0,
-      avgPerDay: selectedPeriod === "month" ? (summary?.avgPerDay || 0) : 0,
+      spent: selectedPeriod === "month" ? summary?.totalSpent || 0 : 0,
+      avgPerDay: selectedPeriod === "month" ? summary?.avgPerDay || 0 : 0,
       label: "This month spent",
       ...SPENDING_CHART_DATA.month,
     },
     "3m": {
-      spent: selectedPeriod === "3m" ? (summary?.totalSpent || 0) : 0,
-      avgPerDay: selectedPeriod === "3m" ? (summary?.avgPerDay || 0) : 0,
+      spent: selectedPeriod === "3m" ? summary?.totalSpent || 0 : 0,
+      avgPerDay: selectedPeriod === "3m" ? summary?.avgPerDay || 0 : 0,
       label: "Last 3 months spent",
       ...SPENDING_CHART_DATA["3m"],
     },
@@ -112,9 +138,9 @@ export default function HomeScreen() {
   // Show loading state
   if (userLoading || walletsLoading) {
     return (
-      <View className="flex-1 bg-background-dark items-center justify-center">
+      <View className="flex-1 items-center justify-center bg-background-dark">
         <ActivityIndicator size="large" color="#FF8C32" />
-        <Text className="text-white mt-4">Loading...</Text>
+        <Text className="mt-4 text-white">Loading...</Text>
       </View>
     );
   }
@@ -141,14 +167,20 @@ export default function HomeScreen() {
           gap: 20,
         }}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF8C32" />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#FF8C32"
+          />
+        }
       >
         {/* PallyTip */}
         <PallyTip message="Small saves beat big regrets. Let's go!" />
 
         {/* KYC Banner */}
         {!user?.kycCompleted && (
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => router.push("/(protected)/full-kyc-benefits")}
             activeOpacity={0.9}
           >
@@ -162,19 +194,31 @@ export default function HomeScreen() {
                 flexDirection: "row",
                 alignItems: "center",
                 borderWidth: 1,
-                borderColor: "rgba(255, 140, 50, 0.3)"
+                borderColor: "rgba(255, 140, 50, 0.3)",
               }}
             >
-              <View style={{ 
-                width: 40, height: 40, borderRadius: 20, 
-                backgroundColor: "rgba(255, 140, 50, 0.2)", 
-                alignItems: "center", justifyContent: "center", marginRight: 12 
-              }}>
+              <View
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: "rgba(255, 140, 50, 0.2)",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginRight: 12,
+                }}
+              >
                 <MaterialIcons name="verified-user" size={20} color="#FF8C32" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: "#FFF", fontWeight: "700", fontSize: 16 }}>Complete Verification</Text>
-                <Text style={{ color: "#B0B0C3", fontSize: 12 }}>Unlock higher limits & exclusive badges</Text>
+                <Text
+                  style={{ color: "#FFF", fontWeight: "700", fontSize: 16 }}
+                >
+                  Complete Verification
+                </Text>
+                <Text style={{ color: "#B0B0C3", fontSize: 12 }}>
+                  Unlock higher limits & exclusive badges
+                </Text>
               </View>
               <MaterialIcons name="chevron-right" size={24} color="#FF8C32" />
             </LinearGradient>
@@ -208,7 +252,9 @@ export default function HomeScreen() {
         {/* Expense Wallet (Primary) */}
         <ExpenseWallet
           balance={wallets?.primary?.balance || 0}
-          categories={(categories || []).slice(0, 3).map(c => ({ id: c._id, name: c.name, emoji: c.emoji }))}
+          categories={(categories || [])
+            .slice(0, 3)
+            .map((c) => ({ id: c.id, name: c.name, emoji: c.emoji }))}
           onScan={handleScan}
           onLoadMoney={handleLoadMoney}
         />

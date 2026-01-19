@@ -1,5 +1,12 @@
 import { useState, useCallback } from "react";
-import { ScrollView, View, Text, ActivityIndicator, TouchableOpacity, RefreshControl } from "react-native";
+import {
+  ScrollView,
+  View,
+  Text,
+  ActivityIndicator,
+  TouchableOpacity,
+  RefreshControl,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -15,40 +22,57 @@ import { useUser, useBoss, useQuests, useFriends } from "../../../hooks/useApi";
 export default function ArcadeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  
+
   // Use real data from backend (cached via React Query)
   const { user, refetch: refetchUser } = useUser();
   const { boss, loading: bossLoading, refetch: refetchBoss } = useBoss();
-  const { quests, loading: questsLoading, assignQuests, refetch: refetchQuests } = useQuests();
+  const {
+    quests,
+    loading: questsLoading,
+    assignQuests,
+    refetch: refetchQuests,
+  } = useQuests();
   const { friends, pendingRequests, refetchFriends } = useFriends();
 
   // Pull-to-refresh
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([refetchUser(), refetchBoss(), refetchQuests(), refetchFriends()]);
+    await Promise.all([
+      refetchUser(),
+      refetchBoss(),
+      refetchQuests(),
+      refetchFriends(),
+    ]);
     setRefreshing(false);
   }, [refetchUser, refetchBoss, refetchQuests, refetchFriends]);
 
   // Transform boss data for BossBattles component
-  const bossesForDisplay = boss ? [{
-    id: boss._id,
-    name: boss.name,
-    emoji: boss.emoji || "🍔",
-    type: "BOSS" as const,
-    weakness: boss.description,
-    hpPercent: Math.round((boss.currentHealth / boss.totalHealth) * 100),
-  }] : [];
+  const bossesForDisplay = boss
+    ? [
+        {
+          id: boss.id,
+          name: boss.name,
+          emoji: boss.emoji || "🍔",
+          type: "BOSS" as const,
+          weakness: boss.description,
+          hpPercent: Math.round((boss.currentHealth / boss.totalHealth) * 100),
+        },
+      ]
+    : [];
 
   // Transform quests for NoSpendQuests component
-  const questsForDisplay = quests.map(q => ({
-    id: q._id,
+  const questsForDisplay = quests.map((q) => ({
+    id: q.id,
     name: q.title,
     description: q.description,
-    icon: q.type === "savings" ? "savings" as const : "restaurant-menu" as const,
+    icon:
+      q.type === "savings"
+        ? ("savings" as const)
+        : ("restaurant-menu" as const),
     iconColor: q.completed ? "#3DDC97" : "#FF8C32",
     progress: q.progress,
-    target: q.requirement.target,
+    target: q.requirement?.target || 0,
     completed: q.completed,
   }));
 
@@ -72,7 +96,7 @@ export default function ArcadeScreen() {
   const handleBossPress = (id: string) => {
     router.push({
       pathname: "/(protected)/boss-battle",
-      params: { id }
+      params: { id },
     });
   };
 
@@ -97,7 +121,13 @@ export default function ArcadeScreen() {
           paddingTop: 4,
         }}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF8C32" />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#FF8C32"
+          />
+        }
       >
         {/* Welcome */}
         <ArcadeWelcome />
@@ -106,14 +136,14 @@ export default function ArcadeScreen() {
         <TouchableOpacity
           onPress={handleFriendsPress}
           activeOpacity={0.8}
-          className="bg-surface-dark rounded-2xl p-4 border border-white/5"
+          className="bg-surface-dark rounded-2xl border border-white/5 p-4"
         >
           <View className="flex-row items-center">
-            <View className="w-12 h-12 rounded-full bg-primary/20 items-center justify-center mr-4">
+            <View className="mr-4 h-12 w-12 items-center justify-center rounded-full bg-primary/20">
               <Text className="text-2xl">👥</Text>
             </View>
             <View className="flex-1">
-              <Text className="text-white font-semibold text-lg">Friends</Text>
+              <Text className="text-lg font-semibold text-white">Friends</Text>
               <Text className="text-text-muted text-sm">
                 {friends.length} friends • {pendingRequests.length} pending
               </Text>
@@ -126,14 +156,14 @@ export default function ArcadeScreen() {
         <TouchableOpacity
           onPress={() => router.push("/(protected)/badges")}
           activeOpacity={0.8}
-          className="bg-surface-dark rounded-2xl p-4 border border-white/5"
+          className="bg-surface-dark rounded-2xl border border-white/5 p-4"
         >
           <View className="flex-row items-center">
-            <View className="w-12 h-12 rounded-full bg-yellow-500/20 items-center justify-center mr-4">
+            <View className="mr-4 h-12 w-12 items-center justify-center rounded-full bg-yellow-500/20">
               <Text className="text-2xl">🏆</Text>
             </View>
             <View className="flex-1">
-              <Text className="text-white font-semibold text-lg">Badges</Text>
+              <Text className="text-lg font-semibold text-white">Badges</Text>
               <Text className="text-text-muted text-sm">
                 Collect achievements
               </Text>
@@ -156,9 +186,9 @@ export default function ArcadeScreen() {
             <ActivityIndicator color="#FF8C32" />
           </View>
         ) : bossesForDisplay.length > 0 ? (
-          <BossBattles 
-            bosses={bossesForDisplay} 
-            onSeeMap={handleSeeMap} 
+          <BossBattles
+            bosses={bossesForDisplay}
+            onSeeMap={handleSeeMap}
             onPressBoss={handleBossPress}
           />
         ) : (

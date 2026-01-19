@@ -1,11 +1,10 @@
-
 import { useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { goalApi, categoryApi, subscriptionApi } from "@repo/auth";
 import { API_URL } from "./useUser";
 
 export interface Goal {
-  _id: string;
+  id: string;
   name: string;
   emoji: string;
   category: string;
@@ -20,14 +19,14 @@ export interface Goal {
 }
 
 export interface Category {
-  _id: string;
+  id: string;
   name: string;
   emoji: string;
   color: string;
 }
 
 export interface Subscription {
-  _id: string;
+  id: string;
   name: string;
   price: number;
   category: string;
@@ -40,7 +39,12 @@ export interface Subscription {
 export function useGoals() {
   const queryClient = useQueryClient();
 
-  const { data: goals, isLoading, error, refetch } = useQuery({
+  const {
+    data: goals,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ["goals"],
     queryFn: async () => {
       const data = await goalApi.list(API_URL);
@@ -63,9 +67,9 @@ export function useGoals() {
     onMutate: async (newGoal) => {
       await queryClient.cancelQueries({ queryKey: ["goals"] });
       const previousGoals = queryClient.getQueryData<Goal[]>(["goals"]);
-      
+
       const optimisticGoal: Goal = {
-        _id: `temp-${Date.now()}`,
+        id: `temp-${Date.now()}`,
         name: newGoal.name,
         emoji: newGoal.emoji || "🎯",
         category: newGoal.category || "General",
@@ -78,9 +82,9 @@ export function useGoals() {
         createdAt: new Date().toISOString(),
         _isOffline: true,
       };
-      
-      queryClient.setQueryData<Goal[]>(["goals"], (old) => 
-        old ? [...old, optimisticGoal] : [optimisticGoal]
+
+      queryClient.setQueryData<Goal[]>(["goals"], (old) =>
+        old ? [...old, optimisticGoal] : [optimisticGoal],
       );
       return { previousGoals };
     },
@@ -118,17 +122,26 @@ export function useGoals() {
     },
   });
 
-  const createGoal = useCallback(async (goalData: any) => {
-    return await createGoalMutation.mutateAsync(goalData);
-  }, [createGoalMutation]);
+  const createGoal = useCallback(
+    async (goalData: any) => {
+      return await createGoalMutation.mutateAsync(goalData);
+    },
+    [createGoalMutation],
+  );
 
-  const addToGoal = useCallback(async (id: string, amount: number) => {
-    return await addToGoalMutation.mutateAsync({ id, amount });
-  }, [addToGoalMutation]);
+  const addToGoal = useCallback(
+    async (id: string, amount: number) => {
+      return await addToGoalMutation.mutateAsync({ id, amount });
+    },
+    [addToGoalMutation],
+  );
 
-  const deleteGoal = useCallback(async (id: string) => {
-    return await deleteGoalMutation.mutateAsync(id);
-  }, [deleteGoalMutation]);
+  const deleteGoal = useCallback(
+    async (id: string) => {
+      return await deleteGoalMutation.mutateAsync(id);
+    },
+    [deleteGoalMutation],
+  );
 
   const updateGoalMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
@@ -139,15 +152,32 @@ export function useGoals() {
     },
   });
 
-  const updateGoal = useCallback(async (id: string, data: any) => {
-    return await updateGoalMutation.mutateAsync({ id, data });
-  }, [updateGoalMutation]);
+  const updateGoal = useCallback(
+    async (id: string, data: any) => {
+      return await updateGoalMutation.mutateAsync({ id, data });
+    },
+    [updateGoalMutation],
+  );
 
-  return { goals: goals || [], loading: isLoading, error: error ? (error as Error).message : null, refetch, createGoal, addToGoal, deleteGoal, updateGoal };
+  return {
+    goals: goals || [],
+    loading: isLoading,
+    error: error ? (error as Error).message : null,
+    refetch,
+    createGoal,
+    addToGoal,
+    deleteGoal,
+    updateGoal,
+  };
 }
 
 export function useCategories() {
-  const { data: categories, isLoading, error, refetch } = useQuery({
+  const {
+    data: categories,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ["categories"],
     queryFn: async () => {
       const data = await categoryApi.list(API_URL);
@@ -155,13 +185,23 @@ export function useCategories() {
     },
   });
 
-  return { categories: categories || [], loading: isLoading, error: error ? (error as Error).message : null, refetch };
+  return {
+    categories: categories || [],
+    loading: isLoading,
+    error: error ? (error as Error).message : null,
+    refetch,
+  };
 }
 
 export function useSubscriptions() {
   const queryClient = useQueryClient();
 
-  const { data: subscriptions, isLoading, error, refetch } = useQuery({
+  const {
+    data: subscriptions,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ["subscriptions"],
     queryFn: async () => {
       const data = await subscriptionApi.getActive(API_URL);
@@ -176,10 +216,12 @@ export function useSubscriptions() {
     },
     onMutate: async (newSub) => {
       await queryClient.cancelQueries({ queryKey: ["subscriptions"] });
-      const previousSubs = queryClient.getQueryData<Subscription[]>(["subscriptions"]);
-      
+      const previousSubs = queryClient.getQueryData<Subscription[]>([
+        "subscriptions",
+      ]);
+
       const optimisticSub: Subscription = {
-        _id: `temp-${Date.now()}`,
+        id: `temp-${Date.now()}`,
         name: newSub.name,
         price: newSub.price,
         category: newSub.category || "general",
@@ -188,16 +230,16 @@ export function useSubscriptions() {
         status: "active",
         nextRenewal: newSub.startDate,
       };
-      
+
       queryClient.setQueryData<Subscription[]>(["subscriptions"], (old) =>
-        old ? [...old, optimisticSub] : [optimisticSub]
+        old ? [...old, optimisticSub] : [optimisticSub],
       );
       return { previousSubs };
     },
     onError: (err, newSub, context) => {
-        if (context?.previousSubs) {
-            queryClient.setQueryData(["subscriptions"], context.previousSubs);
-        }
+      if (context?.previousSubs) {
+        queryClient.setQueryData(["subscriptions"], context.previousSubs);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
@@ -214,20 +256,26 @@ export function useSubscriptions() {
     },
   });
 
-  const addSubscription = useCallback(async (data: any) => {
-    return await addSubscriptionMutation.mutateAsync(data);
-  }, [addSubscriptionMutation]);
+  const addSubscription = useCallback(
+    async (data: any) => {
+      return await addSubscriptionMutation.mutateAsync(data);
+    },
+    [addSubscriptionMutation],
+  );
 
-  const cancelSubscription = useCallback(async (id: string) => {
-    return await cancelSubscriptionMutation.mutateAsync(id);
-  }, [cancelSubscriptionMutation]);
+  const cancelSubscription = useCallback(
+    async (id: string) => {
+      return await cancelSubscriptionMutation.mutateAsync(id);
+    },
+    [cancelSubscriptionMutation],
+  );
 
-  return { 
-    subscriptions: subscriptions || [], 
-    loading: isLoading, 
-    error: error ? (error as Error).message : null, 
-    refetch, 
-    addSubscription, 
-    cancelSubscription 
+  return {
+    subscriptions: subscriptions || [],
+    loading: isLoading,
+    error: error ? (error as Error).message : null,
+    refetch,
+    addSubscription,
+    cancelSubscription,
   };
 }

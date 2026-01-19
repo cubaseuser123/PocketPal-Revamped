@@ -14,14 +14,14 @@ graph TB
         Hook["usePallyChat Hook"]
         CTX["Context Collector"]
     end
-    
+
     subgraph Backend["🖥️ Express.js Backend"]
         API["/api/v1/chat"]
         Auth["Auth Middleware"]
         AI["Vercel AI SDK"]
         Stream["Streaming Response"]
     end
-    
+
     subgraph Tools["🔧 15 Agent Tools"]
         direction TB
         FIN["💰 Financial (6)"]
@@ -29,24 +29,24 @@ graph TB
         GAM["🎮 Gamification (3)"]
         SOC["👥 Social (2)"]
     end
-    
+
     subgraph RAG["📚 RAG Layer (Optional)"]
         MEM["Conversation Memory"]
         SEM["Semantic Search"]
         VEC[(pgvector)]
     end
-    
+
     subgraph LLM["🤖 LLM"]
         Gemini["Gemini 2.0 Flash"]
     end
-    
+
     subgraph DB["🗄️ MongoDB"]
         Users[(Users)]
         Wallets[(Wallets)]
         Transactions[(Transactions)]
         Goals[(Goals)]
     end
-    
+
     UI --> Hook
     Hook --> CTX
     CTX -->|"POST + Stream"| API
@@ -72,7 +72,7 @@ sequenceDiagram
     participant LLM as Gemini
     participant Tools
     participant DB as MongoDB
-    
+
     User->>Mobile: "Where did my money go?"
     Mobile->>API: POST /chat {messages}
     API->>AI: streamText()
@@ -94,38 +94,38 @@ sequenceDiagram
 
 ### 💰 Category 1: Financial Data (6 tools)
 
-| Tool | Parameters | Returns | Example Query |
-|------|------------|---------|---------------|
-| `getWalletBalance` | none | `{ primary, savings, total }` | "What's my balance?" |
-| `getRecentTransactions` | `limit?, days?, category?` | Transaction list | "Show my food expenses" |
-| `getSpendingSummary` | `period: week/month/3m` | `{ totalSpent, avgPerDay }` | "How much did I spend?" |
-| `getCategoryBreakdown` | `period` | `{ Food: 1200, ... }` | "Where did my money go?" |
-| `getGoals` | none | Goals with progress | "How are my goals?" |
-| `getSubscriptions` | none | Active subscriptions | "What subscriptions do I have?" |
+| Tool                    | Parameters                 | Returns                       | Example Query                   |
+| ----------------------- | -------------------------- | ----------------------------- | ------------------------------- |
+| `getWalletBalance`      | none                       | `{ primary, savings, total }` | "What's my balance?"            |
+| `getRecentTransactions` | `limit?, days?, category?` | Transaction list              | "Show my food expenses"         |
+| `getSpendingSummary`    | `period: week/month/3m`    | `{ totalSpent, avgPerDay }`   | "How much did I spend?"         |
+| `getCategoryBreakdown`  | `period`                   | `{ Food: 1200, ... }`         | "Where did my money go?"        |
+| `getGoals`              | none                       | Goals with progress           | "How are my goals?"             |
+| `getSubscriptions`      | none                       | Active subscriptions          | "What subscriptions do I have?" |
 
 ### 📊 Category 2: Analytics & Insights (4 tools)
 
-| Tool | Parameters | Returns | Example Query |
-|------|------------|---------|---------------|
-| `explainChart` | `period, chartType` | Insights object | "Explain this graph" |
-| `compareSpending` | `period1, period2` | Comparison data | "Am I spending more than last week?" |
-| `getTopSpendingDays` | `days` | Ranked days | "When do I spend most?" |
-| `findLargeTransactions` | `threshold?, days?` | Big purchases | "Any big expenses recently?" |
+| Tool                    | Parameters          | Returns         | Example Query                        |
+| ----------------------- | ------------------- | --------------- | ------------------------------------ |
+| `explainChart`          | `period, chartType` | Insights object | "Explain this graph"                 |
+| `compareSpending`       | `period1, period2`  | Comparison data | "Am I spending more than last week?" |
+| `getTopSpendingDays`    | `days`              | Ranked days     | "When do I spend most?"              |
+| `findLargeTransactions` | `threshold?, days?` | Big purchases   | "Any big expenses recently?"         |
 
 ### 🎮 Category 3: Gamification (3 tools)
 
-| Tool | Parameters | Returns | Example Query |
-|------|------------|---------|---------------|
-| `getStreakStatus` | none | Streak info | "How's my streak?" |
-| `getActiveQuests` | none | Quest list + progress | "What quests do I have?" |
-| `getBadges` | none | Earned + available | "What badges have I earned?" |
+| Tool              | Parameters | Returns               | Example Query                |
+| ----------------- | ---------- | --------------------- | ---------------------------- |
+| `getStreakStatus` | none       | Streak info           | "How's my streak?"           |
+| `getActiveQuests` | none       | Quest list + progress | "What quests do I have?"     |
+| `getBadges`       | none       | Earned + available    | "What badges have I earned?" |
 
 ### 👥 Category 4: Social (2 tools)
 
-| Tool | Parameters | Returns | Example Query |
-|------|------------|---------|---------------|
-| `getLeaderboard` | `type: coins/goals` | Ranked friends | "Where am I on the leaderboard?" |
-| `getFriendStats` | `friendId?` | Friend comparison | "How's Rahul doing?" |
+| Tool             | Parameters          | Returns           | Example Query                    |
+| ---------------- | ------------------- | ----------------- | -------------------------------- |
+| `getLeaderboard` | `type: coins/goals` | Ranked friends    | "Where am I on the leaderboard?" |
+| `getFriendStats` | `friendId?`         | Friend comparison | "How's Rahul doing?"             |
 
 ---
 
@@ -136,26 +136,26 @@ graph LR
     subgraph Input
         Q["User Query"]
     end
-    
+
     subgraph Embedding
         E["text-embedding-004"]
     end
-    
+
     subgraph Vector
         V[(pgvector)]
     end
-    
+
     subgraph Results
         R["Relevant Context"]
     end
-    
+
     Q --> E --> V --> R --> LLM
 ```
 
-| Use Case | What It Does | When Needed |
-|----------|--------------|-------------|
-| **Conversation Memory** | Store past chats, recall context | "Remember when I said I'm saving for a PS5?" |
-| **Transaction Search** | Semantic search on transaction names | "Find that Uber ride from last month" |
+| Use Case                | What It Does                         | When Needed                                  |
+| ----------------------- | ------------------------------------ | -------------------------------------------- |
+| **Conversation Memory** | Store past chats, recall context     | "Remember when I said I'm saving for a PS5?" |
+| **Transaction Search**  | Semantic search on transaction names | "Find that Uber ride from last month"        |
 
 ---
 
@@ -257,10 +257,10 @@ GOOGLE_GENERATIVE_AI_API_KEY=your_gemini_api_key
 
 ## Implementation Timeline
 
-| Day | Task | Deliverable |
-|-----|------|-------------|
-| 1 | Setup + routes | Chat endpoint working |
-| 2 | Implement 15 tools | All tools querying DB |
-| 3 | Mobile hook | Streaming in UI |
-| 4 | Testing | All queries working |
-| 5 | RAG (optional) | Memory + search |
+| Day | Task               | Deliverable           |
+| --- | ------------------ | --------------------- |
+| 1   | Setup + routes     | Chat endpoint working |
+| 2   | Implement 15 tools | All tools querying DB |
+| 3   | Mobile hook        | Streaming in UI       |
+| 4   | Testing            | All queries working   |
+| 5   | RAG (optional)     | Memory + search       |

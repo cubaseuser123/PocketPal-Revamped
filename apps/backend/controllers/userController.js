@@ -1,18 +1,23 @@
-import User from "../models/User.js";
-import Wallet from "../models/Wallet.js";
+import { db } from "../config/db.js";
+import { users, wallets, transactions } from "../drizzle/schema.js";
+import { eq, sql } from "drizzle-orm";
 
 // Get current user profile
 export const getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const user = await db.query.users.findFirst({
+      where: eq(users.id, req.user.id),
+      with: { wallets: true },
+    });
+
     if (!user || user.deletedAt) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Get user's wallets
-    const wallets = await Wallet.find({ userId: user._id });
-    const primaryWallet = wallets.find(w => w.type === "primary");
-    const savingsWallet = wallets.find(w => w.type === "savings");
+    const userWallets = user.wallets || [];
+    
+    const primaryWallet = userWallets.find(w => w.type === "primary");
+    const savingsWallet = userWallets.find(w => w.type === "savings");
 
     // Check if onboarding should be shown again (> 30 days since completion)
     let shouldShowOnboarding = !user.onboardingCompleted;
@@ -25,19 +30,19 @@ export const getProfile = async (req, res) => {
 
     return res.json({
       user: {
-        id: user._id,
+        id: user.id,
         name: user.name,
         phone: user.phone,
         level: user.level,
         coins: user.coins,
         avatarUrl: user.avatarUrl,
         kycCompleted: user.kycCompleted,
-        onboardingCompleted: !shouldShowOnboarding, // Return false if should show again
+        onboardingCompleted: !shouldShowOnboarding,
         friendCode: user.friendCode,
       },
       wallets: {
-        primary: primaryWallet?.balance || 0,
-        savings: savingsWallet?.balance || 0,
+        primary: Number(primaryWallet?.balance || 0),
+        savings: Number(savingsWallet?.balance || 0),
       },
     });
   } catch (err) {
@@ -51,15 +56,13 @@ export const updateProfile = async (req, res) => {
   try {
     const { name, avatarUrl } = req.body;
     
-    const user = await User.findById(req.user.id);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    if (name) user.name = name;
-    if (avatarUrl) user.avatarUrl = avatarUrl;
-    
-    await user.save();
+    const [user] = await db.update(users)
+      .set({
+        ...(name && { name }),
+        ...(avatarUrl && { avatarUrl }),
+      })
+      .where(eq(users.id, req.user.id))
+      .returning();
     
     return res.json({ message: "Profile updated", user });
   } catch (err) {
@@ -71,63 +74,71 @@ export const updateProfile = async (req, res) => {
 // Complete onboarding
 export const completeOnboarding = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    user.onboardingCompleted = true;
-    user.onboardingCompletedAt = new Date();
-    
-    // Award coins for completing onboarding
-    user.coins = (user.coins || 0) + 20;
-    
-    await user.save();
-
     const { amount } = req.body;
     const initialBalance = amount ? parseInt(amount) : 0;
 
-    // Create or Get wallets
-    let primaryWallet;
-    const existingWallets = await Wallet.find({ userId: user._id });
-    
-    if (existingWallets.length === 0) {
-        const newWallets = await Wallet.create([
-            { userId: user._id, type: "primary", balance: initialBalance },
-            { userId: user._id, type: "savings", balance: 0 },
-        ]);
-        primaryWallet = newWallets.find(w => w.type === "primary");
-    } else {
+    const result = await db.transaction(async (tx) => {
+      // Update user
+      const [user] = await tx.update(users)
+        .set({
+            onboardingCompleted: true,
+            onboardingCompletedAt: new Date(),
+            coins: sql`${users.coins} + 20`,
+        })
+        .where(eq(users.id, req.user.id))
+        .returning();
+      
+      // Check if wallets exist
+      const existingWallets = await tx.query.wallets.findMany({ 
+        where: eq(wallets.userId, req.user.id) 
+      });
+      
+      let primaryWallet;
+      
+      if (existingWallets.length === 0) {
+        // Create wallets
+        [primaryWallet] = await tx.insert(wallets).values({ 
+            userId: req.user.id, 
+            type: "primary", 
+            balance: initialBalance 
+        }).returning();
+        
+        await tx.insert(wallets).values({ 
+            userId: req.user.id, 
+            type: "savings", 
+            balance: 0 
+        });
+      } else {
         primaryWallet = existingWallets.find(w => w.type === "primary");
         if (primaryWallet && initialBalance > 0) {
-            // Edge case: Wallet exists but user is re-onboarding with money
-            primaryWallet.balance += initialBalance;
-            await primaryWallet.save();
+          [primaryWallet] = await tx.update(wallets)
+            .set({ 
+                balance: sql`${wallets.balance} + ${initialBalance}`
+            })
+            .where(eq(wallets.id, primaryWallet.id))
+            .returning();
         }
-    }
+      }
 
-    // Create Initial Transaction if amount > 0
-    if (initialBalance > 0 && primaryWallet) {
-        const Transaction = (await import("../models/Transaction.js")).default;
-        await Transaction.create({
-            userId: user._id,
-            walletId: primaryWallet._id,
+      // Create Initial Transaction if amount > 0
+      if (initialBalance > 0 && primaryWallet) {
+        await tx.insert(transactions).values({
+            userId: req.user.id,
+            walletId: primaryWallet.id,
             amount: initialBalance,
-            type: "income", // Money coming IN
-            category: null, // Initial deposit might not have a category or we can look it up if needed, but schema allows ref/null? 
-                            // Schema says categoryId is ref "Category", not required. 
-                            // But name is required. Keep "Initial Deposit".
+            type: "income",
             name: "Initial Deposit",
             emoji: "💰",
-            status: "completed",
-            date: new Date()
         });
-    }
+      }
+
+      return user;
+    });
 
     return res.json({ 
       message: "Onboarding completed", 
-      coins: user.coins,
-      user 
+      coins: result.coins,
+      user: result,
     });
   } catch (err) {
     console.error("completeOnboarding error:", err);
@@ -138,7 +149,8 @@ export const completeOnboarding = async (req, res) => {
 // Complete KYC
 export const completeKyc = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const user = await db.query.users.findFirst({ where: eq(users.id, req.user.id) });
+    
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -147,14 +159,15 @@ export const completeKyc = async (req, res) => {
       return res.status(400).json({ message: "KYC already completed" });
     }
 
-    user.kycCompleted = true;
-    
-    // Award 100 XP/Coins for KYC
-    user.coins = (user.coins || 0) + 100;
-    
-    await user.save();
+    const [updatedUser] = await db.update(users)
+      .set({
+        kycCompleted: true,
+        coins: sql`${users.coins} + 100`, // Award 100 coins
+      })
+      .where(eq(users.id, req.user.id))
+      .returning();
 
-    return res.json({ message: "KYC completed", user });
+    return res.json({ message: "KYC completed", user: updatedUser });
   } catch (err) {
     console.error("completeKyc error:", err);
     return res.status(500).json({ message: "Server error", error: err.message });
@@ -164,22 +177,17 @@ export const completeKyc = async (req, res) => {
 // Upload Avatar
 export const uploadAvatar = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
     if (!req.file) {
       return res.status(400).json({ message: "Please upload a file" });
     }
 
-    // Store relative path to allow client to construct full URL based on its environment
-    // windows handle path separator
     const relativePath = req.file.path.replace(/\\/g, "/");
     const avatarUrl = `/${relativePath}`;
 
-    user.avatarUrl = avatarUrl;
-    await user.save();
+    const [user] = await db.update(users)
+      .set({ avatarUrl })
+      .where(eq(users.id, req.user.id))
+      .returning();
 
     return res.json({ message: "Avatar updated", avatarUrl, user });
   } catch (err) {
@@ -191,7 +199,7 @@ export const uploadAvatar = async (req, res) => {
 // Delete User Account (Soft Delete)
 export const deleteUser = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const user = await db.query.users.findFirst({ where: eq(users.id, req.user.id) });
     
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -199,22 +207,13 @@ export const deleteUser = async (req, res) => {
 
     const timestamp = Date.now();
 
-    // Soft delete user
-    user.deletedAt = new Date(timestamp);
-    
-    // Release unique constraints so they can re-register
-    // Append timestamp to preserve history but free the phone number
-    user.phone = `${user.phone}_deleted_${timestamp}`;
-    
-    // Also free up friendCode if it exists
-    if (user.friendCode) {
-      user.friendCode = `${user.friendCode}_deleted_${timestamp}`;
-    }
-
-    await user.save();
-
-    // Ideally, we would also invalidate the auth token here (e.g., add to a blacklist), 
-    // but that depends on the auth implementation.
+    await db.update(users)
+      .set({
+        deletedAt: new Date(timestamp),
+        phone: `${user.phone}_deleted_${timestamp}`,
+        ...(user.friendCode && { friendCode: `${user.friendCode}_deleted_${timestamp}` }),
+      })
+      .where(eq(users.id, req.user.id));
 
     return res.json({ message: "User account deactivated successfully" });
   } catch (err) {

@@ -1,4 +1,7 @@
-import User from "../models/User.js";
+// import { prisma } from "../config/prisma.js";
+import { db } from "../config/db.js";
+import { users } from "../drizzle/schema.js";
+import { eq, sql } from "drizzle-orm";
 
 // Wheel segments with rewards
 const WHEEL_SEGMENTS = [
@@ -24,7 +27,9 @@ const canSpinToday = (lastSpinDate) => {
 // Get wheel status
 export const getWheelStatus = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
+    const user = await db.query.users.findFirst({ 
+      where: eq(users.id, req.user.id)
+    });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -42,7 +47,9 @@ export const getWheelStatus = async (req, res) => {
 // Spin the wheel
 export const spinWheel = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
+    const user = await db.query.users.findFirst({ 
+      where: eq(users.id, req.user.id) 
+    });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -60,14 +67,13 @@ export const spinWheel = async (req, res) => {
     const result = WHEEL_SEGMENTS[randomIndex];
     
     // Award coins atomically
-    const updatedUser = await User.findByIdAndUpdate(
-      req.user._id,
-      { 
-        $inc: { coins: result.reward },
-        $set: { lastSpinDate: new Date() }
-      },
-      { new: true }
-    );
+    const [updatedUser] = await db.update(users)
+        .set({
+            coins: sql`${users.coins} + ${result.reward}`,
+            lastSpinDate: new Date(),
+        })
+        .where(eq(users.id, req.user.id))
+        .returning();
     
     res.json({
       segment: result,

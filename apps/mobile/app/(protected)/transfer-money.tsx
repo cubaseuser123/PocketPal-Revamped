@@ -1,5 +1,14 @@
 import { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, TextInput, StyleSheet, ScrollView, ActivityIndicator, Modal } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  TextInput,
+  StyleSheet,
+  ScrollView,
+  ActivityIndicator,
+  Modal,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -15,47 +24,52 @@ export default function TransferMoneyScreen() {
   const { user } = useUser();
   const { goals, addToGoal } = useGoals();
   const { showAlert } = useCustomAlert();
-  
+
   const [amount, setAmount] = useState("");
   const [transferring, setTransferring] = useState(false);
   const [showGoalModal, setShowGoalModal] = useState(false);
   const [showPenaltyModal, setShowPenaltyModal] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<string | null>(null);
-  
+
   // displayGoal is only set when a specific goal is selected
   // null means "Savings Wallet" (distribute to all goals)
-  const displayGoal = selectedGoal ? goals?.find(g => g._id === selectedGoal) : null;
-  
+  const displayGoal = selectedGoal
+    ? goals?.find((g) => g.id === selectedGoal)
+    : null;
+
   // Total amount across all goals (for savings wallet display)
-  const totalAllocated = goals?.reduce((sum, g) => sum + (g.currentAmount || 0), 0) || 0;
-  
+  const totalAllocated =
+    goals?.reduce((sum, g) => sum + (g.currentAmount || 0), 0) || 0;
+
   const expenseBalance = wallets?.primary?.balance || 0;
   const unallocatedSavings = wallets?.savings?.balance || 0;
   const totalSavingsAvailable = unallocatedSavings + totalAllocated;
-  
-  const [sourceType, setSourceType] = useState<"primary" | "savings">("primary");
+
+  const [sourceType, setSourceType] = useState<"primary" | "savings">(
+    "primary",
+  );
   const isDeposit = sourceType === "primary"; // Expense -> Savings
-  
+
   const currentBalance = isDeposit ? expenseBalance : totalSavingsAvailable;
-  
+
   const amountNum = parseInt(amount) || 0;
-  
+
   const handleAddAmount = (value: number) => {
     const current = parseInt(amount) || 0;
     setAmount((current + value).toString());
   };
-  
+
   const handleMax = () => {
     setAmount(currentBalance.toString());
   };
 
   const handleSwap = () => {
-    setSourceType(prev => prev === "primary" ? "savings" : "primary");
+    setSourceType((prev) => (prev === "primary" ? "savings" : "primary"));
     setAmount(""); // Reset amount on swap
     setSelectedGoal(null); // Reset goal selection
     setShowGoalModal(false);
   };
-  
+
   const executeTransfer = async () => {
     setTransferring(true);
     try {
@@ -63,27 +77,30 @@ export default function TransferMoneyScreen() {
         // Expense -> Savings logic
         // First transfer to savings wallet (Unallocated)
         await transfer("primary", "savings", amountNum);
-        
+
         if (selectedGoal) {
           // If a specific goal is selected, add to that goal
           await addToGoal(selectedGoal, amountNum);
-          showAlert("Success! 🎉", `₹${amountNum} transferred and added to ${displayGoal?.name}!`);
+          showAlert(
+            "Success! 🎉",
+            `₹${amountNum} transferred and added to ${displayGoal?.name}!`,
+          );
         } else if (goals && goals.length > 0) {
           // Distribute equally among ALL goals
           const amountPerGoal = Math.floor(amountNum / goals.length);
           const remainder = amountNum % goals.length;
-          
+
           // We need to execute these sequentially or all at once
           const promises = goals.map((g, i) => {
-             const amt = i === 0 ? amountPerGoal + remainder : amountPerGoal;
-             return amt > 0 ? addToGoal(g._id, amt) : Promise.resolve();
+            const amt = i === 0 ? amountPerGoal + remainder : amountPerGoal;
+            return amt > 0 ? addToGoal(g.id, amt) : Promise.resolve();
           });
-          
+
           await Promise.all(promises);
-          
+
           showAlert(
-            "Success! 💰", 
-            `₹${amountNum} distributed equally to ${goals.length} goals!`
+            "Success! 💰",
+            `₹${amountNum} distributed equally to ${goals.length} goals!`,
           );
         } else {
           showAlert("Success! 💰", `₹${amountNum} transferred to savings!`);
@@ -91,10 +108,15 @@ export default function TransferMoneyScreen() {
       } else {
         // Savings -> Expense logic (Withdrawal)
         // Pass selectedGoal as sourceGoalId if set
-        const result = await transfer("savings", "primary", amountNum, selectedGoal || undefined);
+        const result = await transfer(
+          "savings",
+          "primary",
+          amountNum,
+          selectedGoal || undefined,
+        );
         showAlert("Success", result.message || "Withdrawal successful");
       }
-      
+
       router.back();
     } catch (error: any) {
       console.error("Transfer failed:", error);
@@ -106,27 +128,39 @@ export default function TransferMoneyScreen() {
 
   const handleTransfer = async () => {
     if (amountNum <= 0 || amountNum > currentBalance) return;
-    
+
     // Check for withdrawal penalty
     if (!isDeposit) {
-       const isPenaltyApplicable = selectedGoal 
-         ? !displayGoal?.isCompleted 
-         : goals?.some(g => !g.isCompleted);
+      const isPenaltyApplicable = selectedGoal
+        ? !displayGoal?.isCompleted
+        : goals?.some((g) => !g.isCompleted);
 
-       if (isPenaltyApplicable) {
-         setShowPenaltyModal(true);
-         return;
-       }
+      if (isPenaltyApplicable) {
+        setShowPenaltyModal(true);
+        return;
+      }
     }
 
     executeTransfer();
   };
-  
+
   // Calculate after-transfer values
-  const newSavingsTotal = isDeposit ? totalSavingsAvailable + amountNum : totalSavingsAvailable - amountNum;
+  const newSavingsTotal = isDeposit
+    ? totalSavingsAvailable + amountNum
+    : totalSavingsAvailable - amountNum;
   // Goal progress preview
   const goalProgress = displayGoal
-    ? Math.min(100, Math.round(((Math.max(0, displayGoal.currentAmount + (isDeposit ? amountNum : -amountNum))) / displayGoal.targetAmount) * 100))
+    ? Math.min(
+        100,
+        Math.round(
+          (Math.max(
+            0,
+            displayGoal.currentAmount + (isDeposit ? amountNum : -amountNum),
+          ) /
+            displayGoal.targetAmount) *
+            100,
+        ),
+      )
     : 0;
 
   if (walletsLoading) {
@@ -142,7 +176,7 @@ export default function TransferMoneyScreen() {
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View style={styles.headerRow}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
           >
@@ -150,44 +184,66 @@ export default function TransferMoneyScreen() {
           </TouchableOpacity>
           <View>
             <Text style={styles.headerTitle}>Transfer Money</Text>
-            <Text style={styles.headerSubtitle}>Move money between your wallets</Text>
+            <Text style={styles.headerSubtitle}>
+              Move money between your wallets
+            </Text>
           </View>
         </View>
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.content, { paddingBottom: 180 + insets.bottom }]}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: 180 + insets.bottom },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* KYC Limit Warning */}
         {!user?.kycCompleted && (
-          <TouchableOpacity 
-            activeOpacity={0.9} 
+          <TouchableOpacity
+            activeOpacity={0.9}
             onPress={() => router.push("/(protected)/full-kyc-benefits")}
             style={{ marginBottom: 4 }}
           >
             <LinearGradient
-               colors={["rgba(239, 68, 68, 0.15)", "rgba(239, 68, 68, 0.05)"]}
-               start={{ x: 0, y: 0 }}
-               end={{ x: 1, y: 0 }}
-               style={{
-                 borderRadius: 16,
-                 padding: 12,
-                 flexDirection: "row",
-                 alignItems: "center",
-                 borderWidth: 1,
-                 borderColor: "rgba(239, 68, 68, 0.3)",
-                 gap: 12
-               }}
+              colors={["rgba(239, 68, 68, 0.15)", "rgba(239, 68, 68, 0.05)"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={{
+                borderRadius: 16,
+                padding: 12,
+                flexDirection: "row",
+                alignItems: "center",
+                borderWidth: 1,
+                borderColor: "rgba(239, 68, 68, 0.3)",
+                gap: 12,
+              }}
             >
               <MaterialIcons name="error-outline" size={20} color="#EF4444" />
               <View style={{ flex: 1 }}>
-                <Text style={{ color: "#EF4444", fontWeight: "700", fontSize: 14 }}>Limits Applied</Text>
-                <Text style={{ color: "#B0B0C3", fontSize: 12 }}>Complete verification to remove limits.</Text>
+                <Text
+                  style={{ color: "#EF4444", fontWeight: "700", fontSize: 14 }}
+                >
+                  Limits Applied
+                </Text>
+                <Text style={{ color: "#B0B0C3", fontSize: 12 }}>
+                  Complete verification to remove limits.
+                </Text>
               </View>
-              <View style={{ backgroundColor: "rgba(239,68,68,0.2)", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
-                <Text style={{ color: "#EF4444", fontWeight: "700", fontSize: 12 }}>FIX</Text>
+              <View
+                style={{
+                  backgroundColor: "rgba(239,68,68,0.2)",
+                  paddingHorizontal: 10,
+                  paddingVertical: 4,
+                  borderRadius: 8,
+                }}
+              >
+                <Text
+                  style={{ color: "#EF4444", fontWeight: "700", fontSize: 12 }}
+                >
+                  FIX
+                </Text>
               </View>
             </LinearGradient>
           </TouchableOpacity>
@@ -204,20 +260,29 @@ export default function TransferMoneyScreen() {
             <PallyIcon size={24} />
           </View>
           <Text style={styles.tipText}>
-            Smart transfers keep your <Text style={styles.tipHighlight}>streak alive</Text>
+            Smart transfers keep your{" "}
+            <Text style={styles.tipHighlight}>streak alive</Text>
           </Text>
         </LinearGradient>
 
         {/* From/To Wallets */}
         <View style={styles.walletsContainer}>
-          
           {/* FROM CARD */}
           {isDeposit ? (
-             // FROM: Expense (Fixed)
+            // FROM: Expense (Fixed)
             <View style={styles.walletCard}>
               <View style={styles.walletLeft}>
-                <View style={[styles.walletIcon, { backgroundColor: "rgba(255, 140, 50, 0.1)" }]}>
-                  <MaterialIcons name="account-balance-wallet" size={24} color="#FF8C32" />
+                <View
+                  style={[
+                    styles.walletIcon,
+                    { backgroundColor: "rgba(255, 140, 50, 0.1)" },
+                  ]}
+                >
+                  <MaterialIcons
+                    name="account-balance-wallet"
+                    size={24}
+                    color="#FF8C32"
+                  />
                 </View>
                 <View>
                   <Text style={styles.walletLabel}>FROM</Text>
@@ -225,24 +290,35 @@ export default function TransferMoneyScreen() {
                 </View>
               </View>
               <View style={styles.walletRight}>
-                <Text style={styles.walletBalance}>₹{expenseBalance.toLocaleString()}</Text>
+                <Text style={styles.walletBalance}>
+                  ₹{expenseBalance.toLocaleString()}
+                </Text>
                 <Text style={styles.walletBalanceLabel}>Available</Text>
               </View>
             </View>
           ) : (
-             // FROM: Savings/Goal (Selectable)
-            <TouchableOpacity 
+            // FROM: Savings/Goal (Selectable)
+            <TouchableOpacity
               style={styles.walletCard}
               onPress={() => setShowGoalModal(true)}
               activeOpacity={0.8}
             >
               <View style={styles.walletLeft}>
-                <View style={[styles.walletIcon, { backgroundColor: selectedGoal ? `${displayGoal?.color}20` : "rgba(99, 102, 241, 0.1)" }]}>
-                   {selectedGoal ? (
-                     <Text style={styles.goalEmoji}>{displayGoal?.emoji}</Text>
-                   ) : (
-                     <MaterialIcons name="savings" size={24} color="#6366F1" />
-                   )}
+                <View
+                  style={[
+                    styles.walletIcon,
+                    {
+                      backgroundColor: selectedGoal
+                        ? `${displayGoal?.color}20`
+                        : "rgba(99, 102, 241, 0.1)",
+                    },
+                  ]}
+                >
+                  {selectedGoal ? (
+                    <Text style={styles.goalEmoji}>{displayGoal?.emoji}</Text>
+                  ) : (
+                    <MaterialIcons name="savings" size={24} color="#6366F1" />
+                  )}
                 </View>
                 <View>
                   <Text style={styles.walletLabel}>FROM</Text>
@@ -253,11 +329,19 @@ export default function TransferMoneyScreen() {
               </View>
               <View style={styles.walletRight}>
                 <Text style={styles.walletBalance}>
-                  ₹{(selectedGoal ? (displayGoal?.currentAmount || 0) : totalSavingsAvailable).toLocaleString()}
+                  ₹
+                  {(selectedGoal
+                    ? displayGoal?.currentAmount || 0
+                    : totalSavingsAvailable
+                  ).toLocaleString()}
                 </Text>
                 <View style={styles.changeRow}>
-                   <Text style={styles.walletBalanceLabel}>Tap to change</Text>
-                   <MaterialIcons name="keyboard-arrow-down" size={16} color="#B0B0C3" />
+                  <Text style={styles.walletBalanceLabel}>Tap to change</Text>
+                  <MaterialIcons
+                    name="keyboard-arrow-down"
+                    size={16}
+                    color="#B0B0C3"
+                  />
                 </View>
               </View>
             </TouchableOpacity>
@@ -265,7 +349,7 @@ export default function TransferMoneyScreen() {
 
           {/* SWAP ARROW */}
           <View style={styles.arrowContainer}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.arrowCircle}
               onPress={handleSwap}
               activeOpacity={0.8}
@@ -276,29 +360,46 @@ export default function TransferMoneyScreen() {
 
           {/* TO CARD */}
           {isDeposit ? (
-             // TO: Savings/Goal (Selectable)
-            <TouchableOpacity 
+            // TO: Savings/Goal (Selectable)
+            <TouchableOpacity
               style={styles.walletCard}
               onPress={() => setShowGoalModal(true)}
               activeOpacity={0.8}
             >
               <View style={styles.walletLeft}>
-                <View style={[styles.walletIcon, { backgroundColor: `${displayGoal?.color || "#6366F1"}20` }]}>
-                  <Text style={styles.goalEmoji}>{displayGoal?.emoji || "💰"}</Text>
+                <View
+                  style={[
+                    styles.walletIcon,
+                    { backgroundColor: `${displayGoal?.color || "#6366F1"}20` },
+                  ]}
+                >
+                  <Text style={styles.goalEmoji}>
+                    {displayGoal?.emoji || "💰"}
+                  </Text>
                 </View>
                 <View>
                   <Text style={styles.walletLabel}>TO</Text>
-                  <Text style={styles.walletName}>{displayGoal?.name || "Savings Wallet"}</Text>
+                  <Text style={styles.walletName}>
+                    {displayGoal?.name || "Savings Wallet"}
+                  </Text>
                 </View>
               </View>
               <View style={styles.walletRight}>
                 <Text style={styles.walletBalance}>
-                   {/* If specific goal, show its currentAmount. If Savings Wallet (All), show Total Savings */}
-                  ₹{(selectedGoal ? (displayGoal?.currentAmount || 0) : totalSavingsAvailable).toLocaleString()}
+                  {/* If specific goal, show its currentAmount. If Savings Wallet (All), show Total Savings */}
+                  ₹
+                  {(selectedGoal
+                    ? displayGoal?.currentAmount || 0
+                    : totalSavingsAvailable
+                  ).toLocaleString()}
                 </Text>
                 <View style={styles.changeRow}>
                   <Text style={styles.walletBalanceLabel}>Tap to change</Text>
-                  <MaterialIcons name="keyboard-arrow-down" size={16} color="#B0B0C3" />
+                  <MaterialIcons
+                    name="keyboard-arrow-down"
+                    size={16}
+                    color="#B0B0C3"
+                  />
                 </View>
               </View>
             </TouchableOpacity>
@@ -306,8 +407,17 @@ export default function TransferMoneyScreen() {
             // TO: Expense Wallet (Fixed)
             <View style={styles.walletCard}>
               <View style={styles.walletLeft}>
-                <View style={[styles.walletIcon, { backgroundColor: "rgba(255, 140, 50, 0.1)" }]}>
-                  <MaterialIcons name="account-balance-wallet" size={24} color="#FF8C32" />
+                <View
+                  style={[
+                    styles.walletIcon,
+                    { backgroundColor: "rgba(255, 140, 50, 0.1)" },
+                  ]}
+                >
+                  <MaterialIcons
+                    name="account-balance-wallet"
+                    size={24}
+                    color="#FF8C32"
+                  />
                 </View>
                 <View>
                   <Text style={styles.walletLabel}>TO</Text>
@@ -315,7 +425,9 @@ export default function TransferMoneyScreen() {
                 </View>
               </View>
               <View style={styles.walletRight}>
-                <Text style={styles.walletBalance}>₹{expenseBalance.toLocaleString()}</Text>
+                <Text style={styles.walletBalance}>
+                  ₹{expenseBalance.toLocaleString()}
+                </Text>
                 <Text style={styles.walletBalanceLabel}>Balance</Text>
               </View>
             </View>
@@ -335,42 +447,70 @@ export default function TransferMoneyScreen() {
               keyboardType="numeric"
             />
           </View>
-          
+
           <View style={styles.quickAmounts}>
-            <TouchableOpacity style={styles.quickBtn} onPress={() => handleAddAmount(100)}>
+            <TouchableOpacity
+              style={styles.quickBtn}
+              onPress={() => handleAddAmount(100)}
+            >
               <Text style={styles.quickBtnText}>+ ₹100</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.quickBtn} onPress={() => handleAddAmount(200)}>
+            <TouchableOpacity
+              style={styles.quickBtn}
+              onPress={() => handleAddAmount(200)}
+            >
               <Text style={styles.quickBtnText}>+ ₹200</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.quickBtn} onPress={() => handleAddAmount(500)}>
+            <TouchableOpacity
+              style={styles.quickBtn}
+              onPress={() => handleAddAmount(500)}
+            >
               <Text style={styles.quickBtnText}>+ ₹500</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.quickBtn} onPress={handleMax}>
-              <Text style={[styles.quickBtnText, { color: "#FF8C32" }]}>MAX</Text>
+              <Text style={[styles.quickBtnText, { color: "#FF8C32" }]}>
+                MAX
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
-
-
 
         {/* After Transfer Preview */}
         {/* After Transfer Preview */}
         {(displayGoal || !selectedGoal) && (
           <View style={styles.previewCard}>
             <Text style={styles.previewLabel}>AFTER TRANSFER</Text>
-            
+
             <View style={styles.previewRow}>
               <View style={styles.previewLeft}>
-                <View style={[styles.previewDot, !isDeposit && { backgroundColor: "#EF4444" }]} />
+                <View
+                  style={[
+                    styles.previewDot,
+                    !isDeposit && { backgroundColor: "#EF4444" },
+                  ]}
+                />
                 <Text style={styles.previewGoalName}>
-                  {selectedGoal ? `${displayGoal?.name} Goal` : "Savings Wallet"}
+                  {selectedGoal
+                    ? `${displayGoal?.name} Goal`
+                    : "Savings Wallet"}
                 </Text>
               </View>
               <Text style={styles.previewAmount}>
-                ₹{(selectedGoal ? (displayGoal?.currentAmount || 0) : totalSavingsAvailable).toLocaleString()} → 
+                ₹
+                {(selectedGoal
+                  ? displayGoal?.currentAmount || 0
+                  : totalSavingsAvailable
+                ).toLocaleString()}{" "}
+                →
                 <Text style={styles.previewAmountNew}>
-                  ₹{Math.max(0, (selectedGoal ? (displayGoal?.currentAmount || 0) : totalSavingsAvailable) + (isDeposit ? amountNum : -amountNum)).toLocaleString()}
+                  ₹
+                  {Math.max(
+                    0,
+                    (selectedGoal
+                      ? displayGoal?.currentAmount || 0
+                      : totalSavingsAvailable) +
+                      (isDeposit ? amountNum : -amountNum),
+                  ).toLocaleString()}
                 </Text>
               </Text>
             </View>
@@ -396,20 +536,25 @@ export default function TransferMoneyScreen() {
       </ScrollView>
 
       {/* Transfer Button */}
-      <View style={[styles.bottomSection, { paddingBottom: insets.bottom + 16 }]}>
-        <TouchableOpacity 
+      <View
+        style={[styles.bottomSection, { paddingBottom: insets.bottom + 16 }]}
+      >
+        <TouchableOpacity
           style={[
             styles.transferButton,
-            (amountNum <= 0 || amountNum > currentBalance || transferring) && styles.transferButtonDisabled
+            (amountNum <= 0 || amountNum > currentBalance || transferring) &&
+              styles.transferButtonDisabled,
           ]}
           onPress={handleTransfer}
-          disabled={amountNum <= 0 || amountNum > currentBalance || transferring}
+          disabled={
+            amountNum <= 0 || amountNum > currentBalance || transferring
+          }
         >
           {transferring ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
             <Text style={styles.transferButtonText}>
-               {isDeposit ? "Transfer & Save" : "Withdraw Funds"}
+              {isDeposit ? "Transfer & Save" : "Withdraw Funds"}
             </Text>
           )}
         </TouchableOpacity>
@@ -423,57 +568,97 @@ export default function TransferMoneyScreen() {
         onRequestClose={() => setShowGoalModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.modalBackdrop}
             onPress={() => setShowGoalModal(false)}
             activeOpacity={1}
           />
           <View style={styles.modalContent}>
             <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>{isDeposit ? "Choose Destination" : "Choose Source"}</Text>
-            
-            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+            <Text style={styles.modalTitle}>
+              {isDeposit ? "Choose Destination" : "Choose Source"}
+            </Text>
+
+            <ScrollView
+              style={styles.modalScroll}
+              showsVerticalScrollIndicator={false}
+            >
               {/* Savings Wallet Option */}
-              <TouchableOpacity 
-                style={[styles.goalOption, !selectedGoal && styles.goalOptionSelected]}
+              <TouchableOpacity
+                style={[
+                  styles.goalOption,
+                  !selectedGoal && styles.goalOptionSelected,
+                ]}
                 onPress={() => {
                   setSelectedGoal(null);
                   setShowGoalModal(false);
                 }}
               >
-                <View style={[styles.goalOptionIcon, { backgroundColor: "rgba(99, 102, 241, 0.1)" }]}>
+                <View
+                  style={[
+                    styles.goalOptionIcon,
+                    { backgroundColor: "rgba(99, 102, 241, 0.1)" },
+                  ]}
+                >
                   <MaterialIcons name="savings" size={24} color="#6366F1" />
                 </View>
                 <View style={styles.goalOptionInfo}>
                   <Text style={styles.goalOptionName}>Savings Wallet</Text>
-                  <Text style={styles.goalOptionBalance}>Current Total: ₹{totalSavingsAvailable.toLocaleString()}</Text>
-                  <Text style={{ fontSize: 10, color: "#6366F1", marginTop: 2 }}>
-                    {isDeposit ? "Distributes equally to all goals" : "Deducts equally from all goals"}
+                  <Text style={styles.goalOptionBalance}>
+                    Current Total: ₹{totalSavingsAvailable.toLocaleString()}
+                  </Text>
+                  <Text
+                    style={{ fontSize: 10, color: "#6366F1", marginTop: 2 }}
+                  >
+                    {isDeposit
+                      ? "Distributes equally to all goals"
+                      : "Deducts equally from all goals"}
                   </Text>
                 </View>
-                {!selectedGoal && <MaterialIcons name="check-circle" size={24} color="#3DDC97" />}
+                {!selectedGoal && (
+                  <MaterialIcons
+                    name="check-circle"
+                    size={24}
+                    color="#3DDC97"
+                  />
+                )}
               </TouchableOpacity>
 
               {/* Goals */}
-              {goals?.map(goal => (
-                <TouchableOpacity 
-                  key={goal._id}
-                  style={[styles.goalOption, selectedGoal === goal._id && styles.goalOptionSelected]}
+              {goals?.map((goal) => (
+                <TouchableOpacity
+                  key={goal.id}
+                  style={[
+                    styles.goalOption,
+                    selectedGoal === goal.id && styles.goalOptionSelected,
+                  ]}
                   onPress={() => {
-                    setSelectedGoal(goal._id);
+                    setSelectedGoal(goal.id);
                     setShowGoalModal(false);
                   }}
                 >
-                  <View style={[styles.goalOptionIcon, { backgroundColor: `${goal.color}20` }]}>
+                  <View
+                    style={[
+                      styles.goalOptionIcon,
+                      { backgroundColor: `${goal.color}20` },
+                    ]}
+                  >
                     <Text style={{ fontSize: 24 }}>{goal.emoji}</Text>
                   </View>
                   <View style={styles.goalOptionInfo}>
                     <Text style={styles.goalOptionName}>{goal.name}</Text>
                     <Text style={styles.goalOptionBalance}>
-                      ₹{goal.currentAmount.toLocaleString()} / ₹{goal.targetAmount.toLocaleString()}
+                      ₹{goal.currentAmount.toLocaleString()} / ₹
+                      {goal.targetAmount.toLocaleString()}
                     </Text>
                   </View>
-                  {selectedGoal === goal._id && <MaterialIcons name="check-circle" size={24} color="#3DDC97" />}
+                  {selectedGoal === goal.id && (
+                    <MaterialIcons
+                      name="check-circle"
+                      size={24}
+                      color="#3DDC97"
+                    />
+                  )}
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -488,46 +673,98 @@ export default function TransferMoneyScreen() {
         animationType="fade"
         onRequestClose={() => setShowPenaltyModal(false)}
       >
-        <View style={[styles.modalOverlay, { justifyContent: "center", padding: 24 }]}>
-          <TouchableOpacity 
+        <View
+          style={[
+            styles.modalOverlay,
+            { justifyContent: "center", padding: 24 },
+          ]}
+        >
+          <TouchableOpacity
             style={styles.modalBackdrop}
             onPress={() => setShowPenaltyModal(false)}
             activeOpacity={1}
           />
-          <View style={[styles.modalContent, { borderRadius: 24, paddingBottom: 24 }]}>
+          <View
+            style={[
+              styles.modalContent,
+              { borderRadius: 24, paddingBottom: 24 },
+            ]}
+          >
             <View style={{ alignItems: "center", gap: 16 }}>
-              <View style={{ 
-                width: 64, height: 64, borderRadius: 32, 
-                backgroundColor: "rgba(239, 68, 68, 0.1)", 
-                alignItems: "center", justifyContent: "center" 
-              }}>
+              <View
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: 32,
+                  backgroundColor: "rgba(239, 68, 68, 0.1)",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
                 <Text style={{ fontSize: 32 }}>⚠️</Text>
               </View>
-              
+
               <View style={{ alignItems: "center", gap: 8 }}>
-                <Text style={{ fontSize: 20, fontWeight: "700", color: "#FFFFFF" }}>
+                <Text
+                  style={{ fontSize: 20, fontWeight: "700", color: "#FFFFFF" }}
+                >
                   Early Withdrawal
                 </Text>
-                <Text style={{ fontSize: 14, color: "#B0B0C3", textAlign: "center", lineHeight: 20 }}>
-                  You are withdrawing from an incomplete goal. This will cost you <Text style={{ color: "#EF4444", fontWeight: "700" }}>10 Pocket Coins</Text>.
+                <Text
+                  style={{
+                    fontSize: 14,
+                    color: "#B0B0C3",
+                    textAlign: "center",
+                    lineHeight: 20,
+                  }}
+                >
+                  You are withdrawing from an incomplete goal. This will cost
+                  you{" "}
+                  <Text style={{ color: "#EF4444", fontWeight: "700" }}>
+                    10 Pocket Coins
+                  </Text>
+                  .
                 </Text>
               </View>
 
-              <View style={{ flexDirection: "row", gap: 12, marginTop: 8, width: "100%" }}>
-                <TouchableOpacity 
-                  style={{ flex: 1, padding: 16, borderRadius: 16, backgroundColor: "#2A2A35", alignItems: "center" }}
+              <View
+                style={{
+                  flexDirection: "row",
+                  gap: 12,
+                  marginTop: 8,
+                  width: "100%",
+                }}
+              >
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    padding: 16,
+                    borderRadius: 16,
+                    backgroundColor: "#2A2A35",
+                    alignItems: "center",
+                  }}
                   onPress={() => setShowPenaltyModal(false)}
                 >
-                  <Text style={{ color: "#FFFFFF", fontWeight: "600" }}>Cancel</Text>
+                  <Text style={{ color: "#FFFFFF", fontWeight: "600" }}>
+                    Cancel
+                  </Text>
                 </TouchableOpacity>
-                <TouchableOpacity 
-                  style={{ flex: 1, padding: 16, borderRadius: 16, backgroundColor: "#EF4444", alignItems: "center" }}
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    padding: 16,
+                    borderRadius: 16,
+                    backgroundColor: "#EF4444",
+                    alignItems: "center",
+                  }}
                   onPress={() => {
                     setShowPenaltyModal(false);
                     executeTransfer();
                   }}
                 >
-                  <Text style={{ color: "#FFFFFF", fontWeight: "600" }}>Confirm</Text>
+                  <Text style={{ color: "#FFFFFF", fontWeight: "600" }}>
+                    Confirm
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -917,4 +1154,3 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 });
-

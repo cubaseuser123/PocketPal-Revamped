@@ -15,7 +15,7 @@ export default function PaymentDetailsScreen() {
   
   const payeeName = params.payeeName as string || "Unknown Payee";
   const vpa = params.vpa as string || "";
-  const initialAmount = params.amount as string || "";
+  const initialAmount = (params.amount as string || "").replace(/[^0-9.]/g, "");
   
   const [amount, setAmount] = useState(initialAmount);
   const [remarks, setRemarks] = useState("");

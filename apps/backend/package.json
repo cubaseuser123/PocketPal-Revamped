@@ -12,6 +12,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
     "@sentry/node": "^10.34.0",
     "@sentry/profiling-node": "^10.34.0",
     "axios": "^1.13.2",
@@ -19,6 +20,8 @@
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
+    "drizzle-kit": "^0.31.8",
+    "drizzle-orm": "^0.45.1",
     "expo-image-picker": "~17.0.10",
     "express": "^5.1.0",
     "express-rate-limit": "^8.2.1",
@@ -29,12 +32,14 @@
     "next": "^16.0.10",
     "nodemailer": "^7.0.10",
     "nodemon": "^3.1.11",
+    "pg": "^8.17.1",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
-    "twilio": "^5.11.2"
+    "twilio": "^5.11.2",
+    "ws": "^8.19.0"
   }
 }
