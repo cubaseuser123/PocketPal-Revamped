@@ -35,7 +35,7 @@ export const getTransactions = async (req, res) => {
   }
 };
 
-// Create a transaction (expense)
+// Create a transaction (expense/income)
 export const createTransaction = async (req, res) => {
   try {
     const { name, emoji, amount, categoryId, note, walletType = "primary" } = req.body;
@@ -44,21 +44,43 @@ export const createTransaction = async (req, res) => {
       return res.status(400).json({ message: "Name and amount required" });
     }
 
+    const absAmount = Math.abs(amount);
+    const isExpense = amount < 0;
+
+    // 1. Find the wallet first to get its ID
     const wallet = await Wallet.findOne({ userId: req.user.id, type: walletType });
     if (!wallet) {
       return res.status(404).json({ message: "Wallet not found" });
     }
 
-    // Check balance for expenses
-    if (amount < 0 && wallet.balance < Math.abs(amount)) {
-      return res.status(400).json({ message: "Insufficient balance" });
+    // 2. Perform Atomic Update
+    let updatedWallet;
+
+    if (isExpense) {
+      // Atomic check-and-decrement
+      updatedWallet = await Wallet.findOneAndUpdate(
+        { 
+          _id: wallet._id, 
+          balance: { $gte: absAmount } // Condition: Balance must be >= amount
+        },
+        { $inc: { balance: amount } }, // amount is negative
+        { new: true }
+      );
+
+      if (!updatedWallet) {
+        return res.status(400).json({ message: "Insufficient balance" });
+      }
+    } else {
+      // Income - just increment
+      // (TODO: Add PPI limit checks here inside the query if needed)
+      updatedWallet = await Wallet.findOneAndUpdate(
+        { _id: wallet._id },
+        { $inc: { balance: amount } },
+        { new: true }
+      );
     }
 
-    // Update wallet balance
-    wallet.balance += amount;
-    await wallet.save();
-
-    // Create transaction
+    // 3. Create Transaction Record
     const transaction = await Transaction.create({
       userId: req.user.id,
       walletId: wallet._id,
@@ -67,13 +89,13 @@ export const createTransaction = async (req, res) => {
       amount,
       categoryId,
       note,
-      type: amount < 0 ? "expense" : "income",
+      type: isExpense ? "expense" : "income",
     });
 
     return res.status(201).json({
       message: "Transaction created",
       transaction,
-      newBalance: wallet.balance,
+      newBalance: updatedWallet.balance,
     });
   } catch (err) {
     console.error("createTransaction error:", err);

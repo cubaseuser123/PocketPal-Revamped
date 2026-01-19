@@ -108,5 +108,19 @@ export function useUser() {
     return await deleteAccountMutation.mutateAsync();
   }, [deleteAccountMutation]);
 
-  return { user, loading: isLoading, error: error ? (error as Error).message : null, refetch, updateUser, uploadAvatar, deleteAccount };
+  const completeKycMutation = useMutation({
+    mutationFn: async () => {
+      // Simulation of KYC process
+      return await api.post(`${API_URL}/api/v1/user/complete-kyc`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["user"] });
+    },
+  });
+
+  const completeKyc = useCallback(async () => {
+    return await completeKycMutation.mutateAsync();
+  }, [completeKycMutation]);
+
+  return { user, loading: isLoading, error: error ? (error as Error).message : null, refetch, updateUser, uploadAvatar, deleteAccount, completeKyc };
 }

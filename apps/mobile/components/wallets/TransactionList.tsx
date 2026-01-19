@@ -17,13 +17,22 @@ interface TransactionListProps {
 export function TransactionList({
   transactions,
   onTransactionPress,
-}: TransactionListProps) {
+  onViewAll,
+  title = "Recent Transactions"
+}: TransactionListProps & { onViewAll?: () => void; title?: string }) {
   return (
     <View className="gap-3">
       {/* Section header */}
-      <Text className="text-text-secondary text-xs font-bold uppercase tracking-wider ml-1">
-        Recent Transactions
-      </Text>
+      <View className="flex-row items-center justify-between ml-1 pr-1">
+        <Text className="text-text-secondary text-xs font-bold uppercase tracking-wider">
+          {title}
+        </Text>
+        {onViewAll && (
+          <TouchableOpacity onPress={onViewAll}>
+            <Text className="text-primary-default text-xs font-bold">View All</Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
       {/* Transaction items */}
       <View className="gap-2">

@@ -156,8 +156,9 @@ export default function WalletsScreen() {
 
         {/* Recent Transactions */}
         <TransactionList
-          transactions={formattedTransactions}
+          transactions={formattedTransactions.slice(0, 5)}
           onTransactionPress={handleTransactionPress}
+          onViewAll={() => router.push("/(protected)/history" as any)}
         />
 
         {/* Move Money */}

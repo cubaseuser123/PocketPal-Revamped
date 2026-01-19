@@ -24,6 +24,9 @@ const userSchema = new mongoose.Schema(
     
     // Stats for leaderboard
     totalGoalsCompleted: { type: Number, default: 0 },
+
+    // Soft Delete
+    deletedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

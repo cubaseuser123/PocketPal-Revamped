@@ -41,8 +41,14 @@ export const getLeaderboard = async (req, res) => {
 export const dealDamage = async (req, res) => {
   try {
     const { bossId } = req.params;
-    const { amount } = req.body;
+    let { amount } = req.body;
     const userId = req.user._id;
+
+    // Security: Cap damage to prevent cheating
+    const MAX_DAMAGE_PER_HIT = 100;
+    if (amount > MAX_DAMAGE_PER_HIT) {
+      amount = MAX_DAMAGE_PER_HIT;
+    }
     
     const boss = await BossBattle.findById(bossId);
     if (!boss) {
@@ -59,10 +65,14 @@ export const dealDamage = async (req, res) => {
     // If defeated, award coins to participants
     if (result.defeated) {
       const rewards = boss.rewards;
-      for (const entry of boss.leaderboard) {
-        await User.findByIdAndUpdate(entry.userId, {
-          $inc: { coins: rewards.coins }
-        });
+      
+      // Bulk update for all participants
+      const participantIds = boss.leaderboard.map(entry => entry.userId);
+      if (participantIds.length > 0 && rewards.coins > 0) {
+        await User.updateMany(
+            { _id: { $in: participantIds } },
+            { $inc: { coins: rewards.coins } }
+        );
       }
     }
     

@@ -5,21 +5,8 @@ import Wallet from "../models/Wallet.js";
 export const getProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
-    if (!user) {
+    if (!user || user.deletedAt) {
       return res.status(404).json({ message: "User not found" });
-    }
-
-    // Ensure friend code exists (lazy migration for existing users)
-    if (!user.friendCode) {
-       let code;
-       let unique = false;
-       while(!unique) {
-          code = Math.random().toString(36).substring(2, 8).toUpperCase();
-          const exists = await User.findOne({ friendCode: code });
-          if(!exists) unique = true;
-       }
-       user.friendCode = code;
-       await user.save();
     }
 
     // Get user's wallets
@@ -201,7 +188,7 @@ export const uploadAvatar = async (req, res) => {
   }
 };
 
-// Delete User Account
+// Delete User Account (Soft Delete)
 export const deleteUser = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -210,17 +197,26 @@ export const deleteUser = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Delete associated wallets
-    await Wallet.deleteMany({ userId: user._id });
+    const timestamp = Date.now();
 
-    // Delete associated transactions (optional, depending on retention policy, but usually good to clean up)
-    const Transaction = (await import("../models/Transaction.js")).default;
-    await Transaction.deleteMany({ userId: user._id });
+    // Soft delete user
+    user.deletedAt = new Date(timestamp);
+    
+    // Release unique constraints so they can re-register
+    // Append timestamp to preserve history but free the phone number
+    user.phone = `${user.phone}_deleted_${timestamp}`;
+    
+    // Also free up friendCode if it exists
+    if (user.friendCode) {
+      user.friendCode = `${user.friendCode}_deleted_${timestamp}`;
+    }
 
-    // Delete the user
-    await User.findByIdAndDelete(user._id);
+    await user.save();
 
-    return res.json({ message: "User deleted successfully" });
+    // Ideally, we would also invalidate the auth token here (e.g., add to a blacklist), 
+    // but that depends on the auth implementation.
+
+    return res.json({ message: "User account deactivated successfully" });
   } catch (err) {
     console.error("deleteUser error:", err);
     return res.status(500).json({ message: "Server error", error: err.message });

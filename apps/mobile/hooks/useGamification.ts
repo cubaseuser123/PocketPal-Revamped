@@ -320,21 +320,21 @@ export interface Badge {
 }
 
 export function useBadges() {
-    const { data: badges, isLoading, error, refetch } = useQuery({
+    const { data, isLoading, error, refetch } = useQuery({
       queryKey: ["badges"],
       queryFn: async () => {
         const { auth } = await import("@repo/auth");
         const token = await auth.getToken();
-        const res = await fetch(`${API_URL}/api/v1/badges`, {
+        const res = await fetch(`${API_URL}/api/v1/badges/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        return await res.json() as Badge[];
+        return await res.json() as { badges: Badge[]; earnedCount: number; totalCount: number };
       },
     });
   
-    const safeBadges = Array.isArray(badges) ? badges : [];
-    const earnedCount = safeBadges.filter((b) => b.earned).length || 0;
-    const totalCount = safeBadges.length || 0;
+    const safeBadges = data?.badges || [];
+    const earnedCount = data?.earnedCount || 0;
+    const totalCount = data?.totalCount || 0;
   
     return { 
       badges: safeBadges, 

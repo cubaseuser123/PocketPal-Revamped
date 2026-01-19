@@ -108,6 +108,12 @@ export default function ProfileScreen() {
   const handleMenuPress = (id: string) => {
     if (id === "subscriptions") {
       router.push("/(protected)/subscriptions");
+    } else if (id === "verification") {
+      if (user?.kycCompleted) {
+        showAlert("Verified", "You are already a fully verified user!");
+      } else {
+        router.push("/(protected)/full-kyc-benefits");
+      }
     } else {
       console.log("Menu item pressed:", id);
     }
@@ -204,7 +210,18 @@ export default function ProfileScreen() {
         />
 
         {/* Settings Menu */}
-        <SettingsMenuCard items={MOCK_MENU_ITEMS} onItemPress={handleMenuPress} />
+        <SettingsMenuCard 
+          items={MOCK_MENU_ITEMS.map(item => 
+            item.id === "verification" 
+              ? { 
+                  ...item, 
+                  badge: user?.kycCompleted ? "VERIFIED" : "UPGRADE", 
+                  badgeColor: user?.kycCompleted ? "#3DDC97" : "#FF8C32" 
+                } 
+              : item
+          )} 
+          onItemPress={handleMenuPress} 
+        />
 
         {/* Logout Button */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>

@@ -16,8 +16,10 @@ export const getAllBadges = async (req, res) => {
 export const getUserBadges = async (req, res) => {
   try {
     const userId = req.user._id;
+    console.log(`[DEBUG] Fetching badges for user: ${userId}`);
 
     const earnedBadges = await UserBadge.find({ userId }).lean();
+    console.log(`[DEBUG] Found ${earnedBadges.length} earned badges for user ${userId}`);
     const earnedBadgeIds = earnedBadges.map((b) => b.badgeId);
 
     // Combine all badges with earned status

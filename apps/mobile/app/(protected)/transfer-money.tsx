@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useWallets, useGoals } from "../../hooks/useApi";
+import { useWallets, useGoals, useUser } from "../../hooks/useApi";
 import { PallyIcon } from "../../components/ui/PallyIcon";
 import { useCustomAlert } from "../../contexts/CustomAlertContext";
 
@@ -12,6 +12,7 @@ export default function TransferMoneyScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { wallets, loading: walletsLoading, transfer } = useWallets();
+  const { user } = useUser();
   const { goals, addToGoal } = useGoals();
   const { showAlert } = useCustomAlert();
   
@@ -159,6 +160,39 @@ export default function TransferMoneyScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: 180 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
+        {/* KYC Limit Warning */}
+        {!user?.kycCompleted && (
+          <TouchableOpacity 
+            activeOpacity={0.9} 
+            onPress={() => router.push("/(protected)/full-kyc-benefits")}
+            style={{ marginBottom: 4 }}
+          >
+            <LinearGradient
+               colors={["rgba(239, 68, 68, 0.15)", "rgba(239, 68, 68, 0.05)"]}
+               start={{ x: 0, y: 0 }}
+               end={{ x: 1, y: 0 }}
+               style={{
+                 borderRadius: 16,
+                 padding: 12,
+                 flexDirection: "row",
+                 alignItems: "center",
+                 borderWidth: 1,
+                 borderColor: "rgba(239, 68, 68, 0.3)",
+                 gap: 12
+               }}
+            >
+              <MaterialIcons name="error-outline" size={20} color="#EF4444" />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: "#EF4444", fontWeight: "700", fontSize: 14 }}>Limits Applied</Text>
+                <Text style={{ color: "#B0B0C3", fontSize: 12 }}>Complete verification to remove limits.</Text>
+              </View>
+              <View style={{ backgroundColor: "rgba(239,68,68,0.2)", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
+                <Text style={{ color: "#EF4444", fontWeight: "700", fontSize: 12 }}>FIX</Text>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+        )}
+
         {/* Pally Tip */}
         <LinearGradient
           colors={["#2A2A35", "#1A1A22"]}

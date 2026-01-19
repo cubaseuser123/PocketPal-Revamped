@@ -2,10 +2,12 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import express from "express";
+import { createServer } from "http";
+import { Server } from "socket.io";
 import connectDB from "./config/db.js";
 import cors from "cors";
 import * as Sentry from "@sentry/node";
-import rateLimit from "express-rate-limit";
+// import rateLimit from "express-rate-limit";
 import swaggerDocs from "./config/swagger.js";
 import authRoutes from "./routes/authRoutes.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
@@ -20,8 +22,10 @@ import wheelRoutes from "./routes/wheelRoutes.js";
 import friendRoutes from "./routes/friendRoutes.js";
 import badgeRoutes from "./routes/badgeRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
+import splitGroupRoutes from "./routes/splitGroupRoutes.js";
 
 const app = express();
+const httpServer = createServer(app);
 app.set("trust proxy", 1); // Trust first proxy (fix for rate limit error)
 const startTime = Date.now();
 
@@ -48,14 +52,12 @@ app.use(
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
-      if (allowedOrigins.indexOf(origin) === -1) {
-        // In dev, we might want to be lenient, but for "hardcore" audit compliance:
-        if (process.env.NODE_ENV === "development") return callback(null, true);
-        
-        var msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-        return callback(new Error(msg), false);
+      
+      if (allowedOrigins.includes(origin) || process.env.NODE_ENV !== "production") {
+        return callback(null, true);
       }
-      return callback(null, true);
+      
+      return callback(new Error('The CORS policy for this site does not allow access from the specified Origin.'), false);
     },
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -63,19 +65,46 @@ app.use(
   }),
 );
 
+const io = new Server(httpServer, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
+
+app.set("io", io);
+
+io.on("connection", (socket) => {
+  console.log(`Socket connected: ${socket.id}`);
+  
+  socket.on("join_group", (groupId) => {
+    socket.join(groupId);
+    console.log(`Socket ${socket.id} joined group ${groupId}`);
+  });
+
+  socket.on("disconnect", () => {
+    console.log(`Socket disconnected: ${socket.id}`);
+  });
+});
+
 // Rate Limiter for Auth
+/*
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 20, // Limit each IP to 20 requests per windowMs
   message: "Too many login attempts, please try again later"
 });
+*/
 
 // Stricter limiter for OTP
+/*
 const otpLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 5, // Limit each IP to 5 OTP requests per hour
   message: "Too many OTP requests, please try again later"
 });
+*/
 
 // Swagger
 swaggerDocs(app);
@@ -105,9 +134,8 @@ app.get("/health", (req, res) => {
 app.use("/uploads", express.static("uploads"));
 
 // API v1 Routes
-// app.use("/api/v1/auth/send-otp", otpLimiter); // Apply specifically to OTP
-// app.use("/api/v1/auth", authLimiter, authRoutes); // Apply general auth limit
-app.use("/api/v1/auth", authRoutes); // Temporarily removed limiters
+// app.use("/api/v1/auth/send-otp", otpLimiter); // Apply specifically to OTP (Handled in router now)
+app.use("/api/v1/auth", /* authLimiter, */ authRoutes); // Apply general auth limit
 app.use("/api/v1/subscriptions", subscriptionRoutes);
 app.use("/api/v1/user", userRoutes);
 app.use("/api/v1/wallets", walletRoutes);
@@ -120,6 +148,7 @@ app.use("/api/v1/wheel", wheelRoutes);
 app.use("/api/v1/friends", friendRoutes);
 app.use("/api/v1/badges", badgeRoutes);
 app.use("/api/v1/admin", adminRoutes);
+app.use("/api/v1/split-groups", splitGroupRoutes);
 
 // Legacy support: redirect /api/* to /api/v1/*
 app.use("/api", (req, res, next) => {
@@ -148,6 +177,7 @@ app.use(function onError(err, req, res, next) {
 
 const PORT = process.env.PORT || 5757;
 
-app.listen(PORT, () => {
+// app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

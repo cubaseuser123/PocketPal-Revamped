@@ -95,7 +95,7 @@ export default function GoalsScreen() {
         <GoalPallyTip />
 
         {/* Savings Graph */}
-        <SavingsGraph />
+        <SavingsGraph amount={goals?.reduce((acc, g) => acc + g.currentAmount, 0) || 0} />
 
         {/* Featured Goal */}
         {featuredGoal ? (

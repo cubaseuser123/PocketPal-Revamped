@@ -5,6 +5,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { CameraView, Camera } from "expo-camera";
 import { LinearGradient } from "expo-linear-gradient";
+import * as ImagePicker from "expo-image-picker";
+import RNQRGenerator from "rn-qr-generator";
 import { useWallets } from "../../hooks/useApi";
 import { useCustomAlert } from "../../contexts/CustomAlertContext";
 
@@ -15,6 +17,7 @@ export default function ScanQRScreen() {
   const [scanned, setScanned] = useState(false);
   const { wallets, loading } = useWallets();
   const { showAlert } = useCustomAlert();
+
 
   // Check KYC status
   const isKycCompleted = wallets?.kycCompleted === true;
@@ -40,23 +43,19 @@ export default function ScanQRScreen() {
         const payeeName = params.get("pn") || "Unknown";
         const amount = params.get("am");
         
-        showAlert(
-          "Payment Details",
-          `Pay to: ${payeeName}\nVPA: ${payeeVpa}\nAmount: ${amount ? `₹${amount}` : "Enter amount"}`,
-          [
-            { text: "Cancel", onPress: () => setScanned(false) },
-            { 
-              text: "Proceed", 
-              onPress: () => {
-                // Navigate to payment confirmation or transfer screen
-                router.push({
-                  pathname: "/(protected)/transfer-money",
-                  params: { payee: payeeName, vpa: payeeVpa, amount: amount || "" }
-                });
-              }
-            },
-          ]
-        );
+        if (amount) {
+          router.push({
+            pathname: "/(protected)/payment-details",
+            params: { payeeName, vpa: payeeVpa, amount }
+          } as any);
+          setScanned(false); // Reset immediately so back works
+        } else {
+           router.push({
+            pathname: "/(protected)/payment-details",
+            params: { payeeName, vpa: payeeVpa }
+          } as any);
+          setScanned(false);
+        }
       } catch (e) {
         showAlert("Invalid QR", "Could not parse UPI QR code.", [
           { text: "Try Again", onPress: () => setScanned(false) }
@@ -66,6 +65,37 @@ export default function ScanQRScreen() {
       showAlert("Not a UPI QR", "Please scan a valid UPI QR code.", [
         { text: "OK", onPress: () => setScanned(false) }
       ]);
+    }
+  };
+
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: false,
+      quality: 1,
+      base64: true, // Native module might need base64 or URI
+    });
+
+    if (!result.canceled && result.assets && result.assets[0].uri) {
+      try {
+        const response = await RNQRGenerator.detect({
+          uri: result.assets[0].uri,
+        });
+
+        if (response && response.values && response.values.length > 0) {
+           // RNQRGenerator returns values array
+           handleBarCodeScanned({ type: "qr", data: response.values[0] });
+        } else {
+             showAlert("No QR Found", "Could not find a QR code in this image.", [
+             { text: "OK", onPress: () => setScanned(false) }
+          ]);
+        }
+      } catch (error) {
+        console.error("Gallery scan error:", error);
+        showAlert("Error", "Failed to scan image. Please try again.", [
+            { text: "OK", onPress: () => setScanned(false) }
+        ]);
+      }
     }
   };
 
@@ -139,12 +169,30 @@ export default function ScanQRScreen() {
           </View>
         </View>
         
-        {/* Bottom text */}
+        {/* Bottom text & Buttons */}
         <LinearGradient
           colors={["transparent", "rgba(15,15,20,0.9)"]}
           style={[styles.footer, { paddingBottom: insets.bottom + 32 }]}
         >
           <Text style={styles.instruction}>Point camera at a UPI QR code</Text>
+          
+          <View style={styles.buttonRow}>
+            <TouchableOpacity 
+                style={styles.galleryButton}
+                onPress={pickImage}
+            >
+                <MaterialIcons name="photo-library" size={24} color="#FFFFFF" />
+                <Text style={styles.galleryButtonText}>Gallery</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+                style={styles.galleryButton}
+                onPress={() => router.push("/(protected)/pay-contacts" as any)}
+            >
+                <MaterialIcons name="contacts" size={24} color="#FFFFFF" />
+                <Text style={styles.galleryButtonText}>Contacts</Text>
+            </TouchableOpacity>
+          </View>
         </LinearGradient>
       </View>
     </View>
@@ -262,6 +310,27 @@ const styles = StyleSheet.create({
   instruction: {
     color: "#FFFFFF",
     fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 20,
+  },
+  buttonRow: {
+    flexDirection: "row",
+    gap: 16,
+  },
+  galleryButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+  },
+  galleryButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
     fontWeight: "600",
   },
 });

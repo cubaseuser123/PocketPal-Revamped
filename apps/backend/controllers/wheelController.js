@@ -59,15 +59,20 @@ export const spinWheel = async (req, res) => {
     const randomIndex = Math.floor(Math.random() * WHEEL_SEGMENTS.length);
     const result = WHEEL_SEGMENTS[randomIndex];
     
-    // Award coins
-    user.coins += result.reward;
-    user.lastSpinDate = new Date();
-    await user.save();
+    // Award coins atomically
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      { 
+        $inc: { coins: result.reward },
+        $set: { lastSpinDate: new Date() }
+      },
+      { new: true }
+    );
     
     res.json({
       segment: result,
       coinsWon: result.reward,
-      totalCoins: user.coins,
+      totalCoins: updatedUser.coins,
       canSpin: false,
       message: `You won ${result.reward} coins!`,
     });

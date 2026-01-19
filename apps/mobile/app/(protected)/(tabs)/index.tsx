@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
-import { ScrollView, View, ActivityIndicator, Text } from "react-native";
+import { ScrollView, View, ActivityIndicator, Text, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
+import { MaterialIcons } from "@expo/vector-icons";
 
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { PallyTip } from "../../../components/dashboard/PallyTip";
@@ -11,6 +13,7 @@ import { SpendingOverview } from "../../../components/dashboard/SpendingOverview
 import { ExpenseWallet } from "../../../components/dashboard/ExpenseWallet";
 import { SavingsWallet } from "../../../components/dashboard/SavingsWallet";
 import { ArcadeTeaser } from "../../../components/dashboard/ArcadeTeaser";
+import { ActiveSplitGroups } from "../../../components/dashboard/ActiveSplitGroups";
 import { useUser, useWallets, useSpendingSummary, useCategories, useGoals, getFullAvatarUrl } from "../../../hooks/useApi";
 
 // Static spending chart data (would come from analytics API in future)
@@ -131,8 +134,43 @@ export default function HomeScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Pally Tip */}
+        {/* PallyTip */}
         <PallyTip message="Small saves beat big regrets. Let's go!" />
+
+        {/* KYC Banner */}
+        {!user?.kycCompleted && (
+          <TouchableOpacity 
+            onPress={() => router.push("/(protected)/full-kyc-benefits")}
+            activeOpacity={0.9}
+          >
+            <LinearGradient
+              colors={["rgba(255, 140, 50, 0.15)", "rgba(255, 140, 50, 0.05)"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={{
+                borderRadius: 16,
+                padding: 16,
+                flexDirection: "row",
+                alignItems: "center",
+                borderWidth: 1,
+                borderColor: "rgba(255, 140, 50, 0.3)"
+              }}
+            >
+              <View style={{ 
+                width: 40, height: 40, borderRadius: 20, 
+                backgroundColor: "rgba(255, 140, 50, 0.2)", 
+                alignItems: "center", justifyContent: "center", marginRight: 12 
+              }}>
+                <MaterialIcons name="verified-user" size={20} color="#FF8C32" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: "#FFF", fontWeight: "700", fontSize: 16 }}>Complete Verification</Text>
+                <Text style={{ color: "#B0B0C3", fontSize: 12 }}>Unlock higher limits & exclusive badges</Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color="#FF8C32" />
+            </LinearGradient>
+          </TouchableOpacity>
+        )}
 
         {/* Weekly Saving Goal */}
         <WeeklySavingGoal
@@ -141,6 +179,9 @@ export default function HomeScreen() {
           status={!featuredGoal ? "no-goal" : "on-track"}
           todaySaved={0}
         />
+
+        {/* Active Split Groups */}
+        <ActiveSplitGroups />
 
         {/* Prediction */}
         <PredictionCard

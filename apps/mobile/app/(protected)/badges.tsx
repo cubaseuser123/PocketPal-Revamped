@@ -1,7 +1,8 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useState, useCallback } from "react";
 
 import { useBadges, useUser } from "../../hooks/useApi";
 
@@ -16,7 +17,14 @@ export default function BadgesScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user } = useUser();
-  const { badges, earnedCount, totalCount, loading } = useBadges();
+  const { badges, earnedCount, totalCount, loading, refetch } = useBadges();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
 
   const handleBack = () => {
     router.back();
@@ -69,6 +77,9 @@ export default function BadgesScreen() {
         style={styles.scrollView}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF8C32" />
+        }
       >
         {Object.entries(badgesByCategory).map(([category, categoryBadges]) => (
           <View key={category} style={styles.categorySection}>

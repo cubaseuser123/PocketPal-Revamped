@@ -64,9 +64,9 @@ onlineManager.setEventListener((setOnline) => {
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: Infinity, // Data remains fresh indefinitely by default
+      staleTime: 0, // Always consider data stale (refetch on mount/focus)
       retry: 2,
-      gcTime: 1000 * 60 * 60 * 24 * 7, // 7 days
+      gcTime: 1000 * 60 * 60 * 24, // 24 hours (keep cache for offline usage)
     },
   },
 });

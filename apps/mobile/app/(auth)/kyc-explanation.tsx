@@ -396,9 +396,10 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
   secondaryButton: {
+    width: "100%",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 8,
+    paddingVertical: 12,
   },
   secondaryButtonText: {
     fontSize: 15,

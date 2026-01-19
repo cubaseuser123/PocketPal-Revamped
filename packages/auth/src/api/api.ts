@@ -175,6 +175,37 @@ export const subscriptionApi = {
   },
 };
 
+// Friend API
+export const friendApi = {
+  list: async (baseUrl: string) => {
+    const response = await httpApi.get(`${baseUrl}/api/v1/friends`);
+    return response.data;
+  },
+};
+
+// Split Group API
+export const splitGroupApi = {
+  create: async (baseUrl: string, data: { name: string; totalAmount: number; members: string[] }) => {
+    const response = await httpApi.post(`${baseUrl}/api/v1/split-groups`, data);
+    return response.data;
+  },
+
+  list: async (baseUrl: string) => {
+    const response = await httpApi.get(`${baseUrl}/api/v1/split-groups`);
+    return response.data;
+  },
+
+  getDetails: async (baseUrl: string, id: string) => {
+    const response = await httpApi.get(`${baseUrl}/api/v1/split-groups/${id}`);
+    return response.data;
+  },
+
+  pay: async (baseUrl: string, id: string, amount: number) => {
+    const response = await httpApi.post(`${baseUrl}/api/v1/split-groups/${id}/pay`, { amount });
+    return response.data;
+  },
+};
+
 // Export all APIs
 export const pocketPalApi = {
   user: userApi,
@@ -183,4 +214,6 @@ export const pocketPalApi = {
   goals: goalApi,
   categories: categoryApi,
   subscriptions: subscriptionApi,
+  splitGroups: splitGroupApi,
+  friends: friendApi,
 };

@@ -90,6 +90,7 @@ export function useWallets() {
 }
 
 export function useTransactions(walletType?: string) {
+  const queryClient = useQueryClient();
   const { data: transactions, isLoading, error, refetch } = useQuery({
     queryKey: ["transactions", { walletType }],
     queryFn: async () => {
@@ -98,7 +99,28 @@ export function useTransactions(walletType?: string) {
     },
   });
 
-  return { transactions: transactions || [], loading: isLoading, error: error ? (error as Error).message : null, refetch };
+  const addTransactionMutation = useMutation({
+    mutationFn: async (data: { name: string; amount: number; categoryId?: string; walletType?: string; emoji?: string }) => {
+      return await transactionApi.create(API_URL, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["wallets"] });
+      queryClient.invalidateQueries({ queryKey: ["spendingSummary"] });
+    },
+  });
+
+  const addTransaction = useCallback(async (name: string, amount: number, categoryId?: string, walletType: string = "primary", emoji?: string) => {
+    return await addTransactionMutation.mutateAsync({ name, amount, categoryId, walletType, emoji });
+  }, [addTransactionMutation]);
+
+  return { 
+    transactions: transactions || [], 
+    loading: isLoading, 
+    error: error ? (error as Error).message : null, 
+    refetch,
+    addTransaction 
+  };
 }
 
 export function useSpendingSummary(period: "week" | "month" | "3m" = "week") {
