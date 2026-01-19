@@ -16,6 +16,10 @@ const transactionSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId, 
       ref: "Category" 
     },
+    groupId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "SplitGroup"
+    },
     name: { type: String, required: true },
     emoji: { type: String, default: "💰" },
     amount: { type: Number, required: true }, // Negative for expense, positive for income

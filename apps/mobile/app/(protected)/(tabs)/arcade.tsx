@@ -1,4 +1,5 @@
-import { ScrollView, View, Text, ActivityIndicator, TouchableOpacity } from "react-native";
+import { useState, useCallback } from "react";
+import { ScrollView, View, Text, ActivityIndicator, TouchableOpacity, RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -16,10 +17,18 @@ export default function ArcadeScreen() {
   const router = useRouter();
   
   // Use real data from backend (cached via React Query)
-  const { user } = useUser();
-  const { boss, loading: bossLoading } = useBoss();
-  const { quests, loading: questsLoading, assignQuests } = useQuests();
-  const { friends, pendingRequests } = useFriends();
+  const { user, refetch: refetchUser } = useUser();
+  const { boss, loading: bossLoading, refetch: refetchBoss } = useBoss();
+  const { quests, loading: questsLoading, assignQuests, refetch: refetchQuests } = useQuests();
+  const { friends, pendingRequests, refetchFriends } = useFriends();
+
+  // Pull-to-refresh
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([refetchUser(), refetchBoss(), refetchQuests(), refetchFriends()]);
+    setRefreshing(false);
+  }, [refetchUser, refetchBoss, refetchQuests, refetchFriends]);
 
   // Transform boss data for BossBattles component
   const bossesForDisplay = boss ? [{
@@ -88,6 +97,7 @@ export default function ArcadeScreen() {
           paddingTop: 4,
         }}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF8C32" />}
       >
         {/* Welcome */}
         <ArcadeWelcome />

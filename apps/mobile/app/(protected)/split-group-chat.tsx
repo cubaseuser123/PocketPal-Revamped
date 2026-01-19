@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from "react";
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ScrollView, RefreshControl } from "react-native";
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ScrollView, RefreshControl, Alert } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { io } from "socket.io-client";
 import { useUser, useSplitGroupDetails, API_URL } from "../../hooks/useApi"; 
+import { TransactionDetailsModal } from "../../components/wallets/TransactionDetailsModal"; 
 
 export default function SplitGroupChatScreen() {
   const router = useRouter();
@@ -31,6 +32,7 @@ export default function SplitGroupChatScreen() {
 
   const [messages, setMessages] = useState<any[]>([]);
   const [inputText, setInputText] = useState("");
+  const [transactionModalVisible, setTransactionModalVisible] = useState(false);
 
   // Sync real data to messages logic (Simplified for now)
   useEffect(() => {
@@ -260,7 +262,7 @@ export default function SplitGroupChatScreen() {
              <Text style={styles.headerTitle}>{payeeName} Split Group</Text>
              <Text style={styles.headerSubtitle}>{group?.members?.length ? group.members.length + 1 : "?"} Members</Text>
         </View>
-        <TouchableOpacity style={styles.backButton}>
+        <TouchableOpacity style={styles.backButton} onPress={() => setTransactionModalVisible(true)}>
              <MaterialIcons name="info-outline" size={24} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
@@ -292,6 +294,21 @@ export default function SplitGroupChatScreen() {
             </TouchableOpacity>
          </View>
       </KeyboardAvoidingWrapper>
+
+      {/* Transaction Details Modal for Split Group */}
+      <TransactionDetailsModal
+        visible={transactionModalVisible}
+        onClose={() => setTransactionModalVisible(false)}
+        transaction={{
+          _id: groupId,
+          name: `Split: ${group?.name || "Group"}`,
+          emoji: "🧾",
+          amount: role === "ower" ? -myAmount : totalAmount,
+          type: role === "ower" ? "expense" : "income",
+          createdAt: group?.createdAt || new Date().toISOString(),
+          note: `Total: ₹${totalAmount} | Your Share: ₹${myAmount} | Members: ${(group?.members?.length || 0) + 1}`,
+        }}
+      />
     </View>
   );
 }

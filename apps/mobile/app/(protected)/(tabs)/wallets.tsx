@@ -1,4 +1,4 @@
-import { ScrollView, View, ActivityIndicator, Text } from "react-native";
+import { ScrollView, View, ActivityIndicator, Text, RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -10,7 +10,9 @@ import { ExpenseWalletCard } from "../../../components/wallets/ExpenseWalletCard
 import { TransactionList } from "../../../components/wallets/TransactionList";
 import { MoveMoneyCard } from "../../../components/wallets/MoveMoneyCard";
 import { SavingsWalletCard } from "../../../components/wallets/SavingsWalletCard";
+import { TransactionDetailsModal } from "../../../components/wallets/TransactionDetailsModal";
 import { useWallets, useTransactions, useCategories, useGoals, useUser } from "../../../hooks/useApi";
+import { useState, useCallback } from "react";
 
 // Helper to format date
 const formatDate = (dateString: string) => {
@@ -33,12 +35,20 @@ export default function WalletsScreen() {
   const router = useRouter();
 
   // API hooks
-  const { wallets, loading: walletsLoading, addMoney, transfer } = useWallets();
+  const { wallets, loading: walletsLoading, addMoney, transfer, refetch: refetchWallets } = useWallets();
   // Fetch user data for correct coin balance
   const { user } = useUser();
-  const { transactions, loading: transactionsLoading } = useTransactions();
+  const { transactions, loading: transactionsLoading, refetch: refetchTransactions } = useTransactions();
   const { categories } = useCategories();
   const { goals } = useGoals();
+
+  // Pull-to-refresh
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([refetchWallets(), refetchTransactions()]);
+    setRefreshing(false);
+  }, [refetchWallets, refetchTransactions]);
 
   // Get featured goal for savings widget
   const featuredGoal = goals?.find(g => g.isFeatured) || goals?.[0];
@@ -73,8 +83,24 @@ export default function WalletsScreen() {
     router.push("/(protected)/transfer-money");
   };
 
+  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+
   const handleTransactionPress = (id: string) => {
-    console.log("Transaction pressed:", id);
+    const transaction = transactions.find(t => t._id === id);
+    if (!transaction) return;
+
+    if (transaction.groupId) {
+      // Navigate to Split Group
+      router.push({
+        pathname: "/(protected)/split-group-chat",
+        params: { id: transaction.groupId }
+      } as any);
+    } else {
+      // Show Details Modal
+      setSelectedTransaction(transaction);
+      setModalVisible(true);
+    }
   };
 
   // Show loading state
@@ -88,6 +114,7 @@ export default function WalletsScreen() {
   }
 
   return (
+    <>
     <View className="flex-1 bg-background-dark">
       {/* Header */}
       <PageHeader
@@ -107,6 +134,7 @@ export default function WalletsScreen() {
           gap: 24,
         }}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF8C32" />}
       >
         {/* Pally Tip - show PPI type info */}
         <PallyTip 
@@ -174,5 +202,12 @@ export default function WalletsScreen() {
         />
       </ScrollView>
     </View>
+    
+    <TransactionDetailsModal
+        visible={modalVisible}
+        transaction={selectedTransaction}
+        onClose={() => setModalVisible(false)}
+    />
+    </>
   );
 }

@@ -1,4 +1,5 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
+import { useState, useCallback } from "react";
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -21,9 +22,17 @@ const formatCurrency = (amount: number): string => {
 export default function GoalsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { goals, loading, deleteGoal } = useGoals();
+  const { goals, loading, deleteGoal, refetch: refetchGoals } = useGoals();
   const { user } = useUser();
   const { showAlert } = useCustomAlert();
+
+  // Pull-to-refresh
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetchGoals();
+    setRefreshing(false);
+  }, [refetchGoals]);
 
   const handleAddGoal = () => {
     router.push("/(protected)/create-goal");
@@ -90,6 +99,7 @@ export default function GoalsScreen() {
           { paddingBottom: 120 + insets.bottom },
         ]}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF8C32" />}
       >
         {/* Pally Tip */}
         <GoalPallyTip />

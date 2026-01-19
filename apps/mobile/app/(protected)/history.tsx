@@ -1,4 +1,5 @@
-import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity } from "react-native";
+import { useState, useCallback } from "react";
+import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -25,7 +26,15 @@ const formatDate = (dateString: string) => {
 export default function HistoryScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { transactions, loading } = useTransactions();
+  const { transactions, loading, refetch } = useTransactions();
+
+  // Pull-to-refresh
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
 
   // Map transactions for the list
   const formattedTransactions = (transactions || []).map(t => ({
@@ -74,6 +83,7 @@ export default function HistoryScreen() {
           paddingBottom: insets.bottom + 20 
         }}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF8C32" />}
       >
         <TransactionList 
           transactions={formattedTransactions} 

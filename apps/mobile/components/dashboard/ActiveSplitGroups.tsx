@@ -10,7 +10,10 @@ export function ActiveSplitGroups() {
   const { user } = useUser();
   const { groups, loading } = useSplitGroups();
 
-  if (loading || !groups.length) return null;
+// Filter out settled groups for Dashboard view
+  const activeGroups = groups.filter((g) => g.status !== "settled");
+
+  if (loading || !activeGroups.length) return null;
 
   const handlePress = (group: any) => {
     const isCreator = group.creator === user?.id; // user might need strict check if population happened? No, default is ID.
@@ -54,7 +57,7 @@ export function ActiveSplitGroups() {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}
       >
-        {groups.map((group: any) => {
+        {activeGroups.map((group: any) => {
             const isCreator = group.creator === user?.id;
             const role = isCreator ? "payer" : "ower";
             // Map 'active' -> 'unpaid', 'settled' -> 'paid'

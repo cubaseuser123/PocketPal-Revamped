@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Share,
   StyleSheet,
+  RefreshControl,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -32,12 +33,21 @@ export default function FriendsScreen() {
     sendRequest, 
     acceptRequest, 
     rejectRequest, 
-    removeFriend 
+    removeFriend,
+    refetchFriends,
+    refetchPending,
   } = useFriends();
 
   const [activeTab, setActiveTab] = useState<Tab>("friends");
   const [friendCode, setFriendCode] = useState("");
   const [sending, setSending] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([refetchFriends(), refetchPending()]);
+    setRefreshing(false);
+  }, [refetchFriends, refetchPending]);
 
   const handleSendRequest = async () => {
     if (!friendCode.trim()) {
@@ -162,6 +172,7 @@ export default function FriendsScreen() {
         style={styles.scrollView}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF8C32" />}
       >
         {loading ? (
           <View style={styles.centerContainer}>

@@ -182,7 +182,8 @@ export const settleExpense = async (req, res) => {
         name: `Paid share for ${id}`, // ideally group title but logic simplified
         emoji: "💸",
         amount: -expense.amount,
-        type: "expense"
+        type: "expense",
+        groupId: id
       },
       {
         userId: expense.payer,
@@ -190,7 +191,8 @@ export const settleExpense = async (req, res) => {
         name: `Received share for ${id}`,
         emoji: "💰",
         amount: expense.amount,
-        type: "income"
+        type: "income",
+        groupId: id
       }
     ], { session });
 

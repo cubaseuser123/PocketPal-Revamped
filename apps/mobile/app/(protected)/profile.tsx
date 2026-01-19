@@ -1,6 +1,6 @@
-import { ScrollView, View, TouchableOpacity, Text, StyleSheet, Modal, TextInput, ActivityIndicator } from "react-native";
+import { ScrollView, View, TouchableOpacity, Text, StyleSheet, Modal, TextInput, ActivityIndicator, RefreshControl } from "react-native";
 import { Image } from "expo-image";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -46,6 +46,13 @@ export default function ProfileScreen() {
   const [editName, setEditName] = useState("");
   const [editAvatar, setEditAvatar] = useState("");
   const [updating, setUpdating] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
 
   const handleBack = () => {
     router.back();
@@ -183,6 +190,7 @@ export default function ProfileScreen() {
           { paddingBottom: insets.bottom + 100 },
         ]}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF8C32" />}
       >
         {/* Profile Info */}
         <ProfileHeader

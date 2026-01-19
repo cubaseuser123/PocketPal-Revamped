@@ -34,6 +34,9 @@ export interface Transaction {
   amount: number;
   type: "income" | "expense" | "transfer";
   createdAt: string;
+  groupId?: string;
+  note?: string;
+  categoryId?: {_id: string, name: string, emoji: string, color: string};
 }
 
 export function useWallets() {

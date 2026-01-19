@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
+  RefreshControl,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -21,7 +22,15 @@ export default function LeaderboardScreen() {
   const router = useRouter();
   const { user } = useUser();
   const [type, setType] = useState<LeaderboardType>("coins");
-  const { leaderboard, loading } = useLeaderboard(type);
+  const { leaderboard, loading, refetch } = useLeaderboard(type);
+
+  // Pull-to-refresh
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
@@ -90,6 +99,7 @@ export default function LeaderboardScreen() {
         style={styles.scrollView}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF8C32" />}
       >
         {loading ? (
           <View style={styles.centerContainer}>

@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { ScrollView, View, ActivityIndicator, Text, TouchableOpacity } from "react-native";
+import { useState, useEffect, useCallback } from "react";
+import { ScrollView, View, ActivityIndicator, Text, TouchableOpacity, RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -41,11 +41,19 @@ export default function HomeScreen() {
   const [selectedPeriod, setSelectedPeriod] = useState<"week" | "month" | "3m">("week");
 
   // API hooks
-  const { user, loading: userLoading } = useUser();
-  const { wallets, loading: walletsLoading } = useWallets();
+  const { user, loading: userLoading, refetch: refetchUser } = useUser();
+  const { wallets, loading: walletsLoading, refetch: refetchWallets } = useWallets();
   const { summary, refetch: refetchSummary } = useSpendingSummary(selectedPeriod);
   const { categories } = useCategories();
-  const { goals } = useGoals();
+  const { goals, refetch: refetchGoals } = useGoals();
+
+  // Pull-to-refresh
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([refetchUser(), refetchWallets(), refetchSummary(), refetchGoals()]);
+    setRefreshing(false);
+  }, [refetchUser, refetchWallets, refetchSummary, refetchGoals]);
 
   // Refetch spending summary when period changes
   useEffect(() => {
@@ -133,6 +141,7 @@ export default function HomeScreen() {
           gap: 20,
         }}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF8C32" />}
       >
         {/* PallyTip */}
         <PallyTip message="Small saves beat big regrets. Let's go!" />
