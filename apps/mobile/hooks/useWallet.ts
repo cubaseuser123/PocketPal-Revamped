@@ -1,4 +1,3 @@
-
 import { useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { walletApi, transactionApi } from "@repo/auth";
@@ -28,7 +27,7 @@ export interface WalletData {
 }
 
 export interface Transaction {
-  _id: string;
+  id: string;
   name: string;
   emoji: string;
   amount: number;
@@ -36,13 +35,18 @@ export interface Transaction {
   createdAt: string;
   groupId?: string;
   note?: string;
-  categoryId?: {_id: string, name: string, emoji: string, color: string};
+  categoryId?: { id: string; name: string; emoji: string; color: string };
 }
 
 export function useWallets() {
   const queryClient = useQueryClient();
 
-  const { data: wallets, isLoading, error, refetch } = useQuery({
+  const {
+    data: wallets,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ["wallets"],
     queryFn: async () => {
       const data = await walletApi.get(API_URL);
@@ -62,7 +66,17 @@ export function useWallets() {
   });
 
   const transferMutation = useMutation({
-    mutationFn: async ({ from, to, amount, sourceGoalId }: { from: string; to: string; amount: number; sourceGoalId?: string }) => {
+    mutationFn: async ({
+      from,
+      to,
+      amount,
+      sourceGoalId,
+    }: {
+      from: string;
+      to: string;
+      amount: number;
+      sourceGoalId?: string;
+    }) => {
       // @ts-ignore
       return await walletApi.transfer(API_URL, from, to, amount, sourceGoalId);
     },
@@ -74,36 +88,61 @@ export function useWallets() {
     },
   });
 
-  const addMoney = useCallback(async (amount: number) => {
-    return await addMoneyMutation.mutateAsync(amount);
-  }, [addMoneyMutation]);
+  const addMoney = useCallback(
+    async (amount: number) => {
+      return await addMoneyMutation.mutateAsync(amount);
+    },
+    [addMoneyMutation],
+  );
 
-  const transfer = useCallback(async (from: string, to: string, amount: number, sourceGoalId?: string) => {
-    return await transferMutation.mutateAsync({ from, to, amount, sourceGoalId });
-  }, [transferMutation]);
+  const transfer = useCallback(
+    async (from: string, to: string, amount: number, sourceGoalId?: string) => {
+      return await transferMutation.mutateAsync({
+        from,
+        to,
+        amount,
+        sourceGoalId,
+      });
+    },
+    [transferMutation],
+  );
 
-  return { 
-    wallets, 
-    loading: isLoading, 
-    error: error ? (error as Error).message : null, 
-    refetch, 
-    addMoney, 
-    transfer 
+  return {
+    wallets,
+    loading: isLoading,
+    error: error ? (error as Error).message : null,
+    refetch,
+    addMoney,
+    transfer,
   };
 }
 
 export function useTransactions(walletType?: string) {
   const queryClient = useQueryClient();
-  const { data: transactions, isLoading, error, refetch } = useQuery({
+  const {
+    data: transactions,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ["transactions", { walletType }],
     queryFn: async () => {
-      const data = await transactionApi.list(API_URL, { walletType, limit: 20 });
+      const data = await transactionApi.list(API_URL, {
+        walletType,
+        limit: 20,
+      });
       return data.transactions as Transaction[];
     },
   });
 
   const addTransactionMutation = useMutation({
-    mutationFn: async (data: { name: string; amount: number; categoryId?: string; walletType?: string; emoji?: string }) => {
+    mutationFn: async (data: {
+      name: string;
+      amount: number;
+      categoryId?: string;
+      walletType?: string;
+      emoji?: string;
+    }) => {
       return await transactionApi.create(API_URL, data);
     },
     onSuccess: () => {
@@ -113,21 +152,41 @@ export function useTransactions(walletType?: string) {
     },
   });
 
-  const addTransaction = useCallback(async (name: string, amount: number, categoryId?: string, walletType: string = "primary", emoji?: string) => {
-    return await addTransactionMutation.mutateAsync({ name, amount, categoryId, walletType, emoji });
-  }, [addTransactionMutation]);
+  const addTransaction = useCallback(
+    async (
+      name: string,
+      amount: number,
+      categoryId?: string,
+      walletType: string = "primary",
+      emoji?: string,
+    ) => {
+      return await addTransactionMutation.mutateAsync({
+        name,
+        amount,
+        categoryId,
+        walletType,
+        emoji,
+      });
+    },
+    [addTransactionMutation],
+  );
 
-  return { 
-    transactions: transactions || [], 
-    loading: isLoading, 
-    error: error ? (error as Error).message : null, 
+  return {
+    transactions: transactions || [],
+    loading: isLoading,
+    error: error ? (error as Error).message : null,
     refetch,
-    addTransaction 
+    addTransaction,
   };
 }
 
 export function useSpendingSummary(period: "week" | "month" | "3m" = "week") {
-  const { data: summary, isLoading, error, refetch } = useQuery({
+  const {
+    data: summary,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ["spendingSummary", period],
     queryFn: async () => {
       const data = await transactionApi.summary(API_URL, period);
@@ -135,5 +194,10 @@ export function useSpendingSummary(period: "week" | "month" | "3m" = "week") {
     },
   });
 
-  return { summary, loading: isLoading, error: error ? (error as Error).message : null, refetch };
+  return {
+    summary,
+    loading: isLoading,
+    error: error ? (error as Error).message : null,
+    refetch,
+  };
 }

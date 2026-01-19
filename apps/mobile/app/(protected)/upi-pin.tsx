@@ -63,23 +63,32 @@ export default function UpiPinScreen() {
       let resultTransaction;
 
       if (transactionType === "split_bill" && groupId) {
-         // Call Split Group Pay API
-         const response = await pocketPalApi.splitGroups.pay(API_URL, groupId, parsedAmount);
-         resultTransaction = response.transaction || { _id: "TXN_SPLIT_" + Date.now(), createdAt: new Date().toISOString() };
+        // Call Split Group Pay API
+        const response = await pocketPalApi.splitGroups.pay(
+          API_URL,
+          groupId,
+          parsedAmount,
+        );
+        resultTransaction = response.transaction || {
+          id: "TXN_SPLIT_" + Date.now(),
+          createdAt: new Date().toISOString(),
+        };
       } else {
-         // Regular Transaction
-         const transactionName = splitDetails ? `Paid to ${payeeName} (Split Group)` : `Paid to ${payeeName}`;
-         const data = await addTransaction(
-            transactionName, 
-            -parsedAmount, 
-            undefined, 
-            "primary", 
-            "💸", 
-         );
-         resultTransaction = data.transaction;
+        // Regular Transaction
+        const transactionName = splitDetails
+          ? `Paid to ${payeeName} (Split Group)`
+          : `Paid to ${payeeName}`;
+        const data = await addTransaction(
+          transactionName,
+          -parsedAmount,
+          undefined,
+          "primary",
+          "💸",
+        );
+        resultTransaction = data.transaction;
       }
 
-      // Successfully paid. 
+      // Successfully paid.
 
       // Navigate to success
       router.replace({
@@ -87,14 +96,14 @@ export default function UpiPinScreen() {
         params: {
           amount: amount,
           recipient: payeeName,
-          transactionId: resultTransaction._id,
+          transactionId: resultTransaction.id,
           timestamp: resultTransaction.createdAt,
           splitCount: splitDetails?.nop, // Pass param to show split info in success
           returnTo: returnTo, // Pass it forward
           // Data persistence for return flow
           splitDetails: splitDetailsString,
           payeeName: payeeName,
-          vpa: vpa
+          vpa: vpa,
         },
       } as any);
     } catch (error) {

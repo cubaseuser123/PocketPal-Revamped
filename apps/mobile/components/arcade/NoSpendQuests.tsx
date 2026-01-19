@@ -21,8 +21,8 @@ export function NoSpendQuests({ quests, onStartQuest }: NoSpendQuestsProps) {
       <Text style={styles.title}>No-Spend Quests 🛡️</Text>
 
       <View style={styles.questList}>
-        {quests.map((quest) => (
-          <View key={quest.id} style={styles.questCard}>
+        {quests.map((quest, index) => (
+          <View key={`${quest.id}-${index}`} style={styles.questCard}>
             <View style={styles.questContent}>
               {/* Icon */}
               <View

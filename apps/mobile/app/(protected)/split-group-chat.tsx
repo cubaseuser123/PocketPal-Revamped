@@ -1,12 +1,22 @@
 import { useState, useEffect, useRef } from "react";
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ScrollView, RefreshControl, Alert } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  TextInput,
+  ScrollView,
+  RefreshControl,
+  Alert,
+} from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { io } from "socket.io-client";
-import { useUser, useSplitGroupDetails, API_URL } from "../../hooks/useApi"; 
-import { TransactionDetailsModal } from "../../components/wallets/TransactionDetailsModal"; 
+import { useUser, useSplitGroupDetails, API_URL } from "../../hooks/useApi";
+import { TransactionDetailsModal } from "../../components/wallets/TransactionDetailsModal";
 
 export default function SplitGroupChatScreen() {
   const router = useRouter();
@@ -16,16 +26,16 @@ export default function SplitGroupChatScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
 
   // Parse Params - expecting 'id' mainly
-  const groupId = params.id as string; 
+  const groupId = params.id as string;
   // Fallback params valid only if creating new group, but selector navigates with ID now.
-  
-  const { group, expenses, loading, refetch } = useSplitGroupDetails(groupId);
-  
+
+  const { group, expenses, transactions, loading, refetch } = useSplitGroupDetails(groupId);
+
   // Derived state
-  const isPayer = group?.creator?._id === user?.id; // Creator is the one who paid initially
+  const isPayer = group?.creator?.id === user?.id; // Creator is the one who paid initially
   const role = isPayer ? "payer" : "ower";
   // My expense is where I am the OWER
-  const myExpense = expenses?.find(e => e.ower?._id === user?.id);
+  const myExpense = expenses?.find((e) => e.ower?.id === user?.id);
   const myAmount = myExpense ? myExpense.amount : 0;
   const totalAmount = group?.totalAmount || 0;
   const payeeName = group?.name || "Split Bill";
@@ -38,87 +48,114 @@ export default function SplitGroupChatScreen() {
   useEffect(() => {
     if (!group) return;
 
+    const data = { transactions }; // Mocking data object for the logic block consistent with previous edit attempt
+
     // Initial System Message
     const initialMessages: any[] = [
-        { id: "1", type: "system", text: `Split group "${group.name}" created` },
+      { id: "1", type: "system", text: `Split group "${group.name}" created` },
     ];
 
-    // Bill Card always visible
-    initialMessages.push({
-        id: "2",
-        type: "bill_card",
-        status: group.status === "settled" ? "paid" : "unpaid", // Simplification
-        amount: totalAmount,
-        group,
-        expenses
-    });
+    // Note: Bill Card is now rendered directly, not as a message
 
     // If I just paid (detected by success param or simply refetch status)
     // Could check if my expense is paid
     if (role === "ower" && myExpense?.status === "paid") {
-         initialMessages.push({
-            id: "payment_confirm",
-            type: "system",
-            text: `You paid your share of ₹${myAmount}` 
-         });
+      initialMessages.push({
+        id: "payment_confirm",
+        type: "system",
+        text: `You paid your share of ₹${myAmount}`,
+      });
+    }
+
+    // Add persistent history from transactions
+    if (data.transactions && data.transactions.length > 0) {
+        // Find expense settlements
+        // We look for type: 'income' (payer receiving money) to avoid duplicates if we showed both sides
+        // Or actually, backend creates 2 transactions per settlement (expense and income).
+        // For public chat log, we just want to say "X paid Y" once.
+        // We can filter by 'income' which belongs to the Creator/Payer usually? 
+        // Or better: filter by type='income' and display "X paid Y"
+        // Wait, settlement logic creates:
+        // 1. Expense for Ower (Ower paid)
+        // 2. Income for Payer (Payer received)
+        // We can use the 'income' record. user_id is Payer. 
+        // But we want to say "Ower paid". 
+        // The 'income' record says "Received share from group".
+        // The 'expense' record says "Paid share for group".
+        // Let's use the 'expense' record: `userId` is the one who PAID.
+        
+        const historyMessages = data.transactions
+            .filter((t: any) => t.type === 'expense') // User who paid
+            .map((t: any) => ({
+                id: t.id,
+                type: 'system',
+                text: `${t.user?.name || 'Someone'} paid ₹${Math.abs(Number(t.amount))}`,
+                createdAt: t.createdAt // Optional sort if needed
+            }))
+            .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+            
+        initialMessages.push(...historyMessages);
     }
 
     setMessages(initialMessages);
 
     // Socket Integration
     const socket = io(API_URL.replace("/api/v1", ""), {
-        transports: ["websocket"], // Force websocket
+      transports: ["websocket"], // Force websocket
     });
 
     socket.on("connect", () => {
-        console.log("Connected to socket");
-        socket.emit("join_group", groupId);
+      console.log("Connected to socket");
+      socket.emit("join_group", groupId);
     });
 
     socket.on("payment:received", (data: any) => {
-        // Validation: Ensure event is for this group
-        if (data.groupId !== groupId) return;
-        
-        // Show system message
-        addMessage({
-            id: Date.now().toString(),
-            type: "system",
-            text: `${data.payerName} paid ₹${data.amount}`
-        });
+      // Validation: Ensure event is for this group
+      if (data.groupId !== groupId) return;
 
-        // Refetch data to update bill card and expense list
-        refetch();
+      // Show system message
+      addMessage({
+        id: Date.now().toString(),
+        type: "system",
+        text: `${data.payerName} paid ₹${data.amount}`,
+      });
+
+      // Refetch data to update bill card and expense list
+      refetch();
     });
 
     socket.on("group:settled", (data: any) => {
-        if (data.groupId !== groupId) return;
-        
-        addMessage({
-            id: Date.now().toString(),
-            type: "system",
-            text: `All expenses settled! Group is now closed.`
-        });
-        refetch();
+      if (data.groupId !== groupId) return;
+
+      addMessage({
+        id: Date.now().toString(),
+        type: "system",
+        text: `All expenses settled! Group is now closed.`,
+      });
+      refetch();
     });
 
     return () => {
-        socket.disconnect();
+      socket.disconnect();
     };
-  }, [group, expenses, role, groupId, refetch]); // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [group, expenses, transactions, role, groupId, refetch]); // eslint-disable-next-line react-hooks/exhaustive-deps
 
   const addMessage = (msg: any) => {
-    setMessages(prev => [...prev, msg]);
-    setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+    setMessages((prev) => [...prev, msg]);
+    setTimeout(
+      () => scrollViewRef.current?.scrollToEnd({ animated: true }),
+      100,
+    );
   };
- 
+
   const handleSendMessage = () => {
     if (!inputText.trim()) return;
     addMessage({
-        id: Date.now().toString(),
-        type: "text",
-        sender: "You",
-        text: inputText,
-        isMe: true
+      id: Date.now().toString(),
+      type: "text",
+      sender: "You",
+      text: inputText,
+      isMe: true,
     });
     setInputText("");
   };
@@ -126,128 +163,189 @@ export default function SplitGroupChatScreen() {
   const handlePayBill = () => {
     // If Ower: Pay Share. Payer doesn't pay themselves here (they initiated).
     if (role !== "ower") return;
-    
+
     // Navigate to UPI PIN
     router.push({
-        pathname: "/(protected)/upi-pin",
-        params: {
-            amount: myAmount.toString(),
-            payeeName: group?.creator?.name || "Group Admin",
-            vpa: "", // backend knows
-            returnTo: "/(protected)/split-group-chat", // Tell UPI screen to come back here
-            transactionType: "split_bill",
-            groupId: groupId
-        }
+      pathname: "/(protected)/upi-pin",
+      params: {
+        amount: myAmount.toString(),
+        payeeName: group?.creator?.name || "Group Admin",
+        vpa: "", // backend knows
+        returnTo: "/(protected)/split-group-chat", // Tell UPI screen to come back here
+        transactionType: "split_bill",
+        groupId: groupId,
+      },
     } as any);
   };
 
-  const renderMessage = (msg: any) => {
-      // ... (system message logic)
-      if (msg.type === "system") {
-        return (
-            <View style={styles.systemMessage}>
-                <Text style={styles.systemText}>{msg.text}</Text>
+  const renderBillCard = () => {
+    if (!group) return null;
+    
+    const isSettled = group.status === "settled";
+    return (
+      <View style={styles.billCardContainer}>
+        {/* ... (Header logic same) */}
+        <LinearGradient
+          colors={
+            isSettled
+              ? ["rgba(61, 220, 151, 0.1)", "rgba(61, 220, 151, 0.05)"]
+              : ["rgba(255, 140, 50, 0.1)", "rgba(255, 140, 50, 0.05)"]
+          }
+          style={styles.billCard}
+        >
+          <View style={styles.billHeader}>
+            <View
+              style={[
+                styles.iconBox,
+                isSettled
+                  ? { backgroundColor: "rgba(61, 220, 151, 0.2)" }
+                  : {},
+              ]}
+            >
+              <MaterialIcons
+                name={isSettled ? "check-circle" : "receipt-long"}
+                size={24}
+                color={isSettled ? "#3DDC97" : "#FF8C32"}
+              />
             </View>
-        );
-      }
+            <View>
+              <Text style={styles.billTitle}>
+                Bill Split: {group.name}
+              </Text>
+              <Text style={styles.billSubtitle}>
+                {isSettled ? "Settled successfully" : "Pending Settlement"}
+              </Text>
+            </View>
+          </View>
 
-      if (msg.type === "bill_card") {
-          const isSettled = msg.group.status === "settled";
-          return (
-              <View style={styles.billCardContainer}>
-                    {/* ... (Header logic same) */}
-                    <LinearGradient
-                        colors={isSettled ? ["rgba(61, 220, 151, 0.1)", "rgba(61, 220, 151, 0.05)"] : ["rgba(255, 140, 50, 0.1)", "rgba(255, 140, 50, 0.05)"]}
-                        style={styles.billCard}
-                    >
-                    <View style={styles.billHeader}>
-                        <View style={[styles.iconBox, isSettled ? { backgroundColor: "rgba(61, 220, 151, 0.2)" } : {}]}>
-                            <MaterialIcons 
-                                name={isSettled ? "check-circle" : "receipt-long"} 
-                                size={24} 
-                                color={isSettled ? "#3DDC97" : "#FF8C32"} 
-                            />
-                        </View>
-                        <View>
-                            <Text style={styles.billTitle}>Bill Split: {msg.group.name}</Text>
-                            <Text style={styles.billSubtitle}>{isSettled ? "Settled successfully" : "Pending Settlement"}</Text>
-                        </View>
-                    </View>
+          <View style={styles.billDetails}>
+            <View style={styles.billRow}>
+              <Text style={styles.billLabel}>Total Amount</Text>
+              <Text style={styles.billValue}>₹{totalAmount}</Text>
+            </View>
 
-                     <View style={styles.billDetails}>
-                        <View style={styles.billRow}>
-                            <Text style={styles.billLabel}>Total Amount</Text>
-                            <Text style={styles.billValue}>₹{msg.amount}</Text>
-                        </View>
-                        
-                        <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.1)", marginVertical: 12 }} />
+            <View
+              style={{
+                height: 1,
+                backgroundColor: "rgba(255,255,255,0.1)",
+                marginVertical: 12,
+              }}
+            />
 
-                        <Text style={[styles.billLabel, { marginBottom: 8 }]}>Participants</Text>
-                        
-                        {/* Payer (Creator) */}
-                        <View style={styles.participantRow}>
-                             <View style={styles.participantInfo}>
-                                <View style={styles.participantAvatar}>
-                                    <Text style={styles.avatarText}>{msg.group.creator?.name?.[0]}</Text>
-                                </View>
-                                <Text style={styles.participantName}>
-                                    {msg.group.creator?.name} (Paid Total)
-                                </Text>
-                             </View>
-                             <MaterialIcons name="check-circle" size={16} color="#3DDC97" />
-                        </View>
+            <Text style={[styles.billLabel, { marginBottom: 8 }]}>
+              Participants
+            </Text>
 
-                        {/* Expenses (Owers) */}
-                        {msg.expenses?.map((exp: any, idx: number) => {
-                             const isMe = exp.ower?._id === user?.id; 
-                             const paid = exp.status === "paid";
-                             return (
-                                <View key={idx} style={styles.participantRow}>
-                                    <View style={styles.participantInfo}>
-                                        <View style={[styles.participantAvatar, { backgroundColor: "#1A1A22" }]}>
-                                            <Text style={styles.avatarText}>{exp.ower?.name?.[0]}</Text>
-                                        </View>
-                                        <Text style={styles.participantName}>
-                                            {exp.ower?.name} {isMe ? "(You)" : ""}
-                                        </Text>
-                                    </View>
-                                    {paid ? (
-                                        <MaterialIcons name="check-circle" size={16} color="#3DDC97" />
-                                    ) : (
-                                        <View style={styles.pendingBadge}>
-                                             <MaterialIcons name="access-time" size={12} color="#FF8C32" />
-                                             <Text style={styles.pendingText}>₹{exp.amount}</Text>
-                                        </View>
-                                    )}
-                                </View>
-                             );
-                        })}
-                    </View>
-
-                    {/* Show Pay Button only if I am Ower and UNPAID */}
-                    {role === "ower" && myExpense && myExpense.status === "pending" && (
-                        <TouchableOpacity style={styles.payButton} onPress={handlePayBill}>
-                            <Text style={styles.payButtonText}>
-                                Pay Your Share ₹{myAmount}
-                            </Text>
-                        </TouchableOpacity>
-                    )}
-                </LinearGradient>
+            {/* Payer (Creator) */}
+            <View style={styles.participantRow}>
+              <View style={styles.participantInfo}>
+                <View style={styles.participantAvatar}>
+                  <Text style={styles.avatarText}>
+                    {group.creator?.name?.[0]}
+                  </Text>
+                </View>
+                <Text style={styles.participantName}>
+                  {group.creator?.name} (Paid Total)
+                </Text>
               </View>
-          );
-      }
-      
-      // ... text messages logic
-      const isMe = msg.isMe;
-      // ... render text message UI
-      return (
-        <View style={[styles.messageRow, isMe ? styles.messageRowMe : styles.messageRowFriend]}>
-            {!isMe && <View style={styles.messageAvatar}><Text style={styles.avatarText}>{msg.sender[0]}</Text></View>}
-            <View style={[styles.messageBubble, isMe ? styles.bubbleMe : styles.bubbleFriend]}>
-                {!isMe && <Text style={styles.senderName}>{msg.sender}</Text>}
-                <Text style={styles.messageText}>{msg.text}</Text>
+              <MaterialIcons name="check-circle" size={16} color="#3DDC97" />
             </View>
+
+            {/* Expenses (Owers) */}
+            {expenses?.map((exp: any, idx: number) => {
+              const isMe = exp.ower?.id === user?.id;
+              const paid = exp.status === "paid";
+              return (
+                <View key={idx} style={styles.participantRow}>
+                  <View style={styles.participantInfo}>
+                    <View
+                      style={[
+                        styles.participantAvatar,
+                        { backgroundColor: "#1A1A22" },
+                      ]}
+                    >
+                      <Text style={styles.avatarText}>
+                        {exp.ower?.name?.[0]}
+                      </Text>
+                    </View>
+                    <Text style={styles.participantName}>
+                      {exp.ower?.name} {isMe ? "(You)" : ""}
+                    </Text>
+                  </View>
+                  {paid ? (
+                    <MaterialIcons
+                      name="check-circle"
+                      size={16}
+                      color="#3DDC97"
+                    />
+                  ) : (
+                    <View style={styles.pendingBadge}>
+                      <MaterialIcons
+                        name="access-time"
+                        size={12}
+                        color="#FF8C32"
+                      />
+                      <Text style={styles.pendingText}>₹{exp.amount}</Text>
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+
+          {/* Show Pay Button only if I am Ower and UNPAID */}
+          {role === "ower" && myExpense && myExpense.status === "pending" && (
+            <TouchableOpacity
+              style={styles.payButton}
+              onPress={handlePayBill}
+            >
+              <Text style={styles.payButtonText}>
+                Pay Your Share ₹{myAmount}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </LinearGradient>
+      </View>
+    );
+  };
+
+  const renderMessage = (msg: any) => {
+    // ... (system message logic)
+    if (msg.type === "system") {
+      return (
+        <View style={styles.systemMessage}>
+          <Text style={styles.systemText}>{msg.text}</Text>
         </View>
+      );
+    }
+
+    // Bill Card logic removed from here
+
+    // ... text messages logic
+    const isMe = msg.isMe;
+    // ... render text message UI
+    return (
+      <View
+        style={[
+          styles.messageRow,
+          isMe ? styles.messageRowMe : styles.messageRowFriend,
+        ]}
+      >
+        {!isMe && (
+          <View style={styles.messageAvatar}>
+            <Text style={styles.avatarText}>{msg.sender[0]}</Text>
+          </View>
+        )}
+        <View
+          style={[
+            styles.messageBubble,
+            isMe ? styles.bubbleMe : styles.bubbleFriend,
+          ]}
+        >
+          {!isMe && <Text style={styles.senderName}>{msg.sender}</Text>}
+          <Text style={styles.messageText}>{msg.text}</Text>
+        </View>
+      </View>
     );
   };
 
@@ -255,44 +353,66 @@ export default function SplitGroupChatScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.push("/(protected)/(tabs)")}>
-            <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.push("/(protected)/(tabs)")}
+        >
+          <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <View>
-             <Text style={styles.headerTitle}>{payeeName} Split Group</Text>
-             <Text style={styles.headerSubtitle}>{group?.members?.length ? group.members.length + 1 : "?"} Members</Text>
+          <Text style={styles.headerTitle}>{payeeName} Split Group</Text>
+          <Text style={styles.headerSubtitle}>
+            {group?.members?.length ? group.members.length + 1 : "?"} Members
+          </Text>
         </View>
-        <TouchableOpacity style={styles.backButton} onPress={() => setTransactionModalVisible(true)}>
-             <MaterialIcons name="info-outline" size={24} color="#FFFFFF" />
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => setTransactionModalVisible(true)}
+        >
+          <MaterialIcons name="info-outline" size={24} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
       {/* Chat Area */}
-      <ScrollView 
+      <ScrollView
         ref={scrollViewRef}
-        style={styles.chatArea} 
+        style={styles.chatArea}
         contentContainerStyle={{ paddingBottom: 20 }}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={refetch} tintColor="#FF8C32" />}
+        refreshControl={
+          <RefreshControl
+            refreshing={loading}
+            onRefresh={refetch}
+            tintColor="#FF8C32"
+          />
+        }
       >
+        {renderBillCard()}
         {messages.map((msg, index) => (
-            <View key={index}>{renderMessage(msg)}</View> // Key should be better but index fine for now
+          <View key={index}>{renderMessage(msg)}</View> // Key should be better but index fine for now
         ))}
       </ScrollView>
 
       {/* Input Area */}
-      <KeyboardAvoidingWrapper offset={Platform.OS === "ios" ? insets.bottom : 0}>
-         <View style={[styles.inputContainer, { paddingBottom: insets.bottom + 10 }]}>
-            <TextInput
-                style={styles.input}
-                placeholder="Type a message..."
-                placeholderTextColor="#6B6B7B"
-                value={inputText}
-                onChangeText={setInputText}
-            />
-            <TouchableOpacity style={styles.sendButton} onPress={handleSendMessage}>
-                <MaterialIcons name="send" size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-         </View>
+      <KeyboardAvoidingWrapper
+        offset={Platform.OS === "ios" ? insets.bottom : 0}
+      >
+        <View
+          style={[styles.inputContainer, { paddingBottom: insets.bottom + 10 }]}
+        >
+          <TextInput
+            style={styles.input}
+            placeholder="Type a message..."
+            placeholderTextColor="#6B6B7B"
+            value={inputText}
+            onChangeText={setInputText}
+          />
+          <TouchableOpacity
+            style={styles.sendButton}
+            onPress={handleSendMessage}
+          >
+            <MaterialIcons name="send" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
       </KeyboardAvoidingWrapper>
 
       {/* Transaction Details Modal for Split Group */}
@@ -300,7 +420,7 @@ export default function SplitGroupChatScreen() {
         visible={transactionModalVisible}
         onClose={() => setTransactionModalVisible(false)}
         transaction={{
-          _id: groupId,
+          id: groupId,
           name: `Split: ${group?.name || "Group"}`,
           emoji: "🧾",
           amount: role === "ower" ? -myAmount : totalAmount,
@@ -316,15 +436,15 @@ export default function SplitGroupChatScreen() {
 // Helper to avoid duplicate KeyboardAvoidingView imports/logic
 import { KeyboardAvoidingView, Platform } from "react-native";
 const KeyboardAvoidingWrapper = ({ children, offset }: any) => {
-    return (
-        <KeyboardAvoidingView 
-            behavior={Platform.OS === "ios" ? "padding" : "height"} 
-            keyboardVerticalOffset={offset + 60}
-        >
-            {children}
-        </KeyboardAvoidingView>
-    );
-}
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={offset + 60}
+    >
+      {children}
+    </KeyboardAvoidingView>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -352,8 +472,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   headerSubtitle: {
-      color: "#B0B0C3",
-      fontSize: 12,
+    color: "#B0B0C3",
+    fontSize: 12,
   },
   chatArea: {
     flex: 1,
@@ -373,188 +493,188 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   billCardContainer: {
-      marginBottom: 24,
+    marginBottom: 24,
   },
   billCard: {
-      borderRadius: 16,
-      borderWidth: 1,
-      borderColor: "rgba(255,255,255,0.1)",
-      padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    padding: 16,
   },
   billHeader: {
-      flexDirection: "row",
-      alignItems: "center",
-      marginBottom: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
   },
   iconBox: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: "rgba(255, 140, 50, 0.1)",
-      alignItems: "center",
-      justifyContent: "center",
-      marginRight: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255, 140, 50, 0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
   },
   billTitle: {
-      color: "#FFFFFF",
-      fontSize: 16,
-      fontWeight: "700",
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
   },
   billSubtitle: {
-      color: "#B0B0C3",
-      fontSize: 12,
+    color: "#B0B0C3",
+    fontSize: 12,
   },
   billDetails: {
-      backgroundColor: "rgba(0,0,0,0.2)",
-      borderRadius: 12,
-      padding: 12,
-      marginBottom: 16,
+    backgroundColor: "rgba(0,0,0,0.2)",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
   },
   billRow: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      marginBottom: 8,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 8,
   },
   billLabel: {
-      color: "#B0B0C3",
-      fontSize: 14,
+    color: "#B0B0C3",
+    fontSize: 14,
   },
   billValue: {
-      color: "#FFFFFF",
-      fontSize: 14,
-      fontWeight: "600",
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
   },
   payButton: {
-      backgroundColor: "#FF8C32",
-      borderRadius: 12,
-      paddingVertical: 12,
-      alignItems: "center",
+    backgroundColor: "#FF8C32",
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
   },
   payButtonText: {
-      color: "#FFFFFF",
-      fontWeight: "700",
-      fontSize: 16,
+    color: "#FFFFFF",
+    fontWeight: "700",
+    fontSize: 16,
   },
   paidStatus: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 6
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
   },
   paidText: {
-      color: "#3DDC97",
-      fontSize: 14,
-      fontWeight: "500",
+    color: "#3DDC97",
+    fontSize: 14,
+    fontWeight: "500",
   },
   messageRow: {
-      flexDirection: "row",
-      marginBottom: 16,
-      maxWidth: "80%",
+    flexDirection: "row",
+    marginBottom: 16,
+    maxWidth: "80%",
   },
   messageRowMe: {
-      alignSelf: "flex-end",
-      flexDirection: "row-reverse",
+    alignSelf: "flex-end",
+    flexDirection: "row-reverse",
   },
   messageRowFriend: {
-      alignSelf: "flex-start",
+    alignSelf: "flex-start",
   },
   messageBubble: {
-      padding: 12,
-      borderRadius: 16,
+    padding: 12,
+    borderRadius: 16,
   },
   bubbleMe: {
-      backgroundColor: "#2962FF",
-      borderBottomRightRadius: 2,
+    backgroundColor: "#2962FF",
+    borderBottomRightRadius: 2,
   },
   bubbleFriend: {
-      backgroundColor: "#1A1A22",
-      borderBottomLeftRadius: 2,
-      marginLeft: 8,
+    backgroundColor: "#1A1A22",
+    borderBottomLeftRadius: 2,
+    marginLeft: 8,
   },
   messageText: {
-      color: "#FFFFFF",
-      fontSize: 14,
+    color: "#FFFFFF",
+    fontSize: 14,
   },
   messageAvatar: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      backgroundColor: "#FF8C32",
-      alignItems: "center",
-      justifyContent: "center",
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#FF8C32",
+    alignItems: "center",
+    justifyContent: "center",
   },
   avatarText: {
-      color: "#FFFFFF",
-      fontSize: 14,
-      fontWeight: "700",
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
   },
   senderName: {
-      color: "#FF8C32",
-      fontSize: 10,
-      marginBottom: 2,
-      fontWeight: "700"
+    color: "#FF8C32",
+    fontSize: 10,
+    marginBottom: 2,
+    fontWeight: "700",
   },
   inputContainer: {
-      flexDirection: "row",
-      paddingHorizontal: 16,
-      paddingTop: 10,
-      backgroundColor: "#0F0F14",
-      borderTopWidth: 1,
-      borderTopColor: "rgba(255,255,255,0.05)",
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    backgroundColor: "#0F0F14",
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.05)",
   },
   input: {
-      flex: 1,
-      backgroundColor: "#1A1A22",
-      borderRadius: 20,
-      paddingHorizontal: 16,
-      paddingVertical: 10,
-      color: "#FFFFFF",
-      fontSize: 14,
-      marginRight: 10,
+    flex: 1,
+    backgroundColor: "#1A1A22",
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    color: "#FFFFFF",
+    fontSize: 14,
+    marginRight: 10,
   },
   sendButton: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: "#FF8C32",
-      alignItems: "center",
-      justifyContent: "center",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#FF8C32",
+    alignItems: "center",
+    justifyContent: "center",
   },
   participantRow: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginTop: 8,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 8,
   },
   participantInfo: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   participantAvatar: {
-      width: 24,
-      height: 24,
-      borderRadius: 12,
-      backgroundColor: "#FF8C32",
-      alignItems: "center",
-      justifyContent: "center",
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#FF8C32",
+    alignItems: "center",
+    justifyContent: "center",
   },
   participantName: {
-      fontSize: 14,
-      color: "#FFFFFF",
+    fontSize: 14,
+    color: "#FFFFFF",
   },
   pendingBadge: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 4,
-      backgroundColor: "rgba(255,140,50,0.1)",
-      paddingHorizontal: 6,
-      paddingVertical: 2,
-      borderRadius: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(255,140,50,0.1)",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
   pendingText: {
-      fontSize: 12,
-      color: "#FF8C32",
-      fontWeight: "600",
+    fontSize: 12,
+    color: "#FF8C32",
+    fontWeight: "600",
   },
 });

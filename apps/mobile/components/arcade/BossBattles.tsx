@@ -38,13 +38,13 @@ export function BossBattles({ bosses, onSeeMap, onPressBoss }: BossBattlesProps)
 
       {/* Full-width cards */}
       <View style={styles.cardsContainer}>
-        {bosses.map((boss) => {
+        {bosses.map((boss, index) => {
           const typeColor = getTypeColor(boss.type);
           const hpColor = getHpColor(boss.hpPercent);
 
           return (
             <TouchableOpacity
-              key={boss.id}
+              key={boss.id ? `${boss.id}-${index}` : index.toString()}
               style={styles.card}
               onPress={() => onPressBoss?.(boss.id)}
               activeOpacity={0.8}

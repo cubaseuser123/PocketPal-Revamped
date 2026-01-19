@@ -1,5 +1,8 @@
 import jwt from "jsonwebtoken";
-import User from "../models/User.js";
+// import { prisma } from "../config/prisma.js";
+import { db } from "../config/db.js";
+import { users } from "../drizzle/schema.js";
+import { eq } from "drizzle-orm";
 import { sendVerificationOTP, checkVerificationOTP } from "../config/sendSms.js";
 
 // send-otp: send OTP via Twilio Verify, name required only for new users
@@ -26,7 +29,10 @@ export const sendOTP = async (req, res) => {
     const formattedPhone = phone.startsWith("+") ? phone : `+${phone}`;
     if (process.env.NODE_ENV !== 'production') console.log("📞 Formatted phone:", formattedPhone);
 
-    let user = await User.findOne({ phone: formattedPhone });
+    // let user = await prisma.user.findUnique({ where: { phone: formattedPhone } });
+    const [existingUser] = await db.select().from(users).where(eq(users.phone, formattedPhone)).limit(1);
+    let user = existingUser;
+    
     let isNewUser = false;
     if (process.env.NODE_ENV !== 'production') console.log("👤 User found:", !!user);
 
@@ -48,16 +54,24 @@ export const sendOTP = async (req, res) => {
         return res.status(400).json({ message: "Name required for new users", isNewUser: true });
       }
       
-      user = await User.create({
+      // user = await prisma.user.create({ data: { name, phone: formattedPhone } });
+      const [newUser] = await db.insert(users).values({
         name,
         phone: formattedPhone,
-      });
+      }).returning();
+      user = newUser;
+
       isNewUser = true;
       if (process.env.NODE_ENV !== 'production') console.log("✅ New user created");
     } else if (name && name !== user.name) {
       // Existing user can update their name
-      user.name = name;
-      await user.save();
+      // user = await prisma.user.update({ where: { id: user.id }, data: { name } });
+      const [updatedUser] = await db.update(users)
+        .set({ name })
+        .where(eq(users.id, user.id))
+        .returning();
+      user = updatedUser;
+      
       if (process.env.NODE_ENV !== 'production') console.log("✅ User name updated");
     }
 
@@ -100,13 +114,15 @@ export const verifyOTP = async (req, res) => {
     }
 
     // Find user
-    const user = await User.findOne({ phone: formattedPhone });
+    // const user = await prisma.user.findUnique({ where: { phone: formattedPhone } });
+    const [user] = await db.select().from(users).where(eq(users.phone, formattedPhone)).limit(1);
+    
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Create JWT
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    // Create JWT (using UUID id instead of MongoDB _id)
+    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
-    return res.json({ message: "OTP verified", token, user: user.toJSON() });
+    return res.json({ message: "OTP verified", token, user });
   } catch (err) {
     console.error("verifyOTP error:", err);
     return res.status(500).json({ message: "Server error", error: err.message });
@@ -118,7 +134,9 @@ export const getMe = async (req, res) => {
   try {
     if (process.env.NODE_ENV !== 'production') console.log("🟢 getMe controller reached");
 
-    const user = await User.findById(req.user.id);
+    // const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    const [user] = await db.select().from(users).where(eq(users.id, req.user.id)).limit(1);
+
     if (!user) return res.status(404).json({ message: "User not found" });
     return res.json({ user });
   } catch (err) {

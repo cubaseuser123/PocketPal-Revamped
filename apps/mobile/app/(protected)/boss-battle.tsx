@@ -1,4 +1,12 @@
-import { ScrollView, View, Text, TouchableOpacity, StyleSheet, Animated, ActivityIndicator } from "react-native";
+import {
+  ScrollView,
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Animated,
+  ActivityIndicator,
+} from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -12,7 +20,7 @@ export default function BossBattleScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
   const floatAnim = useRef(new Animated.Value(0)).current;
-  
+
   // Fetch real boss data from backend
   const { boss, loading, dealDamage } = useBoss();
 
@@ -30,7 +38,7 @@ export default function BossBattleScreen() {
           duration: 3000,
           useNativeDriver: true,
         }),
-      ])
+      ]),
     ).start();
   }, []);
 
@@ -41,7 +49,12 @@ export default function BossBattleScreen() {
   // Show loading state
   if (loading || !boss) {
     return (
-      <View style={[styles.container, { alignItems: "center", justifyContent: "center" }]}>
+      <View
+        style={[
+          styles.container,
+          { alignItems: "center", justifyContent: "center" },
+        ]}
+      >
         <ActivityIndicator size="large" color="#FF8C32" />
         <Text style={{ color: "#B0B0C3", marginTop: 16 }}>Loading boss...</Text>
       </View>
@@ -51,7 +64,7 @@ export default function BossBattleScreen() {
   // Transform boss data
   const hpPercent = (boss.currentHealth / boss.totalHealth) * 100;
   const bossColor = boss.status === "defeated" ? "#3DDC97" : "#EF4444";
-  
+
   // Get leaderboard (top 10)
   const leaderboard = boss.leaderboard?.slice(0, 10) || [];
 
@@ -81,7 +94,9 @@ export default function BossBattleScreen() {
       >
         {/* Boss Hero Section */}
         <View style={styles.heroSection}>
-          <View style={[styles.heroGlow, { backgroundColor: `${bossColor}15` }]} />
+          <View
+            style={[styles.heroGlow, { backgroundColor: `${bossColor}15` }]}
+          />
 
           {/* Boss with sidekicks - 3 emoji display */}
           <View style={styles.bossContainer}>
@@ -91,7 +106,12 @@ export default function BossBattleScreen() {
                 style={[
                   styles.sidekick,
                   styles.sidekickLeft,
-                  { transform: [{ translateY: floatAnim }, { rotate: "-25deg" }] },
+                  {
+                    transform: [
+                      { translateY: floatAnim },
+                      { rotate: "-25deg" },
+                    ],
+                  },
                 ]}
               >
                 <Text style={styles.sidekickEmoji}>{boss.sidekickEmoji}</Text>
@@ -109,7 +129,9 @@ export default function BossBattleScreen() {
                 style={[
                   styles.sidekick,
                   styles.sidekickRight,
-                  { transform: [{ translateY: floatAnim }, { rotate: "25deg" }] },
+                  {
+                    transform: [{ translateY: floatAnim }, { rotate: "25deg" }],
+                  },
                 ]}
               >
                 <Text style={styles.sidekickEmoji}>{boss.sidekickEmoji}</Text>
@@ -118,16 +140,17 @@ export default function BossBattleScreen() {
           </View>
 
           {/* Boss name */}
-          <Text style={styles.bossName}>
-            {boss.name}
-          </Text>
+          <Text style={styles.bossName}>{boss.name}</Text>
 
           {/* HP Bar */}
           <View style={styles.hpContainer}>
             <View style={styles.hpLabelRow}>
-              <Text style={[styles.hpLabel, { color: bossColor }]}>RAID PROGRESS</Text>
               <Text style={[styles.hpLabel, { color: bossColor }]}>
-                {(boss.totalHealth - boss.currentHealth).toLocaleString()} / {boss.totalHealth.toLocaleString()} HP
+                RAID PROGRESS
+              </Text>
+              <Text style={[styles.hpLabel, { color: bossColor }]}>
+                {(boss.totalHealth - boss.currentHealth).toLocaleString()} /{" "}
+                {boss.totalHealth.toLocaleString()} HP
               </Text>
             </View>
             <View style={styles.hpBar}>
@@ -160,7 +183,7 @@ export default function BossBattleScreen() {
             </View>
           </View>
           <Text style={styles.challengeDesc}>{boss.description}</Text>
-          
+
           <TouchableOpacity style={styles.joinRaidButton}>
             <Text style={styles.joinRaidText}>Join Raid</Text>
             <MaterialIcons name="login" size={18} color="#FFF" />
@@ -169,32 +192,48 @@ export default function BossBattleScreen() {
 
         {/* Top Heroes Leaderboard */}
         <View style={styles.battleLogSection}>
-           <View style={styles.battleLogHeader}>
+          <View style={styles.battleLogHeader}>
             <MaterialIcons name="leaderboard" size={18} color="#FFD166" />
             <Text style={styles.battleLogTitle}>Top Heroes</Text>
           </View>
-          
-          {leaderboard.length > 0 ? leaderboard.map((entry, index) => (
-             <View key={entry.userId?._id || index} style={styles.leaderboardItem}>
+
+          {leaderboard.length > 0 ? (
+            leaderboard.map((entry, index) => (
+              <View
+                key={entry.userId?.id || index}
+                style={styles.leaderboardItem}
+              >
                 <View style={styles.leaderboardLeft}>
-                   <View style={[
-                       styles.rankBadge, 
-                       index === 0 ? styles.rank1 : 
-                       index === 1 ? styles.rank2 : styles.rank3
-                   ]}>
-                      <Text style={styles.rankText}>#{index + 1}</Text>
-                   </View>
-                   <Text style={styles.avatarEmoji}>🦸</Text>
-                   <Text style={styles.leaderboardUser}>{entry.userId?.name || "Hero"}</Text>
+                  <View
+                    style={[
+                      styles.rankBadge,
+                      index === 0
+                        ? styles.rank1
+                        : index === 1
+                          ? styles.rank2
+                          : styles.rank3,
+                    ]}
+                  >
+                    <Text style={styles.rankText}>#{index + 1}</Text>
+                  </View>
+                  <Text style={styles.avatarEmoji}>🦸</Text>
+                  <Text style={styles.leaderboardUser}>
+                    {entry.userId?.name || "Hero"}
+                  </Text>
                 </View>
                 <View style={styles.leaderboardRight}>
-                    <Text style={styles.leaderboardDamage}>{entry.damage} HP</Text>
-                    <MaterialIcons name="flash-on" size={12} color="#EF4444" />
+                  <Text style={styles.leaderboardDamage}>
+                    {entry.damage} HP
+                  </Text>
+                  <MaterialIcons name="flash-on" size={12} color="#EF4444" />
                 </View>
-             </View>
-          )) : (
+              </View>
+            ))
+          ) : (
             <View style={{ padding: 16, alignItems: "center" }}>
-              <Text style={{ color: "#B0B0C3" }}>Be the first to deal damage!</Text>
+              <Text style={{ color: "#B0B0C3" }}>
+                Be the first to deal damage!
+              </Text>
             </View>
           )}
         </View>
@@ -214,7 +253,8 @@ export default function BossBattleScreen() {
               <View style={styles.pallyTextContainer}>
                 <Text style={styles.pallyLabel}>RAID STRATEGY</Text>
                 <Text style={styles.pallyMessage}>
-                  Every good financial habit deals damage to the boss. Keep saving to win!
+                  Every good financial habit deals damage to the boss. Keep
+                  saving to win!
                 </Text>
               </View>
             </View>
@@ -539,43 +579,43 @@ const styles = StyleSheet.create({
     borderBottomColor: "rgba(255, 255, 255, 0.05)",
   },
   leaderboardLeft: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
   rankBadge: {
-      width: 24,
-      height: 24,
-      borderRadius: 12,
-      backgroundColor: "rgba(255,255,255,0.1)",
-      alignItems: "center",
-      justifyContent: "center",
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   rank1: { backgroundColor: "#FFD166" },
   rank2: { backgroundColor: "#C0C0C0" },
   rank3: { backgroundColor: "#CD7F32" },
   rankText: {
-      color: "#0F0F14",
-      fontSize: 10,
-      fontWeight: "800",
+    color: "#0F0F14",
+    fontSize: 10,
+    fontWeight: "800",
   },
   avatarEmoji: {
-      fontSize: 20,
+    fontSize: 20,
   },
   leaderboardUser: {
-      color: "#FFF",
-      fontSize: 14,
-      fontWeight: "600",
+    color: "#FFF",
+    fontSize: 14,
+    fontWeight: "600",
   },
   leaderboardRight: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
   leaderboardDamage: {
-      color: "#EF4444",
-      fontSize: 12,
-      fontWeight: "700",
+    color: "#EF4444",
+    fontSize: 12,
+    fontWeight: "700",
   },
   pallyTipContainer: {
     borderRadius: 24,

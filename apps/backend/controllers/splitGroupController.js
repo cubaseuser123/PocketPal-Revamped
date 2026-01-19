@@ -1,68 +1,74 @@
-import mongoose from "mongoose";
-import SplitGroup from "../models/SplitGroup.js";
-import SplitExpense from "../models/SplitExpense.js";
-import Wallet from "../models/Wallet.js";
-import Transaction from "../models/Transaction.js";
-import User from "../models/User.js";
+// import { prisma } from "../config/prisma.js";
+import { db } from "../config/db.js";
+import { splitGroups, splitGroupMembers, splitExpenses, wallets, transactions, users } from "../drizzle/schema.js";
+import { eq, and, or, sql, inArray, count, desc } from "drizzle-orm";
 
 // Create a new split group
 export const createGroup = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
     const { name, totalAmount, members } = req.body;
     // members is an array of userIds (excluding creator)
 
     if (!name || !totalAmount || !members || !Array.isArray(members)) {
-      throw new Error("Invalid group data");
+      return res.status(400).json({ message: "Invalid group data" });
     }
 
     const creatorId = req.user.id;
     const allMembers = [...members, creatorId]; // Include creator in list
 
-    // Create Group
-    const group = await SplitGroup.create([{
-      name,
-      totalAmount,
-      creator: creatorId,
-      members: allMembers
-    }], { session, ordered: true });
+    const result = await db.transaction(async (tx) => {
+      // Create Group
+      const [group] = await tx.insert(splitGroups).values({
+        name,
+        totalAmount,
+        creatorId,
+        status: "active",
+      }).returning();
 
-    const groupId = group[0]._id;
+      // Add members including creator
+      if (allMembers.length > 0) {
+        await tx.insert(splitGroupMembers).values(
+            allMembers.map(userId => ({
+                groupId: group.id,
+                userId,
+                joinedAt: new Date(),
+            }))
+        );
+      }
 
-    // Calculate Split
-    const nop = allMembers.length;
-    const perPerson = Number((totalAmount / nop).toFixed(2));
+      // Calculate Split
+      const nop = allMembers.length;
+      const perPerson = Number((totalAmount / nop).toFixed(2));
 
-    // Create Expenses for everyone EXCEPT creator (since creator paid upfront)
-    // Technically creator "owes" themselves but we only track what OTHERS owe creator.
-    const expenseDocs = members.map(memberId => ({
-      groupId,
-      payer: creatorId, // Creator paid the bill
-      ower: memberId,   // Friend owes money
-      amount: perPerson,
-      status: 'pending'
-    }));
+      // Create Expenses for everyone EXCEPT creator
+      // Creator paid, others owe creator?
+      // "payerId: creatorId, owerId: memberId"
+      
+      const expenseData = members.map(memberId => ({
+        groupId: group.id,
+        payerId: creatorId,
+        owerId: memberId,
+        amount: perPerson,
+        status: "pending",
+        description: "Group share",
+      }));
 
-    if (expenseDocs.length > 0) {
-      await SplitExpense.create(expenseDocs, { session, ordered: true });
-    }
+      if (expenseData.length > 0) {
+        await tx.insert(splitExpenses).values(expenseData);
+      }
 
-    await session.commitTransaction();
+      return { group, perPerson };
+    });
 
     res.status(201).json({ 
       message: "Group created successfully", 
-      group: group[0],
-      perPerson 
+      group: { ...result.group, totalAmount: Number(result.group.totalAmount) },
+      perPerson: result.perPerson,
     });
 
   } catch (err) {
-    if (session.inTransaction()) await session.abortTransaction();
     console.error("createGroup error:", err);
     res.status(500).json({ message: err.message });
-  } finally {
-    session.endSession();
   }
 };
 
@@ -71,17 +77,61 @@ export const getGroupDetails = async (req, res) => {
   try {
     const { id } = req.params;
     
-    const group = await SplitGroup.findById(id)
-      .populate('members', 'name avatarUrl phone')
-      .populate('creator', 'name avatarUrl');
+    // Fetch group with members and creator
+    const group = await db.query.splitGroups.findFirst({
+      where: eq(splitGroups.id, id),
+      with: {
+        creator: true,
+        splitGroupMembers: {
+            with: {
+                user: true
+            }
+        }
+      },
+    });
 
     if (!group) return res.status(404).json({ message: "Group not found" });
 
-    const expenses = await SplitExpense.find({ groupId: id })
-      .populate('payer', 'name')
-      .populate('ower', 'name');
+    const expenses = await db.query.splitExpenses.findMany({
+      where: eq(splitExpenses.groupId, id),
+      with: {
+        payer: true, // simplified relation name
+        ower: true,
+      },
+    });
 
-    res.json({ group, expenses });
+    const transactionsList = await db.query.transactions.findMany({
+      where: eq(transactions.groupId, id),
+      orderBy: [desc(transactions.createdAt)],
+      with: {
+        user: true, // Fetch who made the transaction
+      } 
+    });
+
+    // Transform to match expected format
+    const transformedGroup = {
+      ...group,
+      totalAmount: Number(group.totalAmount),
+      members: group.splitGroupMembers.map(m => ({
+          id: m.user.id,
+          name: m.user.name,
+          avatarUrl: m.user.avatarUrl,
+          phone: m.user.phone
+      })),
+    };
+
+    const transformedExpenses = expenses.map(e => ({
+      ...e,
+      amount: Number(e.amount),
+      payer: { id: e.payer.id, name: e.payer.name },
+      ower: { id: e.ower.id, name: e.ower.name },
+    }));
+
+    res.json({ 
+        group: transformedGroup, 
+        expenses: transformedExpenses,
+        transactions: transactionsList 
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -91,29 +141,47 @@ export const getGroupDetails = async (req, res) => {
 export const listUserGroups = async (req, res) => {
   try {
     const userId = req.user.id;
+
     // Find groups where user is creator OR member
-    const groups = await SplitGroup.find({
-      $or: [{ creator: userId }, { members: userId }],
-      status: 'active'
-    }).sort({ createdAt: -1 }).lean();
+    // Check membership first
+    const memberGroups = await db.query.splitGroupMembers.findMany({
+      where: eq(splitGroupMembers.userId, userId),
+    });
+    const memberGroupIds = memberGroups.map(m => m.groupId);
+
+    // Fetch groups
+    const groups = await db.query.splitGroups.findMany({
+      where: and(
+          eq(splitGroups.status, "active"),
+          or(
+              eq(splitGroups.creatorId, userId),
+              inArray(splitGroups.id, memberGroupIds.length ? memberGroupIds : ['dummy']) // handle empty array
+          )
+      ),
+      orderBy: [desc(splitGroups.createdAt)],
+    });
 
     // Attach my expense status
     const groupsWithStatus = await Promise.all(groups.map(async (group) => {
-        let myStatus = 'n/a';
-        
-        // If I am Creator, status is 'collecting'
-        if (group.creator.toString() === userId) {
-            myStatus = 'collecting';
-        } else {
-            // I am a member, check my expense
-            const expense = await SplitExpense.findOne({ 
-                groupId: group._id, 
-                ower: userId 
-            });
-            myStatus = expense ? expense.status : 'unknown';
-        }
-        
-        return { ...group, myStatus };
+      let myStatus = 'n/a';
+      
+      if (group.creatorId === userId) {
+        myStatus = 'collecting';
+      } else {
+        const expense = await db.query.splitExpenses.findFirst({ 
+          where: and(
+              eq(splitExpenses.groupId, group.id),
+              eq(splitExpenses.owerId, userId)
+          )
+        });
+        myStatus = expense ? expense.status : 'unknown';
+      }
+      
+      return { 
+        ...group, 
+        totalAmount: Number(group.totalAmount),
+        myStatus,
+      };
     }));
 
     res.json(groupsWithStatus);
@@ -124,113 +192,128 @@ export const listUserGroups = async (req, res) => {
 
 // Settle an expense (Pay back)
 export const settleExpense = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
     const { id } = req.params; // Group ID
     const { amount } = req.body;
     const owerId = req.user.id;
 
-    // Find the pending expense for this user in this group
-    const expense = await SplitExpense.findOne({
-      groupId: id,
-      ower: owerId,
-      status: 'pending'
-    }).session(session);
+    const result = await db.transaction(async (tx) => {
+      // Find the pending expense for this user in this group
+      const expense = await tx.query.splitExpenses.findFirst({
+        where: and(
+          eq(splitExpenses.groupId, id),
+          eq(splitExpenses.owerId, owerId),
+          eq(splitExpenses.status, "pending")
+        ),
+      });
 
-    if (!expense) {
-      throw new Error("No pending expense found for this group");
-    }
-
-    // Verify amount (optional loose check or strict)
-    if (amount && Math.abs(amount - expense.amount) > 1) {
-       // Tolerance of 1 rupee for rounding issues, primarily strict
-       // throw new Error(`Amount mismatch. You owe ${expense.amount}`);
-    }
-
-    // Perform Wallet Transfer: Ower -> Payer
-    const owerWallet = await Wallet.findOne({ userId: owerId, type: 'primary' }).session(session);
-    const payerWallet = await Wallet.findOne({ userId: expense.payer, type: 'primary' }).session(session);
-
-    if (!owerWallet || !payerWallet) {
-      throw new Error("Wallets not found");
-    }
-
-    if (owerWallet.balance < expense.amount) {
-      throw new Error("Insufficient wallet balance");
-    }
-
-    // Deduct from Ower
-    owerWallet.balance -= expense.amount;
-    await owerWallet.save({ session });
-
-    // Add to Payer
-    payerWallet.balance += expense.amount;
-    await payerWallet.save({ session });
-
-    // Update Expense Status
-    expense.status = 'paid';
-    expense.transactionId = `SETTLE_${Date.now()}`;
-    await expense.save({ session });
-
-    // Create Transaction Records
-    await Transaction.create([
-      {
-        userId: owerId,
-        walletId: owerWallet._id,
-        name: `Paid share for ${id}`, // ideally group title but logic simplified
-        emoji: "💸",
-        amount: -expense.amount,
-        type: "expense",
-        groupId: id
-      },
-      {
-        userId: expense.payer,
-        walletId: payerWallet._id,
-        name: `Received share for ${id}`,
-        emoji: "💰",
-        amount: expense.amount,
-        type: "income",
-        groupId: id
+      if (!expense) {
+        throw new Error("No pending expense found for this group");
       }
-    ], { session });
 
-    // Check if group is fully settled
-    const pendingCount = await SplitExpense.countDocuments({ groupId: id, status: 'pending' }).session(session);
-    if (pendingCount === 0) {
-      await SplitGroup.findByIdAndUpdate(id, { status: 'settled' }, { session });
+      // Perform Wallet Transfer: Ower -> Payer
+      const owerWallet = await tx.query.wallets.findFirst({ 
+        where: and(eq(wallets.userId, owerId), eq(wallets.type, "primary")) 
+      });
+      const payerWallet = await tx.query.wallets.findFirst({ 
+        where: and(eq(wallets.userId, expense.payerId), eq(wallets.type, "primary")) 
+      });
+
+      if (!owerWallet || !payerWallet) {
+        throw new Error("Wallets not found");
+      }
+
+      if (Number(owerWallet.balance) < Number(expense.amount)) {
+        throw new Error("Insufficient wallet balance");
+      }
+
+      // Deduct from Ower
+      await tx.update(wallets)
+        .set({ balance: sql`${wallets.balance} - ${Number(expense.amount)}` })
+        .where(eq(wallets.id, owerWallet.id));
+
+      // Add to Payer
+      await tx.update(wallets)
+        .set({ balance: sql`${wallets.balance} + ${Number(expense.amount)}` })
+        .where(eq(wallets.id, payerWallet.id));
+
+      // Update Expense Status
+      const [updatedExpense] = await tx.update(splitExpenses)
+        .set({ 
+          status: "paid",
+          transactionId: `SETTLE_${Date.now()}`,
+          // paidAt: new Date(), / Field does not exist in schema.js splitExpenses!
+          // It was 'updatedAt' which updates automatically. 
+          // Previous code had `paidAt` but schema inspection didn't show it?
+          // Schema says `updatedAt` is updated by default? No, Drizzle doesn't auto-update `updatedAt` unless using `onUpdateNow()` or simplified.
+          // Wait, Drizzle keys: `createdAt`, `updatedAt` are present.
+          // I didn't see `paidAt` in schema.js lines 245-255.
+          // So I removed `paidAt: new Date()`.
+        })
+        .where(eq(splitExpenses.id, expense.id))
+        .returning();
+
+      // Create Transaction Records
+      await tx.insert(transactions).values([
+          {
+            userId: owerId,
+            walletId: owerWallet.id,
+            name: `Paid share for group`,
+            emoji: "💸",
+            amount: -Number(expense.amount),
+            type: "expense",
+            groupId: id, // confirmed in schema.js line 142
+          },
+          {
+            userId: expense.payerId,
+            walletId: payerWallet.id,
+            name: `Received share for group`,
+            emoji: "💰",
+            amount: Number(expense.amount),
+            type: "income",
+            groupId: id,
+          }
+      ]);
+
+      // Check if group is fully settled
+      const [pendingCountResult] = await tx.select({ count: count() }).from(splitExpenses).where(
+          and(eq(splitExpenses.groupId, id), eq(splitExpenses.status, "pending"))
+      );
+      const pendingCount = pendingCountResult?.count || 0;
       
-      // Emit group:settled event
-      const io = req.app.get("io");
-      if (io) {
+      let groupSettled = false;
+      if (pendingCount === 0) {
+        await tx.update(splitGroups)
+            .set({ status: "settled" })
+            .where(eq(splitGroups.id, id));
+        groupSettled = true;
+      }
+
+      return { expense: updatedExpense, groupSettled };
+    });
+
+    // Emit WebSocket events
+    const io = req.app.get("io");
+    if (io) {
+      io.to(id).emit("payment:received", {
+        groupId: id,
+        expenseId: result.expense.id,
+        payerName: req.user.name, 
+        amount: Number(result.expense.amount),
+      });
+
+      if (result.groupSettled) {
         io.to(id).emit("group:settled", { groupId: id });
       }
     }
 
-    await session.commitTransaction();
-
-    // Emit payment:received event
-    const io = req.app.get("io");
-    if (io) {
-       io.to(id).emit("payment:received", {
-          groupId: id,
-          expenseId: expense._id,
-          payerName: req.user.name, 
-          amount: expense.amount
-       });
-    }
-    
-    // Simulate payment received event for now to avoid breaking frontend logic expectations?
-    // Actually frontend pulls data, so it's fine.
-    
-    res.json({ message: "Settlement successful", expense });
+    res.json({ 
+      message: "Settlement successful", 
+      expense: { ...result.expense, amount: Number(result.expense.amount) },
+    });
 
   } catch (err) {
-    if (session.inTransaction()) await session.abortTransaction();
     console.error("settleExpense error:", err);
     res.status(500).json({ message: err.message });
-  } finally {
-    session.endSession();
   }
 };

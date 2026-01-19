@@ -45,7 +45,7 @@ export default function LeaderboardScreen() {
     }
   };
 
-  const getMetricValue = (entry: typeof leaderboard[0]) => {
+  const getMetricValue = (entry: (typeof leaderboard)[0]) => {
     return type === "coins" ? entry.coins : entry.totalGoalsCompleted;
   };
 
@@ -69,7 +69,9 @@ export default function LeaderboardScreen() {
         </View>
         <View style={styles.coinsBadge}>
           <MaterialIcons name="monetization-on" size={16} color="#FFD166" />
-          <Text style={styles.coinsText}>{user?.coins?.toLocaleString() || 0}</Text>
+          <Text style={styles.coinsText}>
+            {user?.coins?.toLocaleString() || 0}
+          </Text>
         </View>
       </View>
 
@@ -77,19 +79,35 @@ export default function LeaderboardScreen() {
       <View style={styles.toggleContainer}>
         <TouchableOpacity
           onPress={() => setType("coins")}
-          style={[styles.toggleButton, type === "coins" && styles.toggleButtonActive]}
+          style={[
+            styles.toggleButton,
+            type === "coins" && styles.toggleButtonActive,
+          ]}
         >
           <Text style={styles.toggleEmoji}>💰</Text>
-          <Text style={[styles.toggleText, type === "coins" && styles.toggleTextActive]}>
+          <Text
+            style={[
+              styles.toggleText,
+              type === "coins" && styles.toggleTextActive,
+            ]}
+          >
             Coins
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => setType("goals")}
-          style={[styles.toggleButton, type === "goals" && styles.toggleButtonActive]}
+          style={[
+            styles.toggleButton,
+            type === "goals" && styles.toggleButtonActive,
+          ]}
         >
           <Text style={styles.toggleEmoji}>🎯</Text>
-          <Text style={[styles.toggleText, type === "goals" && styles.toggleTextActive]}>
+          <Text
+            style={[
+              styles.toggleText,
+              type === "goals" && styles.toggleTextActive,
+            ]}
+          >
             Goals
           </Text>
         </TouchableOpacity>
@@ -97,9 +115,18 @@ export default function LeaderboardScreen() {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 + insets.bottom }]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: 100 + insets.bottom },
+        ]}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF8C32" />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#FF8C32"
+          />
+        }
       >
         {loading ? (
           <View style={styles.centerContainer}>
@@ -108,13 +135,15 @@ export default function LeaderboardScreen() {
         ) : leaderboard.length === 0 ? (
           <View style={styles.centerContainer}>
             <MaterialIcons name="emoji-events" size={48} color="#6B6B7B" />
-            <Text style={styles.emptyText}>Add friends to see the leaderboard!</Text>
+            <Text style={styles.emptyText}>
+              Add friends to see the leaderboard!
+            </Text>
           </View>
         ) : (
           <View style={styles.listContainer}>
             {leaderboard.map((entry) => (
               <View
-                key={entry._id}
+                key={entry.id}
                 style={[
                   styles.entryCard,
                   entry.isCurrentUser && styles.entryCardHighlight,
@@ -123,7 +152,9 @@ export default function LeaderboardScreen() {
                 {/* Rank */}
                 <View style={styles.rankContainer}>
                   {getRankIcon(entry.rank) ? (
-                    <Text style={styles.rankEmoji}>{getRankIcon(entry.rank)}</Text>
+                    <Text style={styles.rankEmoji}>
+                      {getRankIcon(entry.rank)}
+                    </Text>
                   ) : (
                     <Text style={styles.rankNumber}>#{entry.rank}</Text>
                   )}
@@ -146,7 +177,12 @@ export default function LeaderboardScreen() {
                 {/* Info */}
                 <View style={styles.entryInfo}>
                   <View style={styles.nameRow}>
-                    <Text style={[styles.entryName, entry.isCurrentUser && styles.entryNameHighlight]}>
+                    <Text
+                      style={[
+                        styles.entryName,
+                        entry.isCurrentUser && styles.entryNameHighlight,
+                      ]}
+                    >
                       {entry.name}
                     </Text>
                     {entry.isCurrentUser && (

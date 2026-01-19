@@ -38,7 +38,7 @@ export default function HistoryScreen() {
 
   // Map transactions for the list
   const formattedTransactions = (transactions || []).map(t => ({
-    id: t._id,
+    id: t.id,
     name: t.name,
     emoji: t.emoji,
     amount: t.amount,

@@ -1,4 +1,13 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Modal, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  TextInput,
+  Modal,
+  ActivityIndicator,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -10,13 +19,21 @@ import { useCustomAlert } from "../../contexts/CustomAlertContext";
 export default function SubscriptionsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { subscriptions, loading, addSubscription, cancelSubscription, refetch } = useSubscriptions();
+  const {
+    subscriptions,
+    loading,
+    addSubscription,
+    cancelSubscription,
+    refetch,
+  } = useSubscriptions();
   const { showAlert } = useCustomAlert();
-  
+
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [newSubName, setNewSubName] = useState("");
   const [newSubPrice, setNewSubPrice] = useState("");
-  const [newSubDate, setNewSubDate] = useState(new Date().toISOString().split('T')[0]); // Default to today YYYY-MM-DD
+  const [newSubDate, setNewSubDate] = useState(
+    new Date().toISOString().split("T")[0],
+  ); // Default to today YYYY-MM-DD
   const [newSubCycle, setNewSubCycle] = useState("monthly");
   const [adding, setAdding] = useState(false);
 
@@ -37,7 +54,7 @@ export default function SubscriptionsScreen() {
         price: parseFloat(newSubPrice),
         startDate: newSubDate,
         renewalCycle: newSubCycle,
-        category: "general"
+        category: "general",
       });
       setIsModalVisible(false);
       setNewSubName("");
@@ -57,18 +74,18 @@ export default function SubscriptionsScreen() {
       `Are you sure you want to cancel ${name}?`,
       [
         { text: "No", style: "cancel" },
-        { 
-          text: "Yes, Cancel", 
+        {
+          text: "Yes, Cancel",
           style: "destructive",
           onPress: async () => {
-             try {
-               await cancelSubscription(id);
-             } catch (e) {
-               showAlert("Error", "Failed to cancel subscription");
-             }
-          }
-        }
-      ]
+            try {
+              await cancelSubscription(id);
+            } catch (e) {
+              showAlert("Error", "Failed to cancel subscription");
+            }
+          },
+        },
+      ],
     );
   };
 
@@ -80,36 +97,53 @@ export default function SubscriptionsScreen() {
           <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Subscriptions</Text>
-        <TouchableOpacity style={styles.headerButton} onPress={() => setIsModalVisible(true)}>
+        <TouchableOpacity
+          style={styles.headerButton}
+          onPress={() => setIsModalVisible(true)}
+        >
           <MaterialIcons name="add" size={24} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 20 }]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: insets.bottom + 20 },
+        ]}
       >
         {loading ? (
-          <ActivityIndicator size="large" color="#FF8C32" style={{ marginTop: 40 }} />
+          <ActivityIndicator
+            size="large"
+            color="#FF8C32"
+            style={{ marginTop: 40 }}
+          />
         ) : subscriptions.length === 0 ? (
           <View style={styles.emptyState}>
             <MaterialIcons name="subscriptions" size={64} color="#2A2A35" />
             <Text style={styles.emptyText}>No active subscriptions</Text>
-            <Text style={styles.emptySubtext}>Add your subscriptions to track recurring expenses</Text>
+            <Text style={styles.emptySubtext}>
+              Add your subscriptions to track recurring expenses
+            </Text>
           </View>
         ) : (
           subscriptions.map((sub) => (
-            <View key={sub._id} style={styles.subCard}>
+            <View key={sub.id} style={styles.subCard}>
               <View style={styles.subIcon}>
                 <Text style={styles.subEmoji}>📅</Text>
               </View>
               <View style={styles.subInfo}>
                 <Text style={styles.subName}>{sub.name}</Text>
-                <Text style={styles.subCycle}>{sub.renewalCycle} • Next: {new Date(sub.nextRenewal).toLocaleDateString()}</Text>
+                <Text style={styles.subCycle}>
+                  {sub.renewalCycle} • Next:{" "}
+                  {new Date(sub.nextRenewal).toLocaleDateString()}
+                </Text>
               </View>
               <View style={styles.subRight}>
                 <Text style={styles.subPrice}>-₹{sub.price}</Text>
-                <TouchableOpacity onPress={() => handleCancelSubscription(sub._id, sub.name)}>
+                <TouchableOpacity
+                  onPress={() => handleCancelSubscription(sub.id, sub.name)}
+                >
                   <MaterialIcons name="cancel" size={20} color="#EF4444" />
                 </TouchableOpacity>
               </View>
@@ -128,16 +162,16 @@ export default function SubscriptionsScreen() {
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Add Subscription</Text>
-            
-            <TextInput 
+
+            <TextInput
               style={styles.input}
               placeholder="Name (e.g. Netflix)"
               placeholderTextColor="#666"
               value={newSubName}
               onChangeText={setNewSubName}
             />
-            
-            <TextInput 
+
+            <TextInput
               style={styles.input}
               placeholder="Price (₹)"
               placeholderTextColor="#666"
@@ -146,7 +180,7 @@ export default function SubscriptionsScreen() {
               onChangeText={setNewSubPrice}
             />
 
-            <TextInput 
+            <TextInput
               style={styles.input}
               placeholder="Start Date (YYYY-MM-DD)"
               placeholderTextColor="#666"
@@ -155,15 +189,15 @@ export default function SubscriptionsScreen() {
             />
 
             <View style={styles.buttonRow}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelButton]} 
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => setIsModalVisible(false)}
               >
                 <Text style={styles.buttonText}>Cancel</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.addButton]} 
+
+              <TouchableOpacity
+                style={[styles.modalButton, styles.addButton]}
                 onPress={handleAddSubscription}
                 disabled={adding}
               >

@@ -1,13 +1,21 @@
-import mongoose from "mongoose";
+import { drizzle } from "drizzle-orm/neon-serverless";
+import { Pool, neonConfig } from "@neondatabase/serverless";
+import ws from "ws";
+import * as schema from "../drizzle/schema.js"; // We will create this
+import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
-const connectDB = async () => {
-  try {
-    const conn = await mongoose.connect(process.env.MONGO_URI);
-    console.log("MongoDB Connected successfully");
-  } catch (error) {
-    console.log("MongoDB connection error:", error.message);
-    process.exit(1);
-  }
-};
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-export default connectDB;
+// Ensure env vars are loaded
+if (!process.env.DATABASE_URL) {
+  dotenv.config({ path: path.join(__dirname, "../.env") });
+}
+
+neonConfig.webSocketConstructor = ws;
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+export const db = drizzle(pool, { schema });

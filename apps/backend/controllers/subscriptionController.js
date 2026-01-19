@@ -1,6 +1,9 @@
-import Subscription from "../models/subscription.js";
+// import { prisma } from "../config/prisma.js";
+import { db } from "../config/db.js";
+import { subscriptions } from "../drizzle/schema.js";
+import { eq, and, asc } from "drizzle-orm";
 
-// ---------------- Calculate Next Renewal ----------------
+// Calculate Next Renewal
 const calculateNextRenewal = (startDate, cycle) => {
   const date = new Date(startDate);
 
@@ -11,12 +14,11 @@ const calculateNextRenewal = (startDate, cycle) => {
   return date;
 };
 
-// ---------------- ADD SUBSCRIPTION ----------------
+// ADD SUBSCRIPTION
 export const addSubscription = async (req, res) => {
   try {
     const { name, price, category, startDate, renewalCycle } = req.body;
 
-    // Validate fields
     if (!name || !price || !startDate) {
       return res.status(400).json({
         message: "Name, price, and start date are required",
@@ -25,23 +27,24 @@ export const addSubscription = async (req, res) => {
 
     const cycle = renewalCycle || "monthly";
     const nextRenewal = calculateNextRenewal(startDate, cycle);
-
     const roundOffAmount = Math.ceil(price) - price;
 
-    const subscription = await Subscription.create({
-      userId: req.user.id,
-      name,
-      price,
-      category: category || "general",
-      startDate,
-      renewalCycle: cycle,
-      nextRenewal,
-      roundOffAmount,
-    });
+    const [subscription] = await db.insert(subscriptions).values({
+        userId: req.user.id,
+        name,
+        price,
+        category: category || "general",
+        startDate: new Date(startDate),
+        renewalCycle: cycle,
+        nextRenewal,
+        roundOffAmount,
+        status: "active", // Default? Schema says default 'active'.
+        // But let's be explicit if needed. Or just rely on default.
+    }).returning();
 
     return res.status(201).json({
       message: "Subscription added successfully",
-      subscription,
+      subscription: { ...subscription, price: Number(subscription.price) },
     });
 
   } catch (error) {
@@ -52,13 +55,17 @@ export const addSubscription = async (req, res) => {
   }
 };
 
-// ---------------- GET ALL SUBSCRIPTIONS ----------------
+// GET ALL SUBSCRIPTIONS
 export const getAllSubscriptions = async (req, res) => {
   try {
-    const subs = await Subscription.find({ userId: req.user.id })
-      .sort({ nextRenewal: 1 });
+    const subs = await db.query.subscriptions.findMany({
+      where: eq(subscriptions.userId, req.user.id),
+      orderBy: [asc(subscriptions.nextRenewal)],
+    });
 
-    return res.json({ subscriptions: subs });
+    return res.json({ 
+      subscriptions: subs.map(s => ({ ...s, price: Number(s.price) })),
+    });
 
   } catch (error) {
     return res.status(500).json({
@@ -68,15 +75,20 @@ export const getAllSubscriptions = async (req, res) => {
   }
 };
 
-// ---------------- GET ACTIVE SUBSCRIPTIONS ----------------
+// GET ACTIVE SUBSCRIPTIONS
 export const getActiveSubscriptions = async (req, res) => {
   try {
-    const subs = await Subscription.find({
-      userId: req.user.id,
-      status: "active",
-    }).sort({ nextRenewal: 1 });
+    const subs = await db.query.subscriptions.findMany({
+      where: and(
+        eq(subscriptions.userId, req.user.id),
+        eq(subscriptions.status, "active")
+      ),
+      orderBy: [asc(subscriptions.nextRenewal)],
+    });
 
-    return res.json({ subscriptions: subs });
+    return res.json({ 
+      subscriptions: subs.map(s => ({ ...s, price: Number(s.price) })),
+    });
 
   } catch (error) {
     return res.status(500).json({
@@ -86,15 +98,24 @@ export const getActiveSubscriptions = async (req, res) => {
   }
 };
 
-// ---------------- GET UPCOMING SUBSCRIPTIONS ----------------
+// GET UPCOMING SUBSCRIPTIONS
 export const getUpcomingSubscriptions = async (req, res) => {
   try {
-    const subs = await Subscription.find({
-      userId: req.user.id,
-      status: "upcoming",
-    }).sort({ startDate: 1 });
+    // "upcoming" status logic? 
+    // Prisma code: where: { status: "upcoming" }
+    // Schema likely has 'upcoming' in enum, or user meant "active" but sorted by start date? 
+    // The previous code explicitly checked `status: "upcoming"`.
+    const subs = await db.query.subscriptions.findMany({
+      where: and(
+        eq(subscriptions.userId, req.user.id),
+        eq(subscriptions.status, "upcoming")
+      ),
+      orderBy: [asc(subscriptions.startDate)],
+    });
 
-    return res.json({ subscriptions: subs });
+    return res.json({ 
+      subscriptions: subs.map(s => ({ ...s, price: Number(s.price) })),
+    });
 
   } catch (error) {
     return res.status(500).json({
@@ -104,15 +125,19 @@ export const getUpcomingSubscriptions = async (req, res) => {
   }
 };
 
-// ---------------- GET CANCELLED SUBSCRIPTIONS ----------------
+// GET CANCELLED SUBSCRIPTIONS
 export const getCancelledSubscriptions = async (req, res) => {
   try {
-    const subs = await Subscription.find({
-      userId: req.user.id,
-      status: "cancelled",
+    const subs = await db.query.subscriptions.findMany({
+      where: and(
+        eq(subscriptions.userId, req.user.id),
+        eq(subscriptions.status, "cancelled")
+      ),
     });
 
-    return res.json({ subscriptions: subs });
+    return res.json({ 
+      subscriptions: subs.map(s => ({ ...s, price: Number(s.price) })),
+    });
 
   } catch (error) {
     return res.status(500).json({
@@ -122,14 +147,16 @@ export const getCancelledSubscriptions = async (req, res) => {
   }
 };
 
-// ---------------- CANCEL SUBSCRIPTION ----------------
+// CANCEL SUBSCRIPTION
 export const cancelSubscription = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const subscription = await Subscription.findOne({
-      _id: id,
-      userId: req.user.id,
+    const subscription = await db.query.subscriptions.findFirst({
+      where: and(
+        eq(subscriptions.id, id),
+        eq(subscriptions.userId, req.user.id)
+      ),
     });
 
     if (!subscription) {
@@ -138,12 +165,14 @@ export const cancelSubscription = async (req, res) => {
       });
     }
 
-    subscription.status = "cancelled";
-    await subscription.save();
+    const [updated] = await db.update(subscriptions)
+      .set({ status: "cancelled" })
+      .where(eq(subscriptions.id, id))
+      .returning();
 
     return res.json({
       message: "Subscription cancelled successfully",
-      subscription,
+      subscription: { ...updated, price: Number(updated.price) },
     });
 
   } catch (error) {

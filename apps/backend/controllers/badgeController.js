@@ -1,7 +1,8 @@
-import UserBadge from "../models/UserBadge.js";
+// import { prisma } from "../config/prisma.js";
+import { db } from "../config/db.js";
+import { userBadges, friends } from "../drizzle/schema.js";
+import { eq, or, and, count } from "drizzle-orm";
 import { BADGES, getBadgeById } from "../models/Badge.js";
-import Friend from "../models/Friend.js";
-import User from "../models/User.js";
 
 // Get all available badges
 export const getAllBadges = async (req, res) => {
@@ -15,10 +16,12 @@ export const getAllBadges = async (req, res) => {
 // Get badges earned by current user
 export const getUserBadges = async (req, res) => {
   try {
-    const userId = req.user._id;
+    const userId = req.user.id;
     console.log(`[DEBUG] Fetching badges for user: ${userId}`);
 
-    const earnedBadges = await UserBadge.find({ userId }).lean();
+    const earnedBadges = await db.query.userBadges.findMany({ 
+      where: eq(userBadges.userId, userId) 
+    });
     console.log(`[DEBUG] Found ${earnedBadges.length} earned badges for user ${userId}`);
     const earnedBadgeIds = earnedBadges.map((b) => b.badgeId);
 
@@ -52,16 +55,18 @@ export const awardBadge = async (userId, badgeId) => {
     }
 
     // Check if already earned
-    const existing = await UserBadge.findOne({ userId, badgeId });
+    const existing = await db.query.userBadges.findFirst({ 
+      where: and(eq(userBadges.userId, userId), eq(userBadges.badgeId, badgeId)) 
+    });
     if (existing) {
       return null; // Already earned
     }
 
-    const userBadge = await UserBadge.create({
-      userId,
-      badgeId,
-      earnedAt: new Date(),
-    });
+    const [userBadge] = await db.insert(userBadges).values({
+        userId,
+        badgeId,
+        earnedAt: new Date(),
+    }).returning();
 
     console.log(`🏆 Badge "${badge.name}" awarded to user ${userId}`);
     return { ...badge, earnedAt: userBadge.earnedAt };
@@ -96,10 +101,14 @@ export const checkSocialBadges = async (userId) => {
   const awarded = [];
 
   // Count accepted friendships
-  const friendCount = await Friend.countDocuments({
-    status: "accepted",
-    $or: [{ requester: userId }, { recipient: userId }],
-  });
+  const [result] = await db.select({ count: count() }).from(friends).where(
+    and(
+        eq(friends.status, "accepted"),
+        or(eq(friends.requesterId, userId), eq(friends.recipientId, userId))
+    )
+  );
+
+  const friendCount = result?.count || 0;
 
   if (friendCount >= 1) {
     const badge = await awardBadge(userId, "first_friend");

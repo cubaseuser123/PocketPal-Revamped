@@ -1,4 +1,3 @@
-
 import { useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { API_URL } from "./useUser";
@@ -6,7 +5,7 @@ import { API_URL } from "./useUser";
 // --- GAMIFICATION (BOSS & QUESTS & WHEEL) ---
 
 export interface BossBattle {
-  _id: string;
+  id: string;
   name: string;
   description: string;
   imageUrl: string;
@@ -16,13 +15,21 @@ export interface BossBattle {
   currentHealth: number;
   rewards: { coins: number; xp: number };
   status: "active" | "defeated" | "upcoming";
-  leaderboard: Array<{ userId: { _id: string; name: string; avatarUrl: string | null }; damage: number }>;
+  leaderboard: Array<{
+    userId: { id: string; name: string; avatarUrl: string | null };
+    damage: number;
+  }>;
 }
 
 export function useBoss() {
   const queryClient = useQueryClient();
 
-  const { data: boss, isLoading, error, refetch } = useQuery({
+  const {
+    data: boss,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ["boss"],
     queryFn: async () => {
       const { auth } = await import("@repo/auth");
@@ -31,18 +38,27 @@ export function useBoss() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) return null;
-      return await res.json() as BossBattle;
+      return (await res.json()) as BossBattle;
     },
     staleTime: 5 * 60 * 1000,
   });
 
   const dealDamageMutation = useMutation({
-    mutationFn: async ({ bossId, amount }: { bossId: string; amount: number }) => {
+    mutationFn: async ({
+      bossId,
+      amount,
+    }: {
+      bossId: string;
+      amount: number;
+    }) => {
       const { auth } = await import("@repo/auth");
       const token = await auth.getToken();
       const res = await fetch(`${API_URL}/api/v1/boss/${bossId}/damage`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ amount }),
       });
       return await res.json();
@@ -52,15 +68,24 @@ export function useBoss() {
     },
   });
 
-  const dealDamage = useCallback(async (bossId: string, amount: number) => {
-    return await dealDamageMutation.mutateAsync({ bossId, amount });
-  }, [dealDamageMutation]);
+  const dealDamage = useCallback(
+    async (bossId: string, amount: number) => {
+      return await dealDamageMutation.mutateAsync({ bossId, amount });
+    },
+    [dealDamageMutation],
+  );
 
-  return { boss, loading: isLoading, error: error ? (error as Error).message : null, refetch, dealDamage };
+  return {
+    boss,
+    loading: isLoading,
+    error: error ? (error as Error).message : null,
+    refetch,
+    dealDamage,
+  };
 }
 
 export interface Quest {
-  _id: string;
+  id: string;
   title: string;
   description: string;
   type: string;
@@ -75,7 +100,12 @@ export interface Quest {
 export function useQuests() {
   const queryClient = useQueryClient();
 
-  const { data: quests, isLoading, error, refetch } = useQuery({
+  const {
+    data: quests,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ["quests"],
     queryFn: async () => {
       const { auth } = await import("@repo/auth");
@@ -83,11 +113,11 @@ export function useQuests() {
       const res = await fetch(`${API_URL}/api/v1/quests/my`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-        // Check if response is ok
+      // Check if response is ok
       if (!res.ok) {
-           throw new Error("Failed to fetch quests");
+        throw new Error("Failed to fetch quests");
       }
-      return await res.json() as Quest[];
+      return (await res.json()) as Quest[];
     },
     staleTime: 5 * 60 * 1000,
   });
@@ -98,7 +128,10 @@ export function useQuests() {
       const token = await auth.getToken();
       const res = await fetch(`${API_URL}/api/v1/quests/assign`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ count: 3 }),
       });
       return await res.json();
@@ -112,7 +145,13 @@ export function useQuests() {
     return await assignQuestsMutation.mutateAsync();
   }, [assignQuestsMutation]);
 
-  return { quests: quests || [], loading: isLoading, error: error ? (error as Error).message : null, refetch, assignQuests };
+  return {
+    quests: quests || [],
+    loading: isLoading,
+    error: error ? (error as Error).message : null,
+    refetch,
+    assignQuests,
+  };
 }
 
 export interface WheelStatus {
@@ -124,7 +163,12 @@ export interface WheelStatus {
 export function useWheel() {
   const queryClient = useQueryClient();
 
-  const { data: wheelStatus, isLoading, error, refetch } = useQuery({
+  const {
+    data: wheelStatus,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ["wheel"],
     queryFn: async () => {
       const { auth } = await import("@repo/auth");
@@ -132,7 +176,7 @@ export function useWheel() {
       const res = await fetch(`${API_URL}/api/v1/wheel/status`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      return await res.json() as WheelStatus;
+      return (await res.json()) as WheelStatus;
     },
   });
 
@@ -156,14 +200,20 @@ export function useWheel() {
     return await spinMutation.mutateAsync();
   }, [spinMutation]);
 
-  return { wheelStatus, loading: isLoading, error: error ? (error as Error).message : null, refetch, spin };
+  return {
+    wheelStatus,
+    loading: isLoading,
+    error: error ? (error as Error).message : null,
+    refetch,
+    spin,
+  };
 }
 
 // --- SOCIAL ---
 
 export interface Friend {
   friendshipId: string;
-  _id: string;
+  id: string;
   name: string;
   avatarUrl: string | null;
   level: number;
@@ -174,7 +224,7 @@ export interface Friend {
 export interface FriendRequest {
   id: string;
   from: {
-    _id: string;
+    id: string;
     name: string;
     avatarUrl: string | null;
     level: number;
@@ -185,7 +235,11 @@ export interface FriendRequest {
 export function useFriends() {
   const queryClient = useQueryClient();
 
-  const { data: friendsData, isLoading: friendsLoading, refetch: refetchFriends } = useQuery({
+  const {
+    data: friendsData,
+    isLoading: friendsLoading,
+    refetch: refetchFriends,
+  } = useQuery({
     queryKey: ["friends"],
     queryFn: async () => {
       const { auth } = await import("@repo/auth");
@@ -193,11 +247,15 @@ export function useFriends() {
       const res = await fetch(`${API_URL}/api/v1/friends`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      return await res.json() as { friends: Friend[] };
+      return (await res.json()) as { friends: Friend[] };
     },
   });
 
-  const { data: pendingData, isLoading: pendingLoading, refetch: refetchPending } = useQuery({
+  const {
+    data: pendingData,
+    isLoading: pendingLoading,
+    refetch: refetchPending,
+  } = useQuery({
     queryKey: ["friendRequests"],
     queryFn: async () => {
       const { auth } = await import("@repo/auth");
@@ -205,7 +263,7 @@ export function useFriends() {
       const res = await fetch(`${API_URL}/api/v1/friends/pending`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      return await res.json() as { requests: FriendRequest[] };
+      return (await res.json()) as { requests: FriendRequest[] };
     },
   });
 
@@ -215,7 +273,10 @@ export function useFriends() {
       const token = await auth.getToken();
       const res = await fetch(`${API_URL}/api/v1/friends/request`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ friendCode }),
       });
       const data = await res.json();
@@ -279,21 +340,33 @@ export function useFriends() {
     },
   });
 
-  const sendRequest = useCallback(async (friendCode: string) => {
-    return await sendRequestMutation.mutateAsync(friendCode);
-  }, [sendRequestMutation]);
+  const sendRequest = useCallback(
+    async (friendCode: string) => {
+      return await sendRequestMutation.mutateAsync(friendCode);
+    },
+    [sendRequestMutation],
+  );
 
-  const acceptRequest = useCallback(async (requestId: string) => {
-    return await acceptRequestMutation.mutateAsync(requestId);
-  }, [acceptRequestMutation]);
+  const acceptRequest = useCallback(
+    async (requestId: string) => {
+      return await acceptRequestMutation.mutateAsync(requestId);
+    },
+    [acceptRequestMutation],
+  );
 
-  const rejectRequest = useCallback(async (requestId: string) => {
-    return await rejectRequestMutation.mutateAsync(requestId);
-  }, [rejectRequestMutation]);
+  const rejectRequest = useCallback(
+    async (requestId: string) => {
+      return await rejectRequestMutation.mutateAsync(requestId);
+    },
+    [rejectRequestMutation],
+  );
 
-  const removeFriend = useCallback(async (friendshipId: string) => {
-    return await removeFriendMutation.mutateAsync(friendshipId);
-  }, [removeFriendMutation]);
+  const removeFriend = useCallback(
+    async (friendshipId: string) => {
+      return await removeFriendMutation.mutateAsync(friendshipId);
+    },
+    [removeFriendMutation],
+  );
 
   return {
     friends: friendsData?.friends || [],
@@ -320,60 +393,67 @@ export interface Badge {
 }
 
 export function useBadges() {
-    const { data, isLoading, error, refetch } = useQuery({
-      queryKey: ["badges"],
-      queryFn: async () => {
-        const { auth } = await import("@repo/auth");
-        const token = await auth.getToken();
-        const res = await fetch(`${API_URL}/api/v1/badges/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        return await res.json() as { badges: Badge[]; earnedCount: number; totalCount: number };
-      },
-    });
-  
-    const safeBadges = data?.badges || [];
-    const earnedCount = data?.earnedCount || 0;
-    const totalCount = data?.totalCount || 0;
-  
-    return { 
-      badges: safeBadges, 
-      earnedCount, 
-      totalCount, 
-      loading: isLoading, 
-      error: error ? (error as Error).message : null, 
-      refetch 
-    };
-  }
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ["badges"],
+    queryFn: async () => {
+      const { auth } = await import("@repo/auth");
+      const token = await auth.getToken();
+      const res = await fetch(`${API_URL}/api/v1/badges/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return (await res.json()) as {
+        badges: Badge[];
+        earnedCount: number;
+        totalCount: number;
+      };
+    },
+  });
+
+  const safeBadges = data?.badges || [];
+  const earnedCount = data?.earnedCount || 0;
+  const totalCount = data?.totalCount || 0;
+
+  return {
+    badges: safeBadges,
+    earnedCount,
+    totalCount,
+    loading: isLoading,
+    error: error ? (error as Error).message : null,
+    refetch,
+  };
+}
 
 export interface LeaderboardEntry {
-    rank: number;
-    _id: string;
-    name: string;
-    avatarUrl: string | null;
-    level: number;
-    coins: number;
-    totalGoalsCompleted: number;
-    isCurrentUser: boolean;
-  }
+  rank: number;
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+  level: number;
+  coins: number;
+  totalGoalsCompleted: number;
+  isCurrentUser: boolean;
+}
 
 export function useLeaderboard(type: "coins" | "goals" = "coins") {
-    const { data, isLoading, error, refetch } = useQuery({
-      queryKey: ["leaderboard", type],
-      queryFn: async () => {
-        const { auth } = await import("@repo/auth");
-        const token = await auth.getToken();
-        const res = await fetch(`${API_URL}/api/v1/friends/leaderboard/${type}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        return await res.json() as { leaderboard: LeaderboardEntry[]; type: string };
-      },
-    });
-  
-    return {
-      leaderboard: data?.leaderboard || [],
-      loading: isLoading,
-      error: error ? (error as Error).message : null,
-      refetch,
-    };
-  }
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ["leaderboard", type],
+    queryFn: async () => {
+      const { auth } = await import("@repo/auth");
+      const token = await auth.getToken();
+      const res = await fetch(`${API_URL}/api/v1/friends/leaderboard/${type}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return (await res.json()) as {
+        leaderboard: LeaderboardEntry[];
+        type: string;
+      };
+    },
+  });
+
+  return {
+    leaderboard: data?.leaderboard || [],
+    loading: isLoading,
+    error: error ? (error as Error).message : null,
+    refetch,
+  };
+}
