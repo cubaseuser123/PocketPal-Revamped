@@ -17,12 +17,16 @@ export const getAllBadges = async (req, res) => {
 export const getUserBadges = async (req, res) => {
   try {
     const userId = req.user.id;
-    console.log(`[DEBUG] Fetching badges for user: ${userId}`);
+    if (process.env.DEBUG === 'true') {
+      console.log(`[DEBUG] Fetching badges for user: ${userId}`);
+    }
 
     const earnedBadges = await db.query.userBadges.findMany({ 
       where: eq(userBadges.userId, userId) 
     });
-    console.log(`[DEBUG] Found ${earnedBadges.length} earned badges for user ${userId}`);
+    if (process.env.DEBUG === 'true') {
+      console.log(`[DEBUG] Found ${earnedBadges.length} earned badges for user ${userId}`);
+    }
     const earnedBadgeIds = earnedBadges.map((b) => b.badgeId);
 
     // Combine all badges with earned status
@@ -50,7 +54,7 @@ export const awardBadge = async (userId, badgeId) => {
   try {
     const badge = getBadgeById(badgeId);
     if (!badge) {
-      console.log(`Badge ${badgeId} not found`);
+      if (process.env.DEBUG === 'true') console.log(`Badge ${badgeId} not found`);
       return null;
     }
 
@@ -68,7 +72,7 @@ export const awardBadge = async (userId, badgeId) => {
         earnedAt: new Date(),
     }).returning();
 
-    console.log(`🏆 Badge "${badge.name}" awarded to user ${userId}`);
+    if (process.env.DEBUG === 'true') console.log(`🏆 Badge "${badge.name}" awarded to user ${userId}`);
     return { ...badge, earnedAt: userBadge.earnedAt };
   } catch (error) {
     console.error("Error awarding badge:", error);

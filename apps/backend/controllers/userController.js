@@ -56,11 +56,58 @@ export const updateProfile = async (req, res) => {
   try {
     const { name, avatarUrl } = req.body;
     
-    const [user] = await db.update(users)
-      .set({
+    if (!name && !avatarUrl) {
+        return res.status(400).json({ message: "Please provide a name or avatar to update" });
+    }
+
+    // Get current user to check for existing friend code
+    const currentUser = await db.query.users.findFirst({
+        where: eq(users.id, req.user.id),
+    });
+
+    if (!currentUser) return res.status(404).json({ message: "User not found" });
+
+    let updates = {
         ...(name && { name }),
         ...(avatarUrl && { avatarUrl }),
-      })
+    };
+
+    // Generate unique friend code if missing
+    if (!currentUser.friendCode) {
+        let isUnique = false;
+        let newFriendCode = "";
+        
+        // Try to generate a unique code (limit attempts to prevent infinite loops, though unlikely)
+        let attempts = 0;
+        while (!isUnique && attempts < 10) {
+            // Generate 6-char random alphanumeric code (uppercase)
+            const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            newFriendCode = "";
+            for (let i = 0; i < 6; i++) {
+                newFriendCode += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            
+            // Check if code exists in DB
+            const existingWithCode = await db.query.users.findFirst({
+                where: eq(users.friendCode, newFriendCode),
+            });
+            
+            if (!existingWithCode) {
+                isUnique = true;
+            }
+            attempts++;
+        }
+        
+        if (isUnique) {
+            updates.friendCode = newFriendCode;
+        } else {
+             // Fallback if loop fails (extremely rare) - use timestamp to guarantee uniqueness
+             updates.friendCode = `FC${Date.now().toString().slice(-6)}`;
+        }
+    }
+    
+    const [user] = await db.update(users)
+      .set(updates)
       .where(eq(users.id, req.user.id))
       .returning();
     
@@ -218,6 +265,30 @@ export const deleteUser = async (req, res) => {
     return res.json({ message: "User account deactivated successfully" });
   } catch (err) {
     console.error("deleteUser error:", err);
+    return res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+// Check if user exists (for registration flow)
+export const checkUserExists = async (req, res) => {
+  try {
+    const { phone } = req.body;
+    
+    if (!phone) {
+      return res.status(400).json({ message: "Phone number is required" });
+    }
+    
+    const formattedPhone = phone.startsWith("+") ? phone : `+${phone.trim()}`;
+    
+    const user = await db.query.users.findFirst({
+      where: eq(users.phone, formattedPhone),
+    });
+
+    return res.json({ 
+      exists: !!user,
+      message: user ? "User exists" : "User not found" 
+    });
+  } catch (err) {
+    console.error("checkUserExists error:", err);
     return res.status(500).json({ message: "Server error", error: err.message });
   }
 };

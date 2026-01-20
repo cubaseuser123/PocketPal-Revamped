@@ -11,7 +11,16 @@ const getApiUrl = (): string => {
   return "http://localhost:5757";
 };
 
+// Get Auth server URL (Better Auth)
+const getAuthUrl = (): string => {
+  if (process.env.EXPO_PUBLIC_AUTH_URL) {
+    return process.env.EXPO_PUBLIC_AUTH_URL;
+  }
+  return "http://localhost:3001";
+};
+
 export const API_URL = getApiUrl();
+export const AUTH_URL = getAuthUrl();
 
 export interface User {
   id: string;
@@ -39,6 +48,7 @@ export function useUser() {
       const data = await userApi.getProfile(API_URL);
       return data.user as User;
     },
+    staleTime: 1000 * 30, // 30 seconds
   });
 
   const queryClient = useQueryClient();

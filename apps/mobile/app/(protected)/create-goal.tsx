@@ -40,13 +40,15 @@ export default function CreateGoalScreen() {
     if (!name.trim() || targetNum <= 0) return;
     
     setLoading(true);
-    console.log("📝 Creating goal:", {
-      name: name.trim(),
-      emoji: selectedEmoji,
-      color: selectedColor,
-      category: category.trim() || "General",
-      targetAmount: targetNum,
-    });
+    if (__DEV__) {
+        console.log("📝 Creating goal:", {
+        name: name.trim(),
+        emoji: selectedEmoji,
+        color: selectedColor,
+        category: category.trim() || "General",
+        targetAmount: targetNum,
+        });
+    }
     
     try {
       const result = await createGoal({
@@ -57,7 +59,7 @@ export default function CreateGoalScreen() {
         targetAmount: targetNum,
         isFeatured: false,
       });
-      console.log("✅ Goal created successfully:", result);
+      if (__DEV__) console.log("✅ Goal created successfully:", result);
       router.back();
     } catch (error: any) {
       console.error("❌ Create goal failed:", error);

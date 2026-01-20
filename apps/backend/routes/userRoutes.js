@@ -9,6 +9,7 @@ import {
   completeKyc,
   uploadAvatar,
   deleteUser,
+  checkUserExists,
 } from "../controllers/userController.js";
 
 const router = express.Router();
@@ -128,5 +129,14 @@ router.post("/avatar", protect, upload.single("image"), uploadAvatar);
  *       - bearerAuth: []
  */
 router.delete("/me", protect, deleteUser);
+
+/**
+ * @swagger
+ * /api/user/check-exists:
+ *   post:
+ *     tags: [User]
+ *     summary: Check if user exists by phone number
+ */
+router.post("/check-exists", checkUserExists);
 
 export default router;

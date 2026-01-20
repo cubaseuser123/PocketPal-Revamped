@@ -13,8 +13,8 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { auth } from "@repo/auth";
-import { API_URL } from "../../hooks/useApi";
+import { auth, pocketPalApi } from "@repo/auth";
+import { AUTH_URL, API_URL } from "../../hooks/useApi";
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -61,26 +61,35 @@ export default function RegisterScreen() {
     try {
       const formattedPhone = phone.startsWith("+") ? phone : `+91${phone}`;
       
-      const response = await auth.sendOtp({
-        name: name.trim(),
-        phone: formattedPhone,
-        baseUrl: API_URL,
-        action: "register",
-      });
-
       // Check if user already exists
-      if (!response.isNewUser) {
-        setError("Account already exists. Please log in.");
+      try {
+        const check = await pocketPalApi.user.checkExists(API_URL, formattedPhone);
+        if (check.exists) {
+           setError("Account already exists with this number. Please login.");
+           setLoading(false);
+           return;
+        }
+      } catch (checkErr) {
+        console.error("Failed to check user existence:", checkErr);
+        setError("Unable to verify account status. Please try again.");
+        setLoading(false);
         return;
       }
       
-      // Show success and redirect to login
-      setCooldown(30); // Start cooldown in case user comes back
+      // Better Auth creates user on OTP verification, not on send
+      await auth.sendOtp({
+        name: name.trim(),
+        phone: formattedPhone,
+        authUrl: AUTH_URL,
+      });
+      
+      // Start cooldown in case user comes back
+      setCooldown(30);
       
       // Navigate to verify screen immediately
       router.push({
         pathname: "/(auth)/verify",
-        params: { phone: formattedPhone, source: "register" },
+        params: { phone: formattedPhone, source: "register", name: name.trim() },
       });
     } catch (err: any) {
       setError(err.message || "Failed to send OTP");

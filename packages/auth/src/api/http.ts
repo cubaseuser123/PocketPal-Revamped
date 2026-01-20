@@ -20,6 +20,8 @@ async function request({
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Accept: "application/json",
+    // Shim Origin for Better Auth compatibility
+    "Origin": "app://pocketpal",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 

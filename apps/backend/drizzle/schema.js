@@ -19,7 +19,7 @@ export const walletType = pgEnum("WalletType", ['primary', 'savings']);
 export const users = pgTable("users", {
 	id: uuid().defaultRandom().primaryKey().notNull(),
 	name: varchar({ length: 255 }).notNull(),
-	phone: varchar({ length: 100 }).notNull(),
+	phone: varchar("phone_number", { length: 100 }).notNull(),
 	role: userRole().default('user').notNull(),
 	level: integer().default(1).notNull(),
 	coins: integer().default(0).notNull(),
@@ -390,6 +390,17 @@ export const notifications = pgTable("notifications", {
 			name: "notifications_user_id_fkey"
 		}).onUpdate("cascade").onDelete("cascade"),
 ]);
+
+export const sessions = pgTable("sessions", {
+	id: uuid().defaultRandom().primaryKey().notNull(),
+	userId: uuid("user_id").notNull(),
+	token: varchar({ length: 255 }).notNull().unique(),
+	expiresAt: timestamp("expires_at", { withTimezone: true, mode: "date" }).notNull(),
+	ipAddress: varchar("ip_address", { length: 45 }),
+	userAgent: text("user_agent"),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
 
 
 // RELATIONS

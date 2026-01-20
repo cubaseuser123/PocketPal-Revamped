@@ -14,14 +14,12 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { auth, useAuth, storage } from "@repo/auth";
-import { API_URL } from "../../hooks/useApi";
-
-
+import { auth, useAuth, storage, pocketPalApi } from "@repo/auth";
+import { AUTH_URL, API_URL } from "../../hooks/useApi";
 
 export default function VerifyScreen() {
   const router = useRouter();
-  const { phone, source } = useLocalSearchParams<{ phone: string; source: string }>();
+  const { phone, source, name } = useLocalSearchParams<{ phone: string; source: string; name?: string }>();
   const insets = useSafeAreaInsets();
   const authContext = useAuth();
   
@@ -88,28 +86,58 @@ export default function VerifyScreen() {
       const response = await auth.verifyOtp({
         phone: phone || "",
         otp: otpString,
-        baseUrl: API_URL,
+        authUrl: AUTH_URL,
       });
       
       
       if (source === "register") {
         // Registration flow: Show success toast then redirect to login
         // DO NOT set authenticated=true here, enabling it triggers auto-navigation to onboarding
+
+        // Check for token in various possible locations based on logs/types
+        // Log output shows: {"data": {"token": "...", "user": ...}, "ok": true}
+        // Code in auth.ts says verifyOtp returns VerifyResponse directly (which has .token)
+        // But the calling code might receive the Axios response wrapper or the direct data
         
-        // Clear token immediately so we ensure we are clean
-        await storage.remove("access_token");
+        let token = (response as any)?.token || (response as any)?.data?.token;
+        
+        if (token) {
+           // We need to store token temporarily to update the profile name
+           await storage.set("access_token", token);
+           
+           if (name) {
+             try {
+                // Ensure name is passed correctly
+                if (__DEV__) console.log("[Verify] Updating profile with name:", name);
+                await pocketPalApi.user.updateProfile(API_URL, { name });
+             } catch (updateError) {
+                console.error("Failed to update name during registration:", updateError);
+                // We don't fail the verification if name update fails, but we log it
+             }
+           }
+
+           // Clear token immediately so we ensure we are clean
+           await storage.remove("access_token");
+        }
         
         setSuccess(true);
         shouldStopLoading = false; // Keep loading spinner showing (or toast visible)
 
+        // Give user time to see the success message
         setTimeout(() => {
           router.replace("/(auth)/login");
-        }, 2000);
+        }, 3000);
       } else {
         // Normal login flow
+        const user = (response as any)?.user || (response as any)?.data?.user;
+        const token = (response as any)?.token || (response as any)?.data?.token;
+        
+        if (token) {
+           await storage.set("access_token", token);
+        }
+
         authContext?.setAuthenticated(true);
 
-        const user = (response as any)?.user;
         const onboardingComplete = user?.onboardingCompleted === true;
 
         // Small delay to allow auth state to propagate to useAuthNavigation
@@ -139,9 +167,8 @@ export default function VerifyScreen() {
     
     try {
       await auth.sendOtp({
-        name: "",
         phone: phone || "",
-        baseUrl: API_URL,
+        authUrl: AUTH_URL,
       });
       setError("");
       setResendCooldown(30); // Start cooldown after successful resend

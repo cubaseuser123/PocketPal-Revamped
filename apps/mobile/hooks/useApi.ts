@@ -4,5 +4,5 @@ export * from "./useGoal";
 export * from "./useGamification";
 export * from "./useSplitGroup";
 
-// Export API URL for direct use
-export { API_URL } from "./useUser";
+// Export API URLs for direct use
+export { API_URL, AUTH_URL } from "./useUser";

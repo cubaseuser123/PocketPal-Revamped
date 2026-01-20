@@ -46,7 +46,7 @@ export function TransactionDetailsModal({
         message: `Transaction Details:\nType: ${transaction.type}\nAmount: ₹${Math.abs(transaction.amount)}\nTo/From: ${transaction.name}\nDate: ${date}\nID: ${transaction.id}`,
       });
     } catch (error) {
-      console.log(error);
+      console.error(error);
     }
   };
 

@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { auth } from "@repo/auth";
-import { API_URL } from "../../hooks/useApi";
+import { AUTH_URL } from "../../hooks/useApi";
 
 
 export default function LoginScreen() {
@@ -56,11 +56,10 @@ export default function LoginScreen() {
     try {
       const formattedPhone = phone.startsWith("+") ? phone : `+91${phone}`;
       
-      // For login, we don't send a name - backend will return error if user doesn't exist
+      // For login, we don't send a name - Better Auth will create user on verify
       await auth.sendOtp({
-        name: "", // Empty name for login
         phone: formattedPhone,
-        baseUrl: API_URL,
+        authUrl: AUTH_URL,
       });
       
       router.push({

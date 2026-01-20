@@ -31,6 +31,11 @@ export const userApi = {
     const response = await httpApi.delete(`${baseUrl}/api/v1/user/me`);
     return response.data;
   },
+
+  checkExists: async (baseUrl: string, phone: string) => {
+    const response = await httpApi.post(`${baseUrl}/api/v1/user/check-exists`, { phone });
+    return response.data;
+  },
 };
 
 // Wallet API

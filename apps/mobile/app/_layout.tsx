@@ -97,7 +97,7 @@ export default function RootLayout() {
   }
 
   const handleLogout = async () => {
-    console.log("[App] Clearing query cache on logout");
+    if (__DEV__) console.log("[App] Clearing query cache on logout");
     queryClient.removeQueries();
   };
 

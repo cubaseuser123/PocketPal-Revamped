@@ -2,33 +2,50 @@ import { api } from "../api/http";
 import { storage } from "../storage/storage";
 
 interface SendOtpParams {
-  name: string;
+  name?: string;
   phone: string;
-  baseUrl: string;
-  action?: "register" | "login";
+  authUrl: string;  // Better Auth server URL
 }
 
 interface VerifyOtpParams {
   phone: string;
   otp: string;
-  baseUrl: string;
+  authUrl: string;  // Better Auth server URL
 }
 
-interface AuthResponse {
-  token?: string;
-  access_token?: string;
-  accessToken?: string;
+interface AuthUser {
+  id: string;
+  name: string;
+  email: string | null;
+  phoneNumber: string;
+  phoneNumberVerified: boolean;
+  role: string;
+  level: number;
+  coins: number;
+  friendCode: string | null;
+  kycCompleted: boolean;
+  onboardingCompleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface VerifyResponse {
+  status: boolean;
+  token: string;
+  user: AuthUser;
 }
 
 export const auth = {
-  sendOtp: async ({ name, phone, baseUrl, action }: SendOtpParams): Promise<any> => {
+  /**
+   * Send OTP to phone number via Better Auth
+   */
+  sendOtp: async ({ name, phone, authUrl }: SendOtpParams): Promise<{ message: string }> => {
     try {
-      console.log("[Auth] Sending OTP to:", phone, "Action:", action);
+      console.log("[Auth] Sending OTP to:", phone);
 
-      const response = await api.post(`${baseUrl}/api/v1/auth/send-otp`, {
+      const response = await api.post(`${authUrl}/api/auth/phone-number/send-otp`, {
+        phoneNumber: phone,
         name,
-        phone,
-        action,
       });
 
       if (response.status !== 200) {
@@ -43,37 +60,61 @@ export const auth = {
     }
   },
 
+  /**
+   * Verify OTP and get session token via Better Auth
+   */
   verifyOtp: async ({
     phone,
     otp,
-    baseUrl,
-  }: VerifyOtpParams): Promise<any> => {
+    authUrl,
+  }: VerifyOtpParams): Promise<VerifyResponse> => {
     try {
       console.log("[Auth] Verifying OTP for:", phone);
 
-      const response = await api.post(`${baseUrl}/api/v1/auth/verify-otp`, {
-        phone,
-        otp,
+      const response = await api.post(`${authUrl}/api/auth/phone-number/verify`, {
+        phoneNumber: phone,
+        code: otp,
       });
 
       if (response.status !== 200) {
         throw new Error(response.data?.message || "Invalid OTP");
       }
 
-      const data: AuthResponse = response.data;
-      const token = data.token || data.access_token || data.accessToken;
+      const data: VerifyResponse = response.data;
 
-      if (!token) {
+      if (!data.token) {
         console.error("[Auth] No token in response:", data);
         throw new Error("Authentication succeeded but no token received");
       }
 
-      await storage.set("access_token", token);
+      await storage.set("access_token", data.token);
       console.log("[Auth] Token stored successfully");
       return data;
     } catch (error: any) {
       console.error("[Auth] Verify OTP error:", error);
       throw new Error(error.message || "Failed to verify OTP");
+    }
+  },
+
+  /**
+   * Get current session from Better Auth
+   */
+  getSession: async (authUrl: string): Promise<{ user: AuthUser } | null> => {
+    try {
+      const token = await storage.get("access_token");
+      if (!token) return null;
+
+      // The http module automatically adds the Authorization header
+      const response = await api.get(`${authUrl}/api/auth/get-session`);
+
+      if (response.status !== 200 || !response.data?.user) {
+        return null;
+      }
+
+      return response.data;
+    } catch (error) {
+      console.error("[Auth] Get session error:", error);
+      return null;
     }
   },
 

@@ -52,6 +52,7 @@ export function useWallets() {
       const data = await walletApi.get(API_URL);
       return data as WalletData;
     },
+    staleTime: 1000 * 30, // 30 seconds
   });
 
   const addMoneyMutation = useMutation({
@@ -133,6 +134,7 @@ export function useTransactions(walletType?: string) {
       });
       return data.transactions as Transaction[];
     },
+    staleTime: 1000 * 30, // 30 seconds
   });
 
   const addTransactionMutation = useMutation({
@@ -192,6 +194,7 @@ export function useSpendingSummary(period: "week" | "month" | "3m" = "week") {
       const data = await transactionApi.summary(API_URL, period);
       return data as { totalSpent: number; avgPerDay: number };
     },
+    staleTime: 1000 * 30, // 30 seconds
   });
 
   return {
