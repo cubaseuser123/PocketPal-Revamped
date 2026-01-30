@@ -3,5 +3,7 @@
     {
       "mode": "auto"
     }
-  ]
+  ],
+  "java.compile.nullAnalysis.mode": "disabled",
+  "java.search.scope": "main"
 }

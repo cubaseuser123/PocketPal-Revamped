@@ -17,6 +17,7 @@ export const getGoals = async (req, res) => {
         ...g,
         targetAmount: Number(g.targetAmount),
         currentAmount: Number(g.currentAmount),
+        progress: Number(g.targetAmount) > 0 ? Number(g.currentAmount) / Number(g.targetAmount) : 0,
       })),
     });
   } catch (err) {
@@ -58,7 +59,12 @@ export const createGoal = async (req, res) => {
 
     return res.status(201).json({ 
       message: "Goal created", 
-      goal: { ...goal, targetAmount: Number(goal.targetAmount), currentAmount: Number(goal.currentAmount) },
+      goal: { 
+        ...goal, 
+        targetAmount: Number(goal.targetAmount), 
+        currentAmount: Number(goal.currentAmount),
+        progress: Number(goal.targetAmount) > 0 ? Number(goal.currentAmount) / Number(goal.targetAmount) : 0
+      },
       badgeAwarded: awardedBadge || null,
     });
   } catch (err) {
@@ -107,7 +113,12 @@ export const updateGoal = async (req, res) => {
 
     return res.json({ 
       message: "Goal updated", 
-      goal: { ...updatedGoal, targetAmount: Number(updatedGoal.targetAmount), currentAmount: Number(updatedGoal.currentAmount) },
+      goal: { 
+        ...updatedGoal, 
+        targetAmount: Number(updatedGoal.targetAmount), 
+        currentAmount: Number(updatedGoal.currentAmount),
+        progress: Number(updatedGoal.targetAmount) > 0 ? Number(updatedGoal.currentAmount) / Number(updatedGoal.targetAmount) : 0
+      },
     });
   } catch (err) {
     console.error("updateGoal error:", err);
@@ -193,6 +204,7 @@ export const addToGoal = async (req, res) => {
         ...result.goal, 
         targetAmount: Number(result.goal.targetAmount), 
         currentAmount: Number(result.goal.currentAmount),
+        progress: Number(result.goal.targetAmount) > 0 ? Number(result.goal.currentAmount) / Number(result.goal.targetAmount) : 0
       },
       savingsBalance: result.savingsBalance,
       goalCompleted: result.newlyCompleted,

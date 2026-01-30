@@ -1,0 +1,22 @@
+model: /Users/harshkapse/mlx-workspace/models/mistral-q4
+train: true
+data: "./data"
+
+batch_size: 1
+seed: 0
+
+lora_parameters:
+  rank: 8
+  alpha: 16
+  dropout: 0.05
+  scale: 8.0 # ← THIS LINE FIXES THE CRASH
+
+iters: 200
+learning_rate: 2e-4
+
+val_batches: 0
+steps_per_eval: 0
+
+save_every: 50
+steps_per_report: 10
+adapter_path: /Users/harshkapse/mlx-workspace/adapters
