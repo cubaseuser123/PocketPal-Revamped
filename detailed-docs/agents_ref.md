@@ -52,7 +52,7 @@ npm install ai zod node-cron
 }
 ```
 
-> **Note:** When using Vercel AI Gateway, you don't need provider-specific packages like `@ai-sdk/google`. The Gateway handles provider routing via model strings.
+> **Note:** When using Vercel AI Gateway, you don't need provider-specific packages like `@ai-sdk/google`. Install `@ai-sdk/gateway` instead — it handles routing to any model (Mistral, Google, Anthropic, etc.) via model strings.
 
 ---
 
@@ -1035,8 +1035,8 @@ node test-agent.js
 
 ## Checklist
 
-- [ ] Install dependencies: `npm install ai @ai-sdk/google zod node-cron`
-- [ ] Add `GOOGLE_GENERATIVE_AI_API_KEY` to `.env`
+- [ ] Install dependencies: `pnpm add ai @ai-sdk/gateway zod node-cron`
+- [ ] Add `AI_GATEWAY_API_KEY` to `.env`
 - [ ] Create `agents/notificationAgent.js`
 - [ ] Create `services/contextAggregator.js`
 - [ ] Create `services/notificationService.js`

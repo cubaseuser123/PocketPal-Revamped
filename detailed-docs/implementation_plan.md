@@ -3,6 +3,8 @@
 **Tech Stack:** Vercel AI SDK • Google Gemini • Express.js • React Native  
 **Approach:** Tools-first with optional RAG for memory and semantic search
 
+> 📖 **For complete code, see:** [pally_ai_ref.md](./pally_ai_ref.md)
+
 ---
 
 ## System Architecture
@@ -187,7 +189,7 @@ apps/mobile/
 
 ```javascript
 import { streamText, tool } from "ai";
-import { google } from "@ai-sdk/google";
+import { gateway } from "@ai-sdk/gateway";
 import { z } from "zod";
 import * as tools from "../services/chatTools.js";
 
@@ -202,28 +204,28 @@ export const streamChat = async (req, res) => {
   const userId = req.user.id;
 
   const result = streamText({
-    model: google("gemini-2.0-flash"),
+    model: gateway("mistral/devstral-2"),
     system: SYSTEM_PROMPT,
     messages,
     tools: {
       getWalletBalance: tool({
         description: "Get wallet balances (primary + savings)",
-        parameters: z.object({}),
+        inputSchema: z.object({}),
         execute: () => tools.getWalletBalance(userId),
       }),
       getSpendingSummary: tool({
         description: "Get spending total for a period",
-        parameters: z.object({ period: z.enum(["week", "month", "3m"]) }),
+        inputSchema: z.object({ period: z.enum(["week", "month", "3m"]) }),
         execute: ({ period }) => tools.getSpendingSummary(userId, period),
       }),
       getCategoryBreakdown: tool({
         description: "Get spending breakdown by category",
-        parameters: z.object({ period: z.enum(["week", "month", "3m"]) }),
+        inputSchema: z.object({ period: z.enum(["week", "month", "3m"]) }),
         execute: ({ period }) => tools.getCategoryBreakdown(userId, period),
       }),
       getGoals: tool({
         description: "Get savings goals and progress",
-        parameters: z.object({}),
+        inputSchema: z.object({}),
         execute: () => tools.getGoals(userId),
       }),
       // ... remaining 11 tools
@@ -241,9 +243,9 @@ export const streamChat = async (req, res) => {
 
 ```json
 {
-  "@ai-sdk/google": "^1.0.0",
-  "ai": "^4.0.0",
-  "zod": "^3.23.0"
+  "@ai-sdk/gateway": "^1.0.0",
+  "ai": "^6.0.0",
+  "zod": "^4.0.0"
 }
 ```
 

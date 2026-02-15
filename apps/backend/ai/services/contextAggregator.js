@@ -2,7 +2,6 @@ import { db } from '../../config/db.js';
 import {
     users,
     wallets,
-    transcations,
     goals,
     subscriptions,
     categories,
@@ -39,10 +38,10 @@ export async function getTransactionContext(userId, { days = 7 }) {
         id: transactions.id,
         name: transactions.name,
         amount: transactions.amount,
-        type: transcations.type,
+        type: transactions.type,
         createdAt: transactions.createdAt,
         categoryName: categories.name,
-    }).from(transactions).leftJoin(categories, eq(transactions.categoryId, categories.id)).where(and(eq(transactions.userId, userId), gte(transactions.createdAt, startDate)).orderBy(desc(transactions.createdAt)).limit(50));
+    }).from(transactions).leftJoin(categories, eq(transactions.categoryId, categories.id)).where(and(eq(transactions.userId, userId), gte(transactions.createdAt, startDate))).orderBy(desc(transactions.createdAt)).limit(50);
 
     let totalSpent = 0;
     const byCategory = {};
@@ -63,7 +62,7 @@ export async function getTransactionContext(userId, { days = 7 }) {
     return {
         period: `${days} days`,
         totalSpent: Math.round(totalSpent),
-        avgPerDay: Math.round(totalSprnt / days),
+        avgPerDay: Math.round(totalSpent / days),
         transactionCount: txns.length,
         byCategory,
         topCategory: topCategory ? { name: topCategory[0], amount: Math.round(topCategory[1]) } : null,
@@ -89,7 +88,7 @@ export async function getGoalContext(userId) {
     //checking goals that are behind schedule now
 
     const now = new Date();
-    const goalsAtRisk = activeGoals.fildter((g) => {
+    const goalsAtRisk = activeGoals.filter((g) => {
         if (!g.targetDate) return false;
         const target = parseFloat(g.targetAmount);
         const current = parseFloat(g.currentAmount);
@@ -107,7 +106,7 @@ export async function getGoalContext(userId) {
                 name: featured.name,
                 emoji: featured.emoji,
                 progress: Math.round(
-                    (parseFloat(featured.currentAmount) / parseFloat(featured.targetAmiunt)) * 100
+                    (parseFloat(featured.currentAmount) / parseFloat(featured.targetAmount)) * 100
                 ),
                 currentAmount: parseFloat(featured.currentAmount),
                 targetAmount: parseFloat(featured.targetAmount),
@@ -131,10 +130,11 @@ export async function getSubscriptionContext(userId) {
         .select()
         .from(subscriptions)
         .where(
-            and(eq(subscriptions.userId), userId),
-            eq(subscriptions.status, "active")
+            and(eq(subscriptions.userId, userId),
+                eq(subscriptions.status, "active"))
         );
     const now = new Date();
+    const nextWeek = new Date();
     nextWeek.setDate(nextWeek.getDate() + 7);
 
     const upcomingRenewals = userSubs.filter((s) => {
@@ -153,7 +153,7 @@ export async function getSubscriptionContext(userId) {
             name: s.name,
             price: parseFloat(s.price),
             renewalDate: s.nextRenewal,
-            daysUpUntilRenewal: Math.ceil((new Date(s.nextRenewal) - now) / (1000 * 60 * 60 * 24)),
+            daysUntilRenewal: Math.ceil((new Date(s.nextRenewal) - now) / (1000 * 60 * 60 * 24)),
         })),
     };
 }

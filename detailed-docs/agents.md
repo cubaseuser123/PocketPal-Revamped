@@ -135,10 +135,10 @@ apps/mobile/
 
 ```json
 {
-  "@ai-sdk/google": "^1.0.0",
-  "ai": "^4.0.0",
-  "node-cron": "^3.0.3",
-  "zod": "^3.23.0"
+  "@ai-sdk/gateway": "^1.0.0",
+  "ai": "^6.0.0",
+  "node-cron": "^4.2.0",
+  "zod": "^4.0.0"
 }
 ```
 

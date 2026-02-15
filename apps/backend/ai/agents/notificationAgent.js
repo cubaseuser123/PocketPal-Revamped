@@ -1,4 +1,5 @@
 import { generateText, tool } from "ai";
+import { gateway } from "@ai-sdk/gateway";
 import { z } from "zod";
 import fs from "fs/promises";
 import path from "path";
@@ -56,7 +57,7 @@ export async function runNotificationAgent(userId) {
       : 999;
 
     const result = await generateText({
-      model: "google/gemini-2.0-flash",
+      model: gateway("mistral/devstral-2"),
       system: AGENT_PROMPT,
       tools: {
         getSpending: tool({
@@ -128,7 +129,7 @@ export async function runNotificationAgent(userId) {
           return null
         }
       } catch (error) {
-        console.error(`[Agent] Error fetching tips: ${error.meesage}`);
+        console.error(`[Agent] Error fetching tips: ${error.message}`);
         return null;
       }
     }
