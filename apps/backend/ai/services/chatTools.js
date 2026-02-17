@@ -244,7 +244,7 @@ export async function getGoals(userId) {
     };
 }
 
-/**
+/*
   The sixth tool call is going to be getSubscriptions
   Returns active subscriptions and upcoming renewals
  */
@@ -286,4 +286,37 @@ export async function getSubscriptions(userId) {
     };
 }
 
+/*
+  The seventh tool call is going to be explainChart
+  Returns insights for any chart type and period
+ */
 
+export async function explainChart(userId, { period, chartType }) {
+    const days = period === 'week' ? 7 : period === 'month' ? 30 : 90;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    const txns = await db
+        .select({
+            amount: transactions.amount,
+            type: transactions.type,
+            createdAt: transactions.createdAt,
+            categoryAt: transactions.createdAt;
+            categoryName: categories.name,
+        })
+        .from(transactions)
+        .leftJoin(categories, eq(transactions.categoryId, categories.id))
+        .where(
+            and(
+                eq(transactions.userId, userId),
+                gte(transactions.createdAt, startDate)
+            )
+        )
+        .orderBy(desc(transactions.createdAt));
+
+    const dailySpending = {};
+    const byCategory = {};
+    let totalSpent = 0;
+
+    for (const )
+}
