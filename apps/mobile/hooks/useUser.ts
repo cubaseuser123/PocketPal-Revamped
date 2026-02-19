@@ -12,11 +12,15 @@ const getApiUrl = (): string => {
 };
 
 // Get Auth server URL (Better Auth)
+// When using ngrok, auth is proxied through the backend
+// Note: The @repo/auth package appends /api/auth/* to this URL
 const getAuthUrl = (): string => {
   if (process.env.EXPO_PUBLIC_AUTH_URL) {
     return process.env.EXPO_PUBLIC_AUTH_URL;
   }
-  return "http://localhost:3001";
+  // Fallback: use same base URL as API (proxy handles forwarding to auth server)
+  // This allows single ngrok tunnel for both backend + auth
+  return getApiUrl();
 };
 
 export const API_URL = getApiUrl();

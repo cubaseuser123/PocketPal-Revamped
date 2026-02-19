@@ -139,4 +139,36 @@ router.delete("/me", protect, deleteUser);
  */
 router.post("/check-exists", checkUserExists);
 
+/**
+ * @swagger
+ * /api/user/push-token:
+ *   post:
+ *     tags: [User]
+ *     summary: Save Expo push token for notifications
+ *     security:
+ *       - bearerAuth: []
+ */
+router.post("/push-token", protect, async (req, res) => {
+  try {
+    const { expoPushToken } = req.body;
+    if (!expoPushToken) {
+      return res.status(400).json({ message: "expoPushToken is required" });
+    }
+    
+    const { db } = await import("../config/db.js");
+    const { users } = await import("../drizzle/schema.js");
+    const { eq } = await import("drizzle-orm");
+    
+    await db.update(users)
+      .set({ expoPushToken })
+      .where(eq(users.id, req.user.id));
+    
+    console.log(`[Push] Token saved for user ${req.user.id}: ${expoPushToken.substring(0, 30)}...`);
+    res.json({ success: true, message: "Push token saved" });
+  } catch (error) {
+    console.error("Error saving push token:", error);
+    res.status(500).json({ message: "Failed to save push token" });
+  }
+});
+
 export default router;

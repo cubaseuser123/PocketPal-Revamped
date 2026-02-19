@@ -7,6 +7,7 @@ import { Server } from "socket.io";
 
 import cors from "cors";
 import * as Sentry from "@sentry/node";
+import { createProxyMiddleware } from "http-proxy-middleware";
 // import rateLimit from "express-rate-limit";
 import swaggerDocs from "./config/swagger.js";
 import authRoutes from "./routes/authRoutes.js";
@@ -25,6 +26,9 @@ import adminRoutes from "./routes/adminRoutes.js";
 import splitGroupRoutes from "./routes/splitGroupRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 
+// Start cron jobs
+import "./jobs/cronJobs.js";
+
 const app = express();
 const httpServer = createServer(app);
 app.set("trust proxy", 1); // Trust first proxy (fix for rate limit error)
@@ -38,6 +42,33 @@ Sentry.init({
   ],
   tracesSampleRate: 1.0,
 });
+
+// ============ AUTH SERVER PROXY ============
+// Proxy /api/auth/* requests to the auth server
+const AUTH_SERVER_URL =
+  process.env.AUTH_SERVER_URL || "http://127.0.0.1:3001/api/auth";
+const authServerBase = AUTH_SERVER_URL.replace(/\/api\/auth\/?$/, ""); // Extract base URL
+console.log(
+  `[Auth Proxy] Configured to forward /api/auth -> ${authServerBase}/api/auth`,
+);
+
+app.use(
+  "/api/auth",
+  createProxyMiddleware({
+    target: authServerBase,
+    changeOrigin: true,
+    pathRewrite: (path) => `/api/auth${path}`,
+    on: {
+      proxyReq: (proxyReq, req, res) => {
+        console.log(`[Auth Proxy] ${req.method} ${req.originalUrl}`);
+      },
+      error: (err, req, res) => {
+        console.error("[Auth Proxy] Error:", err.message);
+        res.status(502).json({ error: "Auth server unavailable" });
+      },
+    },
+  }),
+);
 
 // Middlewares
 app.use(express.json());
@@ -169,6 +200,7 @@ app.use("/api/v1/badges", badgeRoutes);
 app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1/split-groups", splitGroupRoutes);
 app.use("/api/v1/chat", chatRoutes);
+app.use("/api/v1/notifications", notificationRoutes);
 
 // Legacy support: redirect /api/* to /api/v1/*
 app.use("/api", (req, res, next) => {

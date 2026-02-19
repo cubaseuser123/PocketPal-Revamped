@@ -59,7 +59,7 @@ export default function ProfileScreen() {
   };
 
   const handleSettings = () => {
-    console.log("Open settings");
+    router.push("/(protected)/settings");
   };
 
   const handleEditProfile = () => {

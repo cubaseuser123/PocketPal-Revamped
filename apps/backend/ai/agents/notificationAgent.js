@@ -53,7 +53,8 @@ export async function runNotificationAgent(userId) {
     // Check when last notification was sent
     const lastNotif = await getLastNotification(userId);
     const hoursSinceLastPush = lastNotif
-      ? (Date.now() - new Date(lastNotif.createdAt).getTime()) / (1000 * 60 * 60)
+      ? (Date.now() - new Date(lastNotif.createdAt).getTime()) /
+        (1000 * 60 * 60)
       : 999;
 
     const result = await generateText({
@@ -95,22 +96,26 @@ export async function runNotificationAgent(userId) {
       prompt: `Analyze user ${userId}. Last push notification was ${Math.round(hoursSinceLastPush)} hours ago. Decide if they need a notification today.`,
     });
 
-
     let decision;
     try {
       const jsonMatch = result.text.match(/\{[\s\S]*\}/);
       decision = jsonMatch ? JSON.parse(jsonMatch[0]) : { shouldNotify: false };
     } catch (parseError) {
-      console.error(`[Agent] failed to parse response for ${userId}:`, parseError);
+      console.error(
+        `[Agent] failed to parse response for ${userId}:`,
+        parseError,
+      );
       return null;
     }
 
     if (!decision.shouldNotify) {
-      console.log(`[Agent] AI decided there's no notification to be shared for ${userId}, fetching fallback tip....`);
+      console.log(
+        `[Agent] AI decided there's no notification to be shared for ${userId}, fetching fallback tip....`,
+      );
 
       try {
-        const tipsPath = path.join(process.cwd(), 'ai', 'data', 'tips.json');
-        const tipsData = await fs.readFile(tipsPath, 'utf-8');
+        const tipsPath = path.join(process.cwd(), "ai", "data", "tips.json");
+        const tipsData = await fs.readFile(tipsPath, "utf-8");
         const tips = JSON.parse(tipsData);
 
         if (tips.length > 0) {
@@ -121,23 +126,24 @@ export async function runNotificationAgent(userId) {
             priority: "in-app",
             title: randomTip.title,
             body: randomTip.body,
-            reason: "Random tip has been used when no major notification needed"
+            reason:
+              "Random tip has been used when no major notification needed",
           };
           console.log(`[Agent] Selected fallback tip: ${decision.title}`);
         } else {
           console.log(`[Agent] No tips found in tips.json`);
-          return null
+          return null;
         }
       } catch (error) {
         console.error(`[Agent] Error fetching tips: ${error.message}`);
         return null;
       }
     }
-    if (decision.priority === 'push') {
+    if (decision.priority === "push") {
       const pushSent = await sendPushNotification(
         userId,
         decision.title,
-        decision.body
+        decision.body,
       );
       if (!pushSent) {
         console.log(`[Agent] Push failed for ${userId}, saving as in-app`);
@@ -148,11 +154,12 @@ export async function runNotificationAgent(userId) {
       title: decision.title,
       body: decision.body,
     });
-    console.log(`[Agent] notified user ${userId}: ${decision.type} - ${decision.title}`);
+    console.log(
+      `[Agent] notified user ${userId}: ${decision.type} - ${decision.title}`,
+    );
     return decision;
   } catch (error) {
     console.error(`[Agent] Error for user ${userId}:`, error);
     return null;
   }
-
 }
