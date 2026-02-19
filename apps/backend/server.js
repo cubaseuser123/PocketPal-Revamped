@@ -23,6 +23,7 @@ import friendRoutes from "./routes/friendRoutes.js";
 import badgeRoutes from "./routes/badgeRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import splitGroupRoutes from "./routes/splitGroupRoutes.js";
+import chatRoutes from "./routes/chatRoutes.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -167,6 +168,7 @@ app.use("/api/v1/friends", friendRoutes);
 app.use("/api/v1/badges", badgeRoutes);
 app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1/split-groups", splitGroupRoutes);
+app.use("/api/v1/chat", chatRoutes);
 
 // Legacy support: redirect /api/* to /api/v1/*
 app.use("/api", (req, res, next) => {
