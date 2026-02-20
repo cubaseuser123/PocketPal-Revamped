@@ -15,11 +15,17 @@ export const subscriptionStatus = pgEnum("SubscriptionStatus", ['active', 'upcom
 export const transactionType = pgEnum("TransactionType", ['expense', 'income', 'transfer']);
 export const userRole = pgEnum("UserRole", ['user', 'admin']);
 export const walletType = pgEnum("WalletType", ['primary', 'savings']);
+export const duelStatus = pgEnum("DuelStatus", ['pending', 'active', 'completed', 'expired', 'declined']);
+export const duelType = pgEnum("DuelType", ['most_saved', 'fewest_expenses', 'no_spend_streak']);
 
 export const users = pgTable("users", {
 	id: uuid().defaultRandom().primaryKey().notNull(),
 	name: varchar({ length: 255 }).notNull(),
-	phone: varchar("phone_number", { length: 100 }).notNull(),
+	email: varchar({ length: 255 }),
+	emailVerified: boolean("email_verified").default(false).notNull(),
+	image: text(),
+	phoneNumber: varchar("phone_number", { length: 100 }).notNull(),
+	phoneNumberVerified: boolean("phone_number_verified").default(false).notNull(),
 	role: userRole().default('user').notNull(),
 	level: integer().default(1).notNull(),
 	coins: integer().default(0).notNull(),
@@ -37,8 +43,8 @@ export const users = pgTable("users", {
 }, (table) => [
 	index("users_friend_code_idx").using("btree", table.friendCode.asc().nullsLast().op("text_ops")),
 	uniqueIndex("users_friend_code_key").using("btree", table.friendCode.asc().nullsLast().op("text_ops")),
-	index("users_phone_idx").using("btree", table.phone.asc().nullsLast().op("text_ops")),
-	uniqueIndex("users_phone_key").using("btree", table.phone.asc().nullsLast().op("text_ops")),
+	index("users_phone_idx").using("btree", table.phoneNumber.asc().nullsLast().op("text_ops")),
+	uniqueIndex("users_phone_key").using("btree", table.phoneNumber.asc().nullsLast().op("text_ops")),
 ]);
 
 export const categories = pgTable("categories", {
@@ -68,7 +74,7 @@ export const quests = pgTable("quests", {
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 }, (table) => [
-	index("quests_is_active_expires_at_idx").using("btree", table.isActive.asc().nullsLast().op("timestamptz_ops"), table.expiresAt.asc().nullsLast().op("timestamptz_ops")),
+	index("quests_is_active_expires_at_idx").using("btree", table.isActive.asc().nullsLast(), table.expiresAt.asc().nullsLast()),
 ]);
 
 export const subscriptions = pgTable("subscriptions", {
@@ -86,8 +92,8 @@ export const subscriptions = pgTable("subscriptions", {
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 }, (table) => [
-	index("subscriptions_next_renewal_status_idx").using("btree", table.nextRenewal.asc().nullsLast().op("timestamptz_ops"), table.status.asc().nullsLast().op("timestamptz_ops")),
-	index("subscriptions_user_id_idx").using("btree", table.userId.asc().nullsLast().op("uuid_ops")),
+	index("subscriptions_next_renewal_status_idx").using("btree", table.nextRenewal.asc().nullsLast(), table.status.asc().nullsLast()),
+	index("subscriptions_user_id_idx").using("btree", table.userId.asc().nullsLast()),
 	foreignKey({
 			columns: [table.userId],
 			foreignColumns: [users.id],
@@ -107,8 +113,8 @@ export const wallets = pgTable("wallets", {
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 }, (table) => [
-	index("wallets_user_id_idx").using("btree", table.userId.asc().nullsLast().op("uuid_ops")),
-	uniqueIndex("wallets_user_id_type_key").using("btree", table.userId.asc().nullsLast().op("uuid_ops"), table.type.asc().nullsLast().op("uuid_ops")),
+	index("wallets_user_id_idx").using("btree", table.userId.asc().nullsLast()),
+	uniqueIndex("wallets_user_id_type_key").using("btree", table.userId.asc().nullsLast(), table.type.asc().nullsLast()),
 	foreignKey({
 			columns: [table.userId],
 			foreignColumns: [users.id],
@@ -125,7 +131,7 @@ export const splitGroups = pgTable("split_groups", {
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 }, (table) => [
-	index("split_groups_creator_id_idx").using("btree", table.creatorId.asc().nullsLast().op("uuid_ops")),
+	index("split_groups_creator_id_idx").using("btree", table.creatorId.asc().nullsLast()),
 	index("split_groups_status_idx").using("btree", table.status.asc().nullsLast().op("enum_ops")),
 	foreignKey({
 			columns: [table.creatorId],
@@ -148,10 +154,10 @@ export const transactions = pgTable("transactions", {
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 }, (table) => [
-	index("transactions_group_id_idx").using("btree", table.groupId.asc().nullsLast().op("uuid_ops")),
-	index("transactions_user_id_category_id_idx").using("btree", table.userId.asc().nullsLast().op("uuid_ops"), table.categoryId.asc().nullsLast().op("uuid_ops")),
-	index("transactions_user_id_created_at_idx").using("btree", table.userId.asc().nullsLast().op("timestamptz_ops"), table.createdAt.desc().nullsFirst().op("uuid_ops")),
-	index("transactions_wallet_id_idx").using("btree", table.walletId.asc().nullsLast().op("uuid_ops")),
+	index("transactions_group_id_idx").using("btree", table.groupId.asc().nullsLast()),
+	index("transactions_user_id_category_id_idx").using("btree", table.userId.asc().nullsLast(), table.categoryId.asc().nullsLast()),
+	index("transactions_user_id_created_at_idx").using("btree", table.userId.asc().nullsLast(), table.createdAt.desc().nullsFirst()),
+	index("transactions_wallet_id_idx").using("btree", table.walletId.asc().nullsLast()),
 	foreignKey({
 			columns: [table.userId],
 			foreignColumns: [users.id],
@@ -189,8 +195,8 @@ export const goals = pgTable("goals", {
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 }, (table) => [
-	index("goals_user_id_idx").using("btree", table.userId.asc().nullsLast().op("uuid_ops")),
-	index("goals_user_id_is_featured_idx").using("btree", table.userId.asc().nullsLast().op("bool_ops"), table.isFeatured.asc().nullsLast().op("bool_ops")),
+	index("goals_user_id_idx").using("btree", table.userId.asc().nullsLast()),
+	index("goals_user_id_is_featured_idx").using("btree", table.userId.asc().nullsLast(), table.isFeatured.asc().nullsLast()),
 	foreignKey({
 			columns: [table.userId],
 			foreignColumns: [users.id],
@@ -206,9 +212,9 @@ export const friends = pgTable("friends", {
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 }, (table) => [
-	index("friends_recipient_id_status_idx").using("btree", table.recipientId.asc().nullsLast().op("uuid_ops"), table.status.asc().nullsLast().op("uuid_ops")),
-	uniqueIndex("friends_requester_id_recipient_id_key").using("btree", table.requesterId.asc().nullsLast().op("uuid_ops"), table.recipientId.asc().nullsLast().op("uuid_ops")),
-	index("friends_requester_id_status_idx").using("btree", table.requesterId.asc().nullsLast().op("uuid_ops"), table.status.asc().nullsLast().op("uuid_ops")),
+	index("friends_recipient_id_status_idx").using("btree", table.recipientId.asc().nullsLast(), table.status.asc().nullsLast()),
+	uniqueIndex("friends_requester_id_recipient_id_key").using("btree", table.requesterId.asc().nullsLast(), table.recipientId.asc().nullsLast()),
+	index("friends_requester_id_status_idx").using("btree", table.requesterId.asc().nullsLast(), table.status.asc().nullsLast()),
 	foreignKey({
 			columns: [table.requesterId],
 			foreignColumns: [users.id],
@@ -227,9 +233,9 @@ export const splitGroupMembers = pgTable("split_group_members", {
 	userId: uuid("user_id").notNull(),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 }, (table) => [
-	index("split_group_members_group_id_idx").using("btree", table.groupId.asc().nullsLast().op("uuid_ops")),
-	uniqueIndex("split_group_members_group_id_user_id_key").using("btree", table.groupId.asc().nullsLast().op("uuid_ops"), table.userId.asc().nullsLast().op("uuid_ops")),
-	index("split_group_members_user_id_idx").using("btree", table.userId.asc().nullsLast().op("uuid_ops")),
+	index("split_group_members_group_id_idx").using("btree", table.groupId.asc().nullsLast()),
+	uniqueIndex("split_group_members_group_id_user_id_key").using("btree", table.groupId.asc().nullsLast(), table.userId.asc().nullsLast()),
+	index("split_group_members_user_id_idx").using("btree", table.userId.asc().nullsLast()),
 	foreignKey({
 			columns: [table.groupId],
 			foreignColumns: [splitGroups.id],
@@ -253,9 +259,9 @@ export const splitExpenses = pgTable("split_expenses", {
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 }, (table) => [
-	index("split_expenses_group_id_idx").using("btree", table.groupId.asc().nullsLast().op("uuid_ops")),
-	index("split_expenses_ower_id_status_idx").using("btree", table.owerId.asc().nullsLast().op("uuid_ops"), table.status.asc().nullsLast().op("enum_ops")),
-	index("split_expenses_payer_id_idx").using("btree", table.payerId.asc().nullsLast().op("uuid_ops")),
+	index("split_expenses_group_id_idx").using("btree", table.groupId.asc().nullsLast()),
+	index("split_expenses_ower_id_status_idx").using("btree", table.owerId.asc().nullsLast(), table.status.asc().nullsLast()),
+	index("split_expenses_payer_id_idx").using("btree", table.payerId.asc().nullsLast()),
 	foreignKey({
 			columns: [table.groupId],
 			foreignColumns: [splitGroups.id],
@@ -281,8 +287,8 @@ export const userBadges = pgTable("user_badges", {
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 }, (table) => [
-	uniqueIndex("user_badges_user_id_badge_id_key").using("btree", table.userId.asc().nullsLast().op("text_ops"), table.badgeId.asc().nullsLast().op("text_ops")),
-	index("user_badges_user_id_idx").using("btree", table.userId.asc().nullsLast().op("uuid_ops")),
+	uniqueIndex("user_badges_user_id_badge_id_key").using("btree", table.userId.asc().nullsLast(), table.badgeId.asc().nullsLast()),
+	index("user_badges_user_id_idx").using("btree", table.userId.asc().nullsLast()),
 	foreignKey({
 			columns: [table.userId],
 			foreignColumns: [users.id],
@@ -318,9 +324,9 @@ export const bossBattleLeaderboard = pgTable("boss_battle_leaderboard", {
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 }, (table) => [
-	index("boss_battle_leaderboard_battle_id_damage_idx").using("btree", table.battleId.asc().nullsLast().op("int4_ops"), table.damage.desc().nullsFirst().op("int4_ops")),
-	index("boss_battle_leaderboard_battle_id_idx").using("btree", table.battleId.asc().nullsLast().op("uuid_ops")),
-	uniqueIndex("boss_battle_leaderboard_battle_id_user_id_key").using("btree", table.battleId.asc().nullsLast().op("uuid_ops"), table.userId.asc().nullsLast().op("uuid_ops")),
+	index("boss_battle_leaderboard_battle_id_damage_idx").using("btree", table.battleId.asc().nullsLast(), table.damage.desc().nullsFirst()),
+	index("boss_battle_leaderboard_battle_id_idx").using("btree", table.battleId.asc().nullsLast()),
+	uniqueIndex("boss_battle_leaderboard_battle_id_user_id_key").using("btree", table.battleId.asc().nullsLast(), table.userId.asc().nullsLast()),
 	foreignKey({
 			columns: [table.battleId],
 			foreignColumns: [bossBattles.id],
@@ -343,9 +349,9 @@ export const questAssignments = pgTable("quest_assignments", {
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 }, (table) => [
-	index("quest_assignments_quest_id_idx").using("btree", table.questId.asc().nullsLast().op("uuid_ops")),
-	uniqueIndex("quest_assignments_quest_id_user_id_key").using("btree", table.questId.asc().nullsLast().op("uuid_ops"), table.userId.asc().nullsLast().op("uuid_ops")),
-	index("quest_assignments_user_id_completed_idx").using("btree", table.userId.asc().nullsLast().op("bool_ops"), table.completed.asc().nullsLast().op("bool_ops")),
+	index("quest_assignments_quest_id_idx").using("btree", table.questId.asc().nullsLast()),
+	uniqueIndex("quest_assignments_quest_id_user_id_key").using("btree", table.questId.asc().nullsLast(), table.userId.asc().nullsLast()),
+	index("quest_assignments_user_id_completed_idx").using("btree", table.userId.asc().nullsLast(), table.completed.asc().nullsLast()),
 	foreignKey({
 			columns: [table.questId],
 			foreignColumns: [quests.id],
@@ -366,7 +372,7 @@ export const conversationMemory = pgTable("conversation_memory", {
 	summary: text(),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 }, (table) => [
-	index("conversation_memory_user_id_created_at_idx").using("btree", table.userId.asc().nullsLast().op("timestamptz_ops"), table.createdAt.desc().nullsFirst().op("timestamptz_ops")),
+	index("conversation_memory_user_id_created_at_idx").using("btree", table.userId.asc().nullsLast(), table.createdAt.desc().nullsFirst()),
 	foreignKey({
 			columns: [table.userId],
 			foreignColumns: [users.id],
@@ -383,7 +389,7 @@ export const notifications = pgTable("notifications", {
 	read: boolean().default(false).notNull(),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 }, (table) => [
-	index("notifications_user_id_read_created_at_idx").using("btree", table.userId.asc().nullsLast().op("timestamptz_ops"), table.read.asc().nullsLast().op("timestamptz_ops"), table.createdAt.desc().nullsFirst().op("timestamptz_ops")),
+	index("notifications_user_id_read_created_at_idx").using("btree", table.userId.asc().nullsLast(), table.read.asc().nullsLast(), table.createdAt.desc().nullsFirst()),
 	foreignKey({
 			columns: [table.userId],
 			foreignColumns: [users.id],
@@ -391,17 +397,124 @@ export const notifications = pgTable("notifications", {
 		}).onUpdate("cascade").onDelete("cascade"),
 ]);
 
-export const sessions = pgTable("sessions", {
+
+
+export const duels = pgTable("duels", {
+	id: uuid().defaultRandom().primaryKey().notNull(),
+	challengerId: uuid("challenger_id").notNull(),
+	challengedId: uuid("challenged_id").notNull(),
+	type: duelType().notNull(),
+	wager: integer().default(10).notNull(),
+	startDate: timestamp("start_date", { withTimezone: true, mode: 'date' }),
+	endDate: timestamp("end_date", { withTimezone: true, mode: 'date' }),
+	winnerId: uuid("winner_id"),
+	status: duelStatus().default('pending').notNull(),
+	challengerProgress: integer("challenger_progress").default(0).notNull(),
+	challengedProgress: integer("challenged_progress").default(0).notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+}, (table) => [
+	index("duels_challenger_id_idx").using("btree", table.challengerId.asc().nullsLast()),
+	index("duels_challenged_id_idx").using("btree", table.challengedId.asc().nullsLast()),
+	index("duels_status_idx").using("btree", table.status.asc().nullsLast().op("enum_ops")),
+	foreignKey({
+			columns: [table.challengerId],
+			foreignColumns: [users.id],
+			name: "duels_challenger_id_fkey"
+		}).onUpdate("cascade").onDelete("cascade"),
+	foreignKey({
+			columns: [table.challengedId],
+			foreignColumns: [users.id],
+			name: "duels_challenged_id_fkey"
+		}).onUpdate("cascade").onDelete("cascade"),
+	foreignKey({
+			columns: [table.winnerId],
+			foreignColumns: [users.id],
+			name: "duels_winner_id_fkey"
+		}).onUpdate("cascade").onDelete("set null"),
+]);
+
+export const shopItems = pgTable("shop_items", {
+	id: uuid().defaultRandom().primaryKey().notNull(),
+	name: varchar({ length: 255 }).notNull(),
+	description: text(),
+	emoji: varchar({ length: 10 }).default('🎁').notNull(),
+	category: varchar({ length: 50 }).notNull(),
+	price: integer().notNull(),
+	isActive: boolean("is_active").default(true).notNull(),
+	metadata: text(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+}, (table) => [
+	index("shop_items_category_idx").using("btree", table.category.asc().nullsLast().op("text_ops")),
+	index("shop_items_is_active_idx").using("btree", table.isActive.asc().nullsLast()),
+]);
+
+export const userPurchases = pgTable("user_purchases", {
 	id: uuid().defaultRandom().primaryKey().notNull(),
 	userId: uuid("user_id").notNull(),
-	token: varchar({ length: 255 }).notNull().unique(),
-	expiresAt: timestamp("expires_at", { withTimezone: true, mode: "date" }).notNull(),
-	ipAddress: varchar("ip_address", { length: 45 }),
-	userAgent: text("user_agent"),
-	createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
-	updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+	itemId: uuid("item_id").notNull(),
+	price: integer().notNull(),
+	purchasedAt: timestamp("purchased_at", { withTimezone: true, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+}, (table) => [
+	index("user_purchases_user_id_idx").using("btree", table.userId.asc().nullsLast()),
+	foreignKey({
+			columns: [table.userId],
+			foreignColumns: [users.id],
+			name: "user_purchases_user_id_fkey"
+		}).onUpdate("cascade").onDelete("cascade"),
+	foreignKey({
+			columns: [table.itemId],
+			foreignColumns: [shopItems.id],
+			name: "user_purchases_item_id_fkey"
+		}).onUpdate("cascade").onDelete("cascade"),
+]);
+
+// ============================================
+// BETTER AUTH TABLES (Copied from auth-server)
+// ============================================
+
+export const sessions = pgTable("sessions", {
+  id: uuid().defaultRandom().primaryKey().notNull(),
+  userId: uuid("user_id").notNull(),
+  token: varchar({ length: 255 }).notNull().unique(),
+  expiresAt: timestamp("expires_at", { withTimezone: true, mode: "date" }).notNull(),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
+export const accounts = pgTable("accounts", {
+  id: uuid().defaultRandom().primaryKey().notNull(),
+  userId: uuid("user_id").notNull(),
+  accountId: varchar("account_id", { length: 255 }).notNull(),
+  providerId: varchar("provider_id", { length: 255 }).notNull(),
+  accessToken: text("access_token"),
+  refreshToken: text("refresh_token"),
+  accessTokenExpiresAt: timestamp("access_token_expires_at", { withTimezone: true, mode: "date" }),
+  refreshTokenExpiresAt: timestamp("refresh_token_expires_at", { withTimezone: true, mode: "date" }),
+  scope: text(),
+  idToken: text("id_token"),
+  password: text(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const verifications = pgTable("verifications", {
+  id: uuid().defaultRandom().primaryKey().notNull(),
+  identifier: varchar({ length: 255 }).notNull(),
+  value: varchar({ length: 255 }).notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true, mode: "date" }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const jwks = pgTable("jwks", {
+  id: uuid().defaultRandom().primaryKey().notNull(),
+  publicKey: text("public_key").notNull(),
+  privateKey: text("private_key").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
 
 // RELATIONS
 
@@ -436,6 +549,13 @@ export const usersRelations = relations(users, ({many}) => ({
 	wallets: many(wallets),
 	bossBattleLeaderboards: many(bossBattleLeaderboard),
 	notifications: many(notifications),
+	duels_challengerId: many(duels, {
+		relationName: "duels_challengerId_users_id"
+	}),
+	duels_challengedId: many(duels, {
+		relationName: "duels_challengedId_users_id"
+	}),
+	userPurchases: many(userPurchases),
 }));
 
 export const transactionsRelations = relations(transactions, ({one}) => ({
@@ -575,5 +695,37 @@ export const notificationsRelations = relations(notifications, ({one}) => ({
 	user: one(users, {
 		fields: [notifications.userId],
 		references: [users.id]
+	}),
+}));
+
+export const duelsRelations = relations(duels, ({one}) => ({
+	challenger: one(users, {
+		fields: [duels.challengerId],
+		references: [users.id],
+		relationName: "duels_challengerId_users_id"
+	}),
+	challenged: one(users, {
+		fields: [duels.challengedId],
+		references: [users.id],
+		relationName: "duels_challengedId_users_id"
+	}),
+	winner: one(users, {
+		fields: [duels.winnerId],
+		references: [users.id],
+	}),
+}));
+
+export const shopItemsRelations = relations(shopItems, ({many}) => ({
+	userPurchases: many(userPurchases),
+}));
+
+export const userPurchasesRelations = relations(userPurchases, ({one}) => ({
+	user: one(users, {
+		fields: [userPurchases.userId],
+		references: [users.id]
+	}),
+	item: one(shopItems, {
+		fields: [userPurchases.itemId],
+		references: [shopItems.id]
 	}),
 }));

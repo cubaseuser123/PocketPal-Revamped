@@ -36,23 +36,12 @@ export function PallyBottomSheet({ isOpen, onClose }: PallyBottomSheetProps) {
   const insets = useSafeAreaInsets();
   const [inputText, setInputText] = React.useState("");
 
-  const { messages, isLoading, sendMessage, clearMessages, cancelRequest } = usePallyChat({
+  const { messages, isLoading, thinkingStatus, sendMessage, clearMessages, cancelRequest } = usePallyChat({
     onError: (error) => console.error("[Pally Chat] Error:", error),
   });
 
-  // Snap points: 50% (open), 90% (draggable to full)
-  const snapPoints = useMemo(() => ["50%", "90%"], []);
-
-  // Expand to correct position when opened
-  useEffect(() => {
-    if (isOpen && bottomSheetRef.current) {
-      // Delay to ensure sheet is fully mounted
-      const timer = setTimeout(() => {
-        bottomSheetRef.current?.expand();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen]);
+  // Snap points: single full-height snap to prevent collapsing
+  const snapPoints = useMemo(() => ["90%"], []);
 
   const handleSheetChanges = useCallback((index: number) => {
     if (index === -1) {
@@ -85,14 +74,11 @@ export function PallyBottomSheet({ isOpen, onClose }: PallyBottomSheetProps) {
     if (!inputText.trim() || isLoading) return;
     sendMessage(inputText);
     setInputText("");
-    // Expand to full when sending a message
-    bottomSheetRef.current?.snapToIndex(1);
   };
 
   const handleSuggestedQuestion = (question: string) => {
     if (isLoading) return;
     sendMessage(question);
-    bottomSheetRef.current?.snapToIndex(1);
   };
 
   const handleClose = () => {
@@ -105,7 +91,7 @@ export function PallyBottomSheet({ isOpen, onClose }: PallyBottomSheetProps) {
   return (
     <BottomSheet
       ref={bottomSheetRef}
-      index={-1}
+      index={0}
       snapPoints={snapPoints}
       onChange={handleSheetChanges}
       enablePanDownToClose
@@ -113,8 +99,7 @@ export function PallyBottomSheet({ isOpen, onClose }: PallyBottomSheetProps) {
       handleIndicatorStyle={styles.handleIndicator}
       backgroundStyle={styles.sheetBackground}
       style={styles.sheet}
-      keyboardBehavior="interactive"
-      keyboardBlurBehavior="restore"
+      android_keyboardInputMode="adjustResize"
     >
       {/* Main content container with flex layout */}
       <View style={styles.contentContainer}>
@@ -182,43 +167,43 @@ export function PallyBottomSheet({ isOpen, onClose }: PallyBottomSheetProps) {
           ) : (
             /* Message list */
             <>
-              {messages.map((message) => (
-                <View
-                  key={message.id}
-                  style={[
-                    styles.messageRow,
-                    message.role === "user" && styles.messageRowUser,
-                  ]}
-                >
-                  {message.role === "assistant" && (
-                    <View style={styles.pallyIcon}>
-                      <PallyIcon size={18} />
-                    </View>
-                  )}
+              {messages.map((message) => {
+                // Don't render empty assistant placeholder (thinking indicator handles it)
+                if (message.role === "assistant" && !message.content) return null;
+                return (
                   <View
+                    key={message.id}
                     style={[
-                      styles.messageBubble,
-                      message.role === "assistant" ? styles.pallyBubble : styles.userBubble,
+                      styles.messageRow,
+                      message.role === "user" && styles.messageRowUser,
                     ]}
                   >
-                    {message.role === "assistant" && !message.content ? (
-                      <ActivityIndicator size="small" color="#FF8C32" />
-                    ) : (
-                      <Text style={styles.messageText}>{message.content}</Text>
+                    {message.role === "assistant" && (
+                      <View style={styles.pallyIcon}>
+                        <PallyIcon size={18} />
+                      </View>
                     )}
+                    <View
+                      style={[
+                        styles.messageBubble,
+                        message.role === "assistant" ? styles.pallyBubble : styles.userBubble,
+                      ]}
+                    >
+                      <Text style={styles.messageText}>{message.content}</Text>
+                    </View>
                   </View>
-                </View>
-              ))}
+                );
+              })}
 
-              {/* Typing indicator when loading and last message has content */}
-              {isLoading && messages[messages.length - 1]?.content && (
+              {/* Thinking indicator */}
+              {isLoading && thinkingStatus && (
                 <View style={styles.typingContainer}>
                   <View style={styles.pallyIcon}>
                     <PallyIcon size={18} />
                   </View>
                   <View style={styles.typingDots}>
                     <ActivityIndicator size="small" color="#FF8C32" />
-                    <Text style={styles.typingText}>Pally is thinking...</Text>
+                    <Text style={styles.typingText}>{thinkingStatus}</Text>
                   </View>
                 </View>
               )}
@@ -364,7 +349,9 @@ const styles = StyleSheet.create({
   },
   messagesContent: {
     padding: 20,
+    paddingBottom: 8,
     gap: 16,
+    flexGrow: 1,
   },
   messageRow: {
     flexDirection: "row",

@@ -152,6 +152,49 @@ export default function ArcadeScreen() {
           </View>
         </TouchableOpacity>
 
+        {/* Duels Card */}
+        <TouchableOpacity
+          onPress={() => router.push("/(protected)/duels")}
+          activeOpacity={0.8}
+          className="bg-surface-dark rounded-2xl border border-white/5 p-4"
+        >
+          <View className="flex-row items-center">
+            <View className="mr-4 h-12 w-12 items-center justify-center rounded-full bg-red-500/20">
+              <Text className="text-2xl">⚔️</Text>
+            </View>
+            <View className="flex-1">
+              <Text className="text-lg font-semibold text-white">Duels</Text>
+              <Text className="text-text-muted text-sm">
+                Challenge friends to savings battles
+              </Text>
+            </View>
+            <MaterialIcons name="chevron-right" size={24} color="#6B6B7B" />
+          </View>
+        </TouchableOpacity>
+
+        {/* Coin Shop Card */}
+        <TouchableOpacity
+          onPress={() => router.push("/(protected)/shop")}
+          activeOpacity={0.8}
+          className="bg-surface-dark rounded-2xl border border-white/5 p-4"
+        >
+          <View className="flex-row items-center">
+            <View className="mr-4 h-12 w-12 items-center justify-center rounded-full bg-green-500/20">
+              <Text className="text-2xl">🏪</Text>
+            </View>
+            <View className="flex-1">
+              <Text className="text-lg font-semibold text-white">Coin Shop</Text>
+              <Text className="text-text-muted text-sm">
+                Spend coins on perks & shields
+              </Text>
+            </View>
+            <View className="bg-primary/20 rounded-full px-2 py-1 mr-2">
+              <Text className="text-primary text-xs font-bold">{user?.coins || 0} 🪙</Text>
+            </View>
+            <MaterialIcons name="chevron-right" size={24} color="#6B6B7B" />
+          </View>
+        </TouchableOpacity>
+
         {/* Badges Card */}
         <TouchableOpacity
           onPress={() => router.push("/(protected)/badges")}

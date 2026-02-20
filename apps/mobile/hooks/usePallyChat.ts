@@ -7,15 +7,40 @@ export interface Message {
   role: "user" | "assistant";
   content: string;
   createdAt: Date;
+  toolsUsed?: string[];
 }
 
 interface UsePallyChatOptions {
   onError?: (error: Error) => void;
 }
 
+// Friendly names for tools
+const TOOL_LABELS: Record<string, string> = {
+  getWalletBalance: "Checking your balance",
+  getRecentTransactions: "Looking at your transactions",
+  getSpendingSummary: "Analyzing your spending",
+  getCategoryBreakdown: "Breaking down categories",
+  getGoals: "Checking your goals",
+  getSubscriptions: "Looking at subscriptions",
+  explainChart: "Analyzing the chart",
+  compareSpending: "Comparing periods",
+  getTopSpendingDays: "Finding top spending days",
+  findLargeTransactions: "Spotting large purchases",
+  getStreakStatus: "Checking your streak",
+  getActiveQuests: "Looking at quests",
+  getBadges: "Checking badges",
+  getLeaderboard: "Loading leaderboard",
+  getFriendStats: "Comparing with friends",
+};
+
+export function getToolLabel(toolName: string): string {
+  return TOOL_LABELS[toolName] || "Working on it";
+}
+
 export function usePallyChat(options: UsePallyChatOptions = {}) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [thinkingStatus, setThinkingStatus] = useState<string | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -34,6 +59,7 @@ export function usePallyChat(options: UsePallyChatOptions = {}) {
     setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
     setError(null);
+    setThinkingStatus("Thinking...");
 
     // Create placeholder for assistant response
     const assistantMessageId = (Date.now() + 1).toString();
@@ -51,11 +77,16 @@ export function usePallyChat(options: UsePallyChatOptions = {}) {
       const token = await auth.getToken();
       abortControllerRef.current = new AbortController();
 
-      // Prepare messages for API (all messages including new user message)
+      // Prepare messages for API
       const apiMessages = [
         ...messages.map((m) => ({ role: m.role, content: m.content })),
         { role: "user" as const, content: content.trim() },
       ];
+
+      // Show "fetching data" after a delay (tool calls take time)
+      const thinkingTimer = setTimeout(() => {
+        setThinkingStatus("Fetching your data... 📊");
+      }, 2000);
 
       const response = await fetch(`${API_URL}/api/v1/chat`, {
         method: "POST",
@@ -67,54 +98,26 @@ export function usePallyChat(options: UsePallyChatOptions = {}) {
         signal: abortControllerRef.current.signal,
       });
 
+      clearTimeout(thinkingTimer);
+
       if (!response.ok) {
         throw new Error(`Chat request failed: ${response.status}`);
       }
 
-      // Read the stream
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error("No response body");
+      // Parse JSON response (backend now returns { text, toolsUsed })
+      const data = await response.json();
+      const fullContent = data.text || "";
+      const toolsUsed = data.toolsUsed || [];
 
-      const decoder = new TextDecoder();
-      let fullContent = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-
-        // Parse SSE data (Vercel AI SDK format)
-        const lines = chunk.split("\n").filter((line) => line.trim());
-
-        for (const line of lines) {
-          if (line.startsWith("0:")) {
-            // Text content chunk
-            try {
-              const content = JSON.parse(line.slice(2));
-              fullContent += content;
-
-              // Update assistant message with accumulated content
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantMessageId
-                    ? { ...m, content: fullContent }
-                    : m
-                )
-              );
-            } catch {
-              // Not JSON, might be raw text
-              fullContent += line.slice(2);
-            }
-          }
-        }
-      }
-
-      // Finalize the message
+      // Update assistant message
       setMessages((prev) =>
         prev.map((m) =>
           m.id === assistantMessageId
-            ? { ...m, content: fullContent || "I couldn't process that request." }
+            ? {
+                ...m,
+                content: fullContent || "I couldn't process that request.",
+                toolsUsed,
+              }
             : m
         )
       );
@@ -122,13 +125,11 @@ export function usePallyChat(options: UsePallyChatOptions = {}) {
       const error = err as Error;
 
       if (error.name === "AbortError") {
-        // Request was cancelled
         setMessages((prev) => prev.filter((m) => m.id !== assistantMessageId));
       } else {
         setError(error);
         options.onError?.(error);
 
-        // Update with error message
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantMessageId
@@ -139,6 +140,7 @@ export function usePallyChat(options: UsePallyChatOptions = {}) {
       }
     } finally {
       setIsLoading(false);
+      setThinkingStatus(null);
       abortControllerRef.current = null;
     }
   }, [messages, isLoading, options]);
@@ -150,12 +152,12 @@ export function usePallyChat(options: UsePallyChatOptions = {}) {
   const clearMessages = useCallback(() => {
     setMessages([]);
     setError(null);
+    setThinkingStatus(null);
   }, []);
 
   const retryLastMessage = useCallback(() => {
     const lastUserMessage = [...messages].reverse().find((m) => m.role === "user");
     if (lastUserMessage) {
-      // Remove the last assistant message and retry
       setMessages((prev) => prev.slice(0, -1));
       sendMessage(lastUserMessage.content);
     }
@@ -164,6 +166,7 @@ export function usePallyChat(options: UsePallyChatOptions = {}) {
   return {
     messages,
     isLoading,
+    thinkingStatus,
     error,
     sendMessage,
     cancelRequest,

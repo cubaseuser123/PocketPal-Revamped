@@ -25,6 +25,9 @@ import badgeRoutes from "./routes/badgeRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import splitGroupRoutes from "./routes/splitGroupRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
+import duelRoutes from "./routes/duelRoutes.js";
+import shopRoutes from "./routes/shopRoutes.js";
 
 // Start cron jobs
 import "./jobs/cronJobs.js";
@@ -201,6 +204,8 @@ app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1/split-groups", splitGroupRoutes);
 app.use("/api/v1/chat", chatRoutes);
 app.use("/api/v1/notifications", notificationRoutes);
+app.use("/api/v1/duels", duelRoutes);
+app.use("/api/v1/shop", shopRoutes);
 
 // Legacy support: redirect /api/* to /api/v1/*
 app.use("/api", (req, res, next) => {

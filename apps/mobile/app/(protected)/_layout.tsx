@@ -27,6 +27,8 @@ export default function ProtectedLayout() {
         <Stack.Screen name="savings-wheel" options={{ headerShown: false }} />
         <Stack.Screen name="profile" options={{ headerShown: false }} />
         <Stack.Screen name="settings" options={{ headerShown: false }} />
+        <Stack.Screen name="duels" options={{ headerShown: false }} />
+        <Stack.Screen name="shop" options={{ headerShown: false }} />
       </Stack>
     </PallyProvider>
   );

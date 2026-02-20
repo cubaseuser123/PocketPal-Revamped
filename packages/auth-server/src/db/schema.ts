@@ -27,10 +27,8 @@ export const users = pgTable("users", {
   email: varchar({ length: 255 }),  // Better Auth expects email
   emailVerified: boolean("email_verified").default(false).notNull(),
   image: text(),  // Better Auth expects image
-  phoneNumber: varchar("phone_number", { length: 100 }),  // Better Auth phone plugin field
+  phoneNumber: varchar("phone_number", { length: 100 }).notNull(),  // Better Auth phone plugin field
   phoneNumberVerified: boolean("phone_number_verified").default(false).notNull(),
-  // Legacy field - keep for backwards compatibility
-  phone: varchar({ length: 100 }),
   role: userRole().default('user').notNull(),
   level: integer().default(1).notNull(),
   coins: integer().default(0).notNull(),
@@ -48,8 +46,8 @@ export const users = pgTable("users", {
 }, (table) => [
   index("users_friend_code_idx").using("btree", table.friendCode.asc().nullsLast().op("text_ops")),
   uniqueIndex("users_friend_code_key").using("btree", table.friendCode.asc().nullsLast().op("text_ops")),
-  index("users_phone_idx").using("btree", table.phone.asc().nullsLast().op("text_ops")),
-  uniqueIndex("users_phone_key").using("btree", table.phone.asc().nullsLast().op("text_ops")),
+  index("users_phone_idx").using("btree", table.phoneNumber.asc().nullsLast().op("text_ops")),
+  uniqueIndex("users_phone_key").using("btree", table.phoneNumber.asc().nullsLast().op("text_ops")),
 ]);
 
 // ============================================

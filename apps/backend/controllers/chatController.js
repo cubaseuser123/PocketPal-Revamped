@@ -1,4 +1,4 @@
-import { streamText, tool } from "ai";
+import { generateText, tool, stepCountIs } from "ai";
 import { gateway } from "@ai-sdk/gateway";
 import { z } from "zod";
 import * as chatTools from "../ai/services/chatTools.js";
@@ -44,7 +44,7 @@ export const streamChat = async (req, res) => {
             return res.status(400).json({ message: "Messages array is required" });
         }
 
-        const result = streamText({
+        const { text, steps } = await generateText({ // Switched to generateText
             model: gateway("mistral/devstral-2"),
             system: SYSTEM_PROMPT,
             messages,
@@ -58,7 +58,7 @@ export const streamChat = async (req, res) => {
                 }),
                 getRecentTransactions: tool({
                     description:
-                        "Get recent transactions with optional filters for limit, number of days, and category",
+                        "Get recent transactions with optional filters. Use days=365 and limit=1 when the user asks for their 'last' or 'most recent' transaction. Use larger days values to avoid missing data.",
                     inputSchema: z.object({
                         limit: z
                             .number()
@@ -68,8 +68,8 @@ export const streamChat = async (req, res) => {
                         days: z
                             .number()
                             .optional()
-                            .default(7)
-                            .describe("Number of days to look back"),
+                            .default(30)
+                            .describe("Number of days to look back. Use 365 when looking for the most recent/last transaction."),
                         category: z
                             .string()
                             .optional()
@@ -223,10 +223,29 @@ export const streamChat = async (req, res) => {
                         chatTools.getFriendStats(userId, params),
                 }),
             },
-            maxSteps: 5,
+            stopWhen: stepCountIs(5),
+            onStepFinish: (step) => {
+                console.log(`[Chat] Step finished - finishReason: ${step.finishReason}`);
+                if (step.toolCalls?.length) {
+                    console.log(`[Chat] Tools called:`, step.toolCalls.map(tc => tc.toolName));
+                }
+                if (step.text) {
+                    console.log(`[Chat] Step text: "${step.text.slice(0, 100)}"`);
+                }
+            },
         });
 
-        result.pipeDataStreamToResponse(res);
+        console.log(`[Chat] Steps length:`, steps.length);
+
+        // Build tool usage info for the client
+        const toolsUsed = steps
+            .filter(s => s.toolCalls && s.toolCalls.length > 0)
+            .flatMap(s => s.toolCalls.map(tc => tc.toolName));
+
+        res.json({
+            text: text || "I couldn't process that request.",
+            toolsUsed,
+        });
     } catch (error) {
         console.error("[Chat] Stream error:", error);
         res.status(500).json({ message: "Chat failed", error: error.message });
