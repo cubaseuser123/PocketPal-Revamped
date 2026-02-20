@@ -1,23 +1,18 @@
-import React, { useCallback, useMemo, useRef, useState, useEffect } from "react";
+import React, { useCallback, useMemo, useRef, useEffect } from "react";
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  ActivityIndicator,
 } from "react-native";
 import BottomSheet, { BottomSheetBackdrop, BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { PallyIcon } from "../ui/PallyIcon";
-
-interface Message {
-  id: string;
-  type: "pally" | "user";
-  text: string;
-  timestamp: string;
-}
+import { usePallyChat, type Message } from "../../hooks/usePallyChat";
 
 interface SuggestedQuestion {
   id: string;
@@ -37,16 +32,13 @@ const SUGGESTED_QUESTIONS: SuggestedQuestion[] = [
 
 export function PallyBottomSheet({ isOpen, onClose }: PallyBottomSheetProps) {
   const bottomSheetRef = useRef<BottomSheet>(null);
+  const scrollViewRef = useRef<any>(null);
   const insets = useSafeAreaInsets();
-  const [inputText, setInputText] = useState("");
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      type: "pally",
-      text: "Food spends jumped on Wed 🍔 Want to set a cap?",
-      timestamp: "Just now",
-    },
-  ]);
+  const [inputText, setInputText] = React.useState("");
+
+  const { messages, isLoading, sendMessage, clearMessages, cancelRequest } = usePallyChat({
+    onError: (error) => console.error("[Pally Chat] Error:", error),
+  });
 
   // Snap points: 50% (open), 90% (draggable to full)
   const snapPoints = useMemo(() => ["50%", "90%"], []);
@@ -80,35 +72,32 @@ export function PallyBottomSheet({ isOpen, onClose }: PallyBottomSheetProps) {
     []
   );
 
+  // Auto-scroll to bottom on new messages
+  useEffect(() => {
+    if (messages.length > 0) {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd?.({ animated: true });
+      }, 100);
+    }
+  }, [messages]);
+
   const handleSend = () => {
-    if (!inputText.trim()) return;
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      type: "user",
-      text: inputText,
-      timestamp: "Just now",
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
+    if (!inputText.trim() || isLoading) return;
+    sendMessage(inputText);
     setInputText("");
-
-    // Simulate Pally response
-    setTimeout(() => {
-      const pallyResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        type: "pally",
-        text: "Great question! Let me analyze that for you...",
-        timestamp: "Just now",
-      };
-      setMessages((prev) => [...prev, pallyResponse]);
-      // Expand to full (index 1)
-      bottomSheetRef.current?.snapToIndex(1);
-    }, 1000);
+    // Expand to full when sending a message
+    bottomSheetRef.current?.snapToIndex(1);
   };
 
   const handleSuggestedQuestion = (question: string) => {
-    setInputText(question);
+    if (isLoading) return;
+    sendMessage(question);
+    bottomSheetRef.current?.snapToIndex(1);
+  };
+
+  const handleClose = () => {
+    cancelRequest();
+    onClose();
   };
 
   if (!isOpen) return null;
@@ -148,54 +137,93 @@ export function PallyBottomSheet({ isOpen, onClose }: PallyBottomSheetProps) {
               <Text style={styles.headerSubtitle}>Your money buddy</Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <MaterialIcons name="close" size={20} color="#B0B0C3" />
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            {messages.length > 0 && (
+              <TouchableOpacity style={styles.clearButton} onPress={clearMessages}>
+                <Text style={styles.clearButtonText}>Clear</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+              <MaterialIcons name="close" size={20} color="#B0B0C3" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.divider} />
 
         {/* Scrollable Messages - takes remaining space */}
         <BottomSheetScrollView
+          ref={scrollViewRef}
           contentContainerStyle={styles.messagesContent}
           style={styles.messagesScroll}
         >
-          {messages.map((message) => (
-            <View
-              key={message.id}
-              style={[
-                styles.messageRow,
-                message.type === "user" && styles.messageRowUser,
-              ]}
-            >
-              {message.type === "pally" && (
-                <View style={styles.pallyIcon}>
-                  <PallyIcon size={18} />
-                </View>
-              )}
-              <View
-                style={[
-                  styles.messageBubble,
-                  message.type === "pally" ? styles.pallyBubble : styles.userBubble,
-                ]}
-              >
-                <Text style={styles.messageText}>{message.text}</Text>
+          {messages.length === 0 ? (
+            /* Empty state with suggestions */
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIconContainer}>
+                <PallyIcon size={40} />
+              </View>
+              <Text style={styles.emptyTitle}>Hey! I'm Pally 👋</Text>
+              <Text style={styles.emptySubtitle}>
+                Ask me about your spending, goals, or streaks!
+              </Text>
+              <View style={styles.suggestionsContainer}>
+                {SUGGESTED_QUESTIONS.map((q) => (
+                  <TouchableOpacity
+                    key={q.id}
+                    style={styles.suggestionButton}
+                    onPress={() => handleSuggestedQuestion(q.text)}
+                  >
+                    <Text style={styles.suggestionText}>{q.text}</Text>
+                  </TouchableOpacity>
+                ))}
               </View>
             </View>
-          ))}
+          ) : (
+            /* Message list */
+            <>
+              {messages.map((message) => (
+                <View
+                  key={message.id}
+                  style={[
+                    styles.messageRow,
+                    message.role === "user" && styles.messageRowUser,
+                  ]}
+                >
+                  {message.role === "assistant" && (
+                    <View style={styles.pallyIcon}>
+                      <PallyIcon size={18} />
+                    </View>
+                  )}
+                  <View
+                    style={[
+                      styles.messageBubble,
+                      message.role === "assistant" ? styles.pallyBubble : styles.userBubble,
+                    ]}
+                  >
+                    {message.role === "assistant" && !message.content ? (
+                      <ActivityIndicator size="small" color="#FF8C32" />
+                    ) : (
+                      <Text style={styles.messageText}>{message.content}</Text>
+                    )}
+                  </View>
+                </View>
+              ))}
 
-          {/* Suggested questions */}
-          <View style={styles.suggestionsContainer}>
-            {SUGGESTED_QUESTIONS.map((q) => (
-              <TouchableOpacity
-                key={q.id}
-                style={styles.suggestionButton}
-                onPress={() => handleSuggestedQuestion(q.text)}
-              >
-                <Text style={styles.suggestionText}>{q.text}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+              {/* Typing indicator when loading and last message has content */}
+              {isLoading && messages[messages.length - 1]?.content && (
+                <View style={styles.typingContainer}>
+                  <View style={styles.pallyIcon}>
+                    <PallyIcon size={18} />
+                  </View>
+                  <View style={styles.typingDots}>
+                    <ActivityIndicator size="small" color="#FF8C32" />
+                    <Text style={styles.typingText}>Pally is thinking...</Text>
+                  </View>
+                </View>
+              )}
+            </>
+          )}
         </BottomSheetScrollView>
 
         {/* Fixed Input at bottom */}
@@ -210,7 +238,11 @@ export function PallyBottomSheet({ isOpen, onClose }: PallyBottomSheetProps) {
               onSubmitEditing={handleSend}
               returnKeyType="send"
             />
-            <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
+            <TouchableOpacity
+              style={[styles.sendButton, (!inputText.trim() || isLoading) && styles.sendButtonDisabled]}
+              onPress={handleSend}
+              disabled={!inputText.trim() || isLoading}
+            >
               <MaterialIcons name="send" size={18} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
@@ -299,6 +331,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "500",
   },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  clearButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+  },
+  clearButtonText: {
+    color: "#FF8C32",
+    fontSize: 12,
+    fontWeight: "600",
+  },
   closeButton: {
     width: 36,
     height: 36,
@@ -362,12 +410,59 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     lineHeight: 20,
   },
+  emptyState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+  },
+  emptyIconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: "rgba(255, 140, 50, 0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255, 140, 50, 0.2)",
+  },
+  emptyTitle: {
+    color: "#FFFFFF",
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    color: "#B0B0C3",
+    fontSize: 14,
+    textAlign: "center",
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  typingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 4,
+  },
+  typingDots: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  typingText: {
+    color: "#B0B0C3",
+    fontSize: 12,
+    fontWeight: "500",
+  },
   suggestionsContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 10,
-    marginLeft: 44,
-    marginTop: 4,
+    marginTop: 8,
+    justifyContent: "center",
   },
   suggestionButton: {
     backgroundColor: "#2A2A35",
@@ -417,5 +512,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 8,
     elevation: 3,
+  },
+  sendButtonDisabled: {
+    opacity: 0.4,
   },
 });
