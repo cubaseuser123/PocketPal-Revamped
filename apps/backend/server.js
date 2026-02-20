@@ -235,6 +235,6 @@ app.use(function onError(err, req, res, next) {
 const PORT = process.env.PORT || 5757;
 
 // app.listen(PORT, () => {
-httpServer.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+httpServer.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running on port ${PORT} host 0.0.0.0`);
 });
