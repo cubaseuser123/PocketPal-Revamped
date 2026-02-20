@@ -33,7 +33,7 @@ export function useSplitGroups() {
     queryKey: ["splitGroups"],
     queryFn: async () => {
       const data = await pocketPalApi.splitGroups.list(API_URL);
-      return data as SplitGroup[];
+      return Array.isArray(data) ? (data as SplitGroup[]) : [];
     },
   });
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import {
   ScrollView,
   View,
@@ -15,7 +15,6 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { PallyTip } from "../../../components/dashboard/PallyTip";
 import { WeeklySavingGoal } from "../../../components/dashboard/WeeklySavingGoal";
-import { PredictionCard } from "../../../components/dashboard/PredictionCard";
 import { SpendingOverview } from "../../../components/dashboard/SpendingOverview";
 import { ExpenseWallet } from "../../../components/dashboard/ExpenseWallet";
 import { SavingsWallet } from "../../../components/dashboard/SavingsWallet";
@@ -26,21 +25,15 @@ import {
 } from "../../../hooks/useApi";
 import { useDashboard } from "../../../hooks/useDashboard";
 
-// Static spending chart data (would come from analytics API in future)
-const SPENDING_CHART_DATA = {
+// Keep labels static, but do not fake trend lines when there is no data.
+const SPENDING_CHART_META = {
   week: {
-    chartPath: "M0 40 Q 15 35, 25 38 T 50 20 T 75 25 T 100 10",
-    chartFillPath: "M0 40 Q 15 35, 25 38 T 50 20 T 75 25 T 100 10 V 50 H 0 Z",
     xLabels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
   },
   month: {
-    chartPath: "M0 35 Q 20 30, 35 25 T 60 35 T 80 20 T 100 15",
-    chartFillPath: "M0 35 Q 20 30, 35 25 T 60 35 T 80 20 T 100 15 V 50 H 0 Z",
     xLabels: ["Week 1", "Week 2", "Week 3", "Week 4"],
   },
   "3m": {
-    chartPath: "M0 30 Q 25 40, 40 25 T 70 30 T 100 12",
-    chartFillPath: "M0 30 Q 25 40, 40 25 T 70 30 T 100 12 V 50 H 0 Z",
     xLabels: ["Nov", "Dec", "Jan"],
   },
 };
@@ -78,19 +71,25 @@ export default function HomeScreen() {
       spent: selectedPeriod === "week" ? summary?.totalSpent || 0 : 0,
       avgPerDay: selectedPeriod === "week" ? summary?.avgPerDay || 0 : 0,
       label: "This week spent",
-      ...SPENDING_CHART_DATA.week,
+      chartPath: "M0 44 L100 44",
+      chartFillPath: "M0 44 L100 44 V 50 H 0 Z",
+      ...SPENDING_CHART_META.week,
     },
     month: {
       spent: selectedPeriod === "month" ? summary?.totalSpent || 0 : 0,
       avgPerDay: selectedPeriod === "month" ? summary?.avgPerDay || 0 : 0,
       label: "This month spent",
-      ...SPENDING_CHART_DATA.month,
+      chartPath: "M0 44 L100 44",
+      chartFillPath: "M0 44 L100 44 V 50 H 0 Z",
+      ...SPENDING_CHART_META.month,
     },
     "3m": {
       spent: selectedPeriod === "3m" ? summary?.totalSpent || 0 : 0,
       avgPerDay: selectedPeriod === "3m" ? summary?.avgPerDay || 0 : 0,
       label: "Last 3 months spent",
-      ...SPENDING_CHART_DATA["3m"],
+      chartPath: "M0 44 L100 44",
+      chartFillPath: "M0 44 L100 44 V 50 H 0 Z",
+      ...SPENDING_CHART_META["3m"],
     },
   };
 
@@ -213,17 +212,11 @@ export default function HomeScreen() {
           currentAmount={wallets?.savings?.balance || 0}
           targetAmount={featuredGoal?.targetAmount || 0}
           status={!featuredGoal ? "no-goal" : "on-track"}
-          todaySaved={0}
+          todaySaved={undefined}
         />
 
         {/* Active Split Groups */}
         <ActiveSplitGroups />
-
-        {/* Prediction */}
-        <PredictionCard
-          category="Food"
-          prediction="is projected to be 15% higher this weekend."
-        />
 
         {/* Spending Overview */}
         <SpendingOverview

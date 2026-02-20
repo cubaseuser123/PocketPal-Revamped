@@ -17,7 +17,8 @@ export function ActiveSplitGroups() {
   const { groups, loading } = useSplitGroups();
 
   // Filter out settled groups for Dashboard view
-  const activeGroups = groups.filter((g) => g.status !== "settled");
+  const safeGroups = Array.isArray(groups) ? groups : [];
+  const activeGroups = safeGroups.filter((g) => g.status !== "settled");
 
   if (loading || !activeGroups.length) return null;
 

@@ -71,6 +71,7 @@ app.use(express.json());
 const allowedOrigins = [
   "http://localhost:3000", // Web
   "http://localhost:8081", // Mobile (Expo)
+  "app://pocketpal", // Native mobile origin shim
   // Add production domains here
   "https://pocketpal.app",
 ];
@@ -250,8 +251,13 @@ app.use(function onError(err, req, res, next) {
     req.requestId?.toString() ||
     res.getHeader("x-request-id")?.toString() ||
     randomUUID();
+  const errorStatus = Number(err?.statusCode || err?.status);
   const statusCode =
-    Number(err?.statusCode || err?.status || res.statusCode) || 500;
+    Number.isFinite(errorStatus) && errorStatus >= 400
+      ? errorStatus
+      : res.statusCode >= 400
+        ? res.statusCode
+        : 500;
   const sentryId = res.sentry;
 
   console.error(

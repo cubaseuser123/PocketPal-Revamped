@@ -164,7 +164,9 @@ export default function LeaderboardScreen() {
                 <View style={styles.avatarContainer}>
                   {entry.avatarUrl ? (
                     <Image
-                      source={{ uri: getFullAvatarUrl(entry.avatarUrl) }}
+                      source={{
+                        uri: getFullAvatarUrl(entry.avatarUrl) || undefined,
+                      }}
                       style={styles.avatar}
                     />
                   ) : (

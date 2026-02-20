@@ -20,10 +20,14 @@ async function request({
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Accept: "application/json",
-    // Shim Origin for Better Auth compatibility
-    "Origin": "app://pocketpal",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
+
+  // Better Auth checks trusted origins. Do not send Origin for non-auth APIs,
+  // otherwise backend CORS can reject mobile requests in production.
+  if (url.includes("/api/auth/")) {
+    headers.Origin = "app://pocketpal";
+  }
 
   const fetchOptions: RequestInit = {
     method,

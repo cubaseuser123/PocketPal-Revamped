@@ -213,7 +213,9 @@ export default function FriendsScreen() {
                   <View style={styles.avatarContainer}>
                     {friend.avatarUrl ? (
                       <Image
-                        source={{ uri: getFullAvatarUrl(friend.avatarUrl) }}
+                        source={{
+                          uri: getFullAvatarUrl(friend.avatarUrl) || undefined,
+                        }}
                         style={styles.avatar}
                       />
                     ) : (
@@ -253,7 +255,9 @@ export default function FriendsScreen() {
                   <View style={styles.avatarContainer}>
                     {req.from.avatarUrl ? (
                       <Image
-                        source={{ uri: getFullAvatarUrl(req.from.avatarUrl) }}
+                        source={{
+                          uri: getFullAvatarUrl(req.from.avatarUrl) || undefined,
+                        }}
                         style={styles.avatar}
                       />
                     ) : (

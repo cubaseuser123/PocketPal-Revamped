@@ -50,7 +50,7 @@ export function useUser() {
     queryKey: ["user"],
     queryFn: async () => {
       const data = await userApi.getProfile(API_URL);
-      return data.user as User;
+      return (data?.user ?? null) as User | null;
     },
     staleTime: 1000 * 30, // 30 seconds
   });
