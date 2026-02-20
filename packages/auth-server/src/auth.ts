@@ -3,8 +3,8 @@ import { betterAuth } from "better-auth";
 import { phoneNumber } from "better-auth/plugins";
 import { jwt, bearer } from "better-auth/plugins";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { db, schema } from "./db";
-import { sendOTPViaTwilio, verifyOTPViaTwilio } from "./twilio";
+import { db, schema } from "./db/index.js";
+import { sendOTPViaTwilio, verifyOTPViaTwilio } from "./twilio.js";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {

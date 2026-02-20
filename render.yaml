@@ -30,7 +30,7 @@ services:
       - key: PALLY_API_URL
         value: https://harshkapse-dev--pally-mistral-api-pallymodel-api-dev.modal.run
       - key: AUTH_SERVER_URL
-        value: http://127.0.0.1:3001/api/auth
+        value: http://localhost:${PORT}/api/auth
 
   # Next.js Web Frontend Service
   - type: web

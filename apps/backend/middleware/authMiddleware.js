@@ -56,7 +56,12 @@ export const protect = async (req, res, next) => {
       } else {
         if (process.env.DEBUG === 'true') console.log("🔍 Verifying session with Auth Server...");
         try {
-          const authResponse = await fetch(`${process.env.AUTH_SERVER_URL}/get-session`, {
+          let authServerUrl = process.env.AUTH_SERVER_URL || `http://127.0.0.1:5000/api/auth`;
+          if (authServerUrl.includes("${PORT}")) {
+            authServerUrl = authServerUrl.replace("${PORT}", process.env.PORT || 5757);
+          }
+
+          const authResponse = await fetch(`${authServerUrl}/get-session`, {
             method: "GET",
             headers: {
               "Authorization": req.headers.authorization,

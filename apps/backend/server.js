@@ -46,32 +46,25 @@ Sentry.init({
   tracesSampleRate: 1.0,
 });
 
-// ============ AUTH SERVER PROXY ============
-// Proxy /api/auth/* requests to the auth server
-const AUTH_SERVER_URL =
-  process.env.AUTH_SERVER_URL || "http://127.0.0.1:5000/api/auth";
-const authServerBase = AUTH_SERVER_URL.replace(/\/api\/auth\/?$/, ""); // Extract base URL
-console.log(
-  `[Auth Proxy] Configured to forward /api/auth -> ${authServerBase}/api/auth`,
-);
+// ============ INTERNAL AUTH SERVER ============
+// Use better-auth directly instead of proxying
+import { authHandler } from "@repo/auth-server";
 
-app.use(
-  "/api/auth",
-  createProxyMiddleware({
-    target: authServerBase,
-    changeOrigin: true,
-    pathRewrite: (path) => `/api/auth${path}`,
-    on: {
-      proxyReq: (proxyReq, req, res) => {
-        console.log(`[Auth Proxy] ${req.method} ${req.originalUrl}`);
-      },
-      error: (err, req, res) => {
-        console.error("[Auth Proxy] Error:", err.message);
-        res.status(502).json({ error: "Auth server unavailable" });
-      },
-    },
-  }),
-);
+console.log("[Auth Server] Mounted internal better-auth Express handler at /api/auth");
+app.use(async (req, res, next) => {
+  if (req.path.startsWith("/api/auth")) {
+    try {
+      if (process.env.NODE_ENV !== "production") {
+        console.log(`[Auth Request] ${req.method} ${req.originalUrl}`);
+      }
+      return await authHandler(req, res);
+    } catch (error) {
+      console.error("[Auth Error]", error);
+      return next(error);
+    }
+  }
+  next();
+});
 
 // Middlewares
 app.use(express.json());
