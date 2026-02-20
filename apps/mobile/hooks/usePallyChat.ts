@@ -97,10 +97,6 @@ export function usePallyChat(options: UsePallyChatOptions = {}) {
         throw new Error(`Chat request failed: ${response.status}`);
       }
 
-      // Read the AI SDK Data Stream Protocol via streaming
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error("No response stream");
-
       const decoder = new TextDecoder();
       const contentType = response.headers.get("content-type") || "";
       const isPlainTextStream = contentType.includes("text/plain");
@@ -108,87 +104,99 @@ export function usePallyChat(options: UsePallyChatOptions = {}) {
       const toolsUsed: string[] = [];
       let buffer = "";
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) {
-          if (isPlainTextStream && buffer) {
-            assistantContent += buffer;
-          }
-          break;
-        }
+      const updateAssistantContent = () => {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantMessageId ? { ...m, content: assistantContent } : m
+          )
+        );
+      };
 
-        const chunk = decoder.decode(value, { stream: true });
+      const handleProtocolLine = (rawLine: string) => {
+        const trimmed = rawLine.trim();
+        if (!trimmed) return;
+        const line = trimmed.startsWith("data:")
+          ? trimmed.slice(5).trim()
+          : trimmed;
+        if (!line || line === "[DONE]") return;
+
+        if (line.startsWith("0:")) {
+          // Text token — JSON-encoded string
+          try {
+            const text = JSON.parse(line.slice(2));
+            assistantContent += text;
+            updateAssistantContent();
+          } catch {
+            // Skip unparseable lines
+          }
+        } else if (line.startsWith("9:")) {
+          // Tool call — update thinking status
+          try {
+            const toolCall = JSON.parse(line.slice(2));
+            const toolName = toolCall?.toolName;
+            if (toolName) {
+              toolsUsed.push(toolName);
+              setThinkingStatus(getToolLabel(toolName));
+            }
+          } catch {
+            // Skip unparseable tool call lines
+          }
+        } else if (line.startsWith("{")) {
+          // Fallback for JSON event payloads in SSE streams.
+          try {
+            const event = JSON.parse(line);
+            if (event?.type === "text-delta" && typeof event.text === "string") {
+              assistantContent += event.text;
+              updateAssistantContent();
+            }
+          } catch {
+            // Skip unknown JSON events
+          }
+        }
+        // Other prefixes (a: tool result, d: finish, e: step finish) — ignored
+      };
+
+      // React Native fetch may not expose a ReadableStream. Fall back to full body text.
+      const reader = response.body?.getReader?.();
+      if (!reader) {
+        const text = await response.text();
         if (isPlainTextStream) {
-          assistantContent += chunk;
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantMessageId
-                ? { ...m, content: assistantContent }
-                : m
-            )
-          );
-          continue;
-        }
-
-        buffer += chunk;
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
-        for (const rawLine of lines) {
-          const trimmed = rawLine.trim();
-          if (!trimmed) continue;
-          const line = trimmed.startsWith("data:")
-            ? trimmed.slice(5).trim()
-            : trimmed;
-          if (!line || line === "[DONE]") continue;
-
-          if (line.startsWith("0:")) {
-            // Text token — JSON-encoded string
-            try {
-              const text = JSON.parse(line.slice(2));
-              assistantContent += text;
-
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantMessageId
-                    ? { ...m, content: assistantContent }
-                    : m
-                )
-              );
-            } catch {
-              // Skip unparseable lines
-            }
-          } else if (line.startsWith("9:")) {
-            // Tool call — update thinking status
-            try {
-              const toolCall = JSON.parse(line.slice(2));
-              const toolName = toolCall?.toolName;
-              if (toolName) {
-                toolsUsed.push(toolName);
-                setThinkingStatus(getToolLabel(toolName));
-              }
-            } catch {
-              // Skip unparseable tool call lines
-            }
-          } else if (line.startsWith("{")) {
-            // Fallback for JSON event payloads in SSE streams.
-            try {
-              const event = JSON.parse(line);
-              if (event?.type === "text-delta" && typeof event.text === "string") {
-                assistantContent += event.text;
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantMessageId
-                      ? { ...m, content: assistantContent }
-                      : m
-                  )
-                );
-              }
-            } catch {
-              // Skip unknown JSON events
-            }
+          assistantContent = text;
+          updateAssistantContent();
+        } else {
+          for (const rawLine of text.split("\n")) {
+            handleProtocolLine(rawLine);
           }
-          // Other prefixes (a: tool result, d: finish, e: step finish) — ignored
+        }
+      } else {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            if (buffer) {
+              if (isPlainTextStream) {
+                assistantContent += buffer;
+                updateAssistantContent();
+              } else {
+                handleProtocolLine(buffer);
+              }
+            }
+            break;
+          }
+
+          const chunk = decoder.decode(value, { stream: true });
+          if (isPlainTextStream) {
+            assistantContent += chunk;
+            updateAssistantContent();
+            continue;
+          }
+
+          buffer += chunk;
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          for (const rawLine of lines) {
+            handleProtocolLine(rawLine);
+          }
         }
       }
 
