@@ -5,13 +5,11 @@
   },
   "build": {
     "preview": {
-      "prebuildCommand": "pnpm install --frozen-lockfile && pnpm --filter @repo/auth build",
       "android": {
         "buildType": "apk"
       }
     },
     "production": {
-      "prebuildCommand": "pnpm install --frozen-lockfile && pnpm --filter @repo/auth build",
       "android": {
         "buildType": "app-bundle"
       }

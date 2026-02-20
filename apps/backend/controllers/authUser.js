@@ -29,8 +29,12 @@ export const sendOTP = async (req, res) => {
     const formattedPhone = phone.startsWith("+") ? phone : `+${phone}`;
     if (process.env.DEBUG === 'true') console.log("📞 Formatted phone:", formattedPhone);
 
-    // let user = await prisma.user.findUnique({ where: { phone: formattedPhone } });
-    const [existingUser] = await db.select().from(users).where(eq(users.phone, formattedPhone)).limit(1);
+    // let user = await prisma.user.findUnique({ where: { phoneNumber: formattedPhone } });
+    const [existingUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.phoneNumber, formattedPhone))
+      .limit(1);
     let user = existingUser;
     
     let isNewUser = false;
@@ -54,10 +58,10 @@ export const sendOTP = async (req, res) => {
         return res.status(400).json({ message: "Name required for new users", isNewUser: true });
       }
       
-      // user = await prisma.user.create({ data: { name, phone: formattedPhone } });
+      // user = await prisma.user.create({ data: { name, phoneNumber: formattedPhone } });
       const [newUser] = await db.insert(users).values({
         name,
-        phone: formattedPhone,
+        phoneNumber: formattedPhone,
       }).returning();
       user = newUser;
 
@@ -114,8 +118,12 @@ export const verifyOTP = async (req, res) => {
     }
 
     // Find user
-    // const user = await prisma.user.findUnique({ where: { phone: formattedPhone } });
-    const [user] = await db.select().from(users).where(eq(users.phone, formattedPhone)).limit(1);
+    // const user = await prisma.user.findUnique({ where: { phoneNumber: formattedPhone } });
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.phoneNumber, formattedPhone))
+      .limit(1);
     
     if (!user) return res.status(404).json({ message: "User not found" });
 

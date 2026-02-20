@@ -116,7 +116,7 @@ export const getGroupDetails = async (req, res) => {
           id: m.user.id,
           name: m.user.name,
           avatarUrl: m.user.avatarUrl,
-          phone: m.user.phone
+          phone: m.user.phoneNumber
       })),
     };
 
@@ -149,14 +149,19 @@ export const listUserGroups = async (req, res) => {
     });
     const memberGroupIds = memberGroups.map(m => m.groupId);
 
+    // Build filter without invalid UUID placeholders.
+    const membershipFilter = memberGroupIds.length > 0
+      ? or(
+          eq(splitGroups.creatorId, userId),
+          inArray(splitGroups.id, memberGroupIds)
+        )
+      : eq(splitGroups.creatorId, userId);
+
     // Fetch groups
     const groups = await db.query.splitGroups.findMany({
       where: and(
-          eq(splitGroups.status, "active"),
-          or(
-              eq(splitGroups.creatorId, userId),
-              inArray(splitGroups.id, memberGroupIds.length ? memberGroupIds : ['dummy']) // handle empty array
-          )
+        eq(splitGroups.status, "active"),
+        membershipFilter
       ),
       orderBy: [desc(splitGroups.createdAt)],
     });

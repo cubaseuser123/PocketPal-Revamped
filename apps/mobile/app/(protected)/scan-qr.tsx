@@ -6,7 +6,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { CameraView, Camera } from "expo-camera";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
-import RNQRGenerator from "rn-qr-generator";
+import Constants from "expo-constants";
 import { useWallets } from "../../hooks/useApi";
 import { useCustomAlert } from "../../contexts/CustomAlertContext";
 
@@ -20,7 +20,10 @@ export default function ScanQRScreen() {
 
 
   // Check KYC status
-  const isKycCompleted = wallets?.kycCompleted === true;
+const isKycCompleted = wallets?.kycCompleted === true;
+const isExpoGo =
+  Constants.executionEnvironment === "storeClient" ||
+  Constants.appOwnership === "expo";
 
   useEffect(() => {
     const getCameraPermissions = async () => {
@@ -69,6 +72,15 @@ export default function ScanQRScreen() {
   };
 
   const pickImage = async () => {
+    if (isExpoGo) {
+      showAlert(
+        "Feature unavailable in Expo Go",
+        "Gallery QR scanning needs a development build. Use camera scan in Expo Go.",
+        [{ text: "OK" }],
+      );
+      return;
+    }
+
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: false,
@@ -78,6 +90,8 @@ export default function ScanQRScreen() {
 
     if (!result.canceled && result.assets && result.assets[0].uri) {
       try {
+        const module = require("rn-qr-generator");
+        const RNQRGenerator = module?.default || module;
         const response = await RNQRGenerator.detect({
           uri: result.assets[0].uri,
         });

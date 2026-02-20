@@ -7,14 +7,20 @@ export const getProfile = async (req, res) => {
   try {
     const user = await db.query.users.findFirst({
       where: eq(users.id, req.user.id),
-      with: { wallets: true },
     });
 
     if (!user || user.deletedAt) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const userWallets = user.wallets || [];
+    const userWallets = await db
+      .select({
+        id: wallets.id,
+        type: wallets.type,
+        balance: wallets.balance,
+      })
+      .from(wallets)
+      .where(eq(wallets.userId, req.user.id));
     
     const primaryWallet = userWallets.find(w => w.type === "primary");
     const savingsWallet = userWallets.find(w => w.type === "savings");
@@ -32,7 +38,7 @@ export const getProfile = async (req, res) => {
       user: {
         id: user.id,
         name: user.name,
-        phone: user.phone,
+        phone: user.phoneNumber,
         level: user.level,
         coins: user.coins,
         avatarUrl: user.avatarUrl,
@@ -257,7 +263,7 @@ export const deleteUser = async (req, res) => {
     await db.update(users)
       .set({
         deletedAt: new Date(timestamp),
-        phone: `${user.phone}_deleted_${timestamp}`,
+        phoneNumber: `${user.phoneNumber}_deleted_${timestamp}`,
         ...(user.friendCode && { friendCode: `${user.friendCode}_deleted_${timestamp}` }),
       })
       .where(eq(users.id, req.user.id));
@@ -278,14 +284,36 @@ export const checkUserExists = async (req, res) => {
     }
     
     const formattedPhone = phone.startsWith("+") ? phone : `+${phone.trim()}`;
-    
-    const user = await db.query.users.findFirst({
-      where: eq(users.phone, formattedPhone),
-    });
+
+    // Support both current schema (phone_number) and legacy schema (phone)
+    // to avoid 500s in environments with partial/older migrations.
+    const columnsResult = await db.execute(sql`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'users'
+        AND column_name IN ('phone_number', 'phone')
+    `);
+
+    const columnNames = Array.isArray(columnsResult?.rows)
+      ? columnsResult.rows.map((r) => r.column_name)
+      : [];
+
+    let exists = false;
+    if (columnNames.includes("phone_number")) {
+      const user = await db.query.users.findFirst({
+        where: eq(users.phoneNumber, formattedPhone),
+      });
+      exists = !!user;
+    } else if (columnNames.includes("phone")) {
+      const legacyResult = await db.execute(sql`
+        SELECT id FROM users WHERE phone = ${formattedPhone} LIMIT 1
+      `);
+      exists = Array.isArray(legacyResult?.rows) && legacyResult.rows.length > 0;
+    }
 
     return res.json({ 
-      exists: !!user,
-      message: user ? "User exists" : "User not found" 
+      exists,
+      message: exists ? "User exists" : "User not found" 
     });
   } catch (err) {
     console.error("checkUserExists error:", err);
@@ -320,7 +348,6 @@ export const getDashboard = async (req, res) => {
     ] = await Promise.all([
       db.query.users.findFirst({
         where: eq(users.id, userId),
-        with: { wallets: true },
       }),
       db.query.goals.findMany({
         where: eq(goals.userId, userId),
@@ -351,15 +378,24 @@ export const getDashboard = async (req, res) => {
         ),
       }),
     ]);
+    // Requery wallets with minimal columns to avoid runtime failures if optional
+    // wallet columns differ across environments.
+    const walletRows = await db
+      .select({
+        id: wallets.id,
+        type: wallets.type,
+        balance: wallets.balance,
+      })
+      .from(wallets)
+      .where(eq(wallets.userId, userId));
 
     if (!user || user.deletedAt) {
       return res.status(404).json({ message: "User not found" });
     }
 
     // Process Wallets
-    const userWallets = user.wallets || [];
-    const primaryWallet = userWallets.find(w => w.type === "primary");
-    const savingsWallet = userWallets.find(w => w.type === "savings");
+    const primaryWallet = walletRows.find(w => w.type === "primary");
+    const savingsWallet = walletRows.find(w => w.type === "savings");
 
     let shouldShowOnboarding = !user.onboardingCompleted;
     if (user.onboardingCompleted && user.onboardingCompletedAt) {
@@ -383,7 +419,7 @@ export const getDashboard = async (req, res) => {
       user: {
         id: user.id,
         name: user.name,
-        phone: user.phone,
+        phone: user.phoneNumber,
         level: user.level,
         coins: user.coins,
         avatarUrl: user.avatarUrl,

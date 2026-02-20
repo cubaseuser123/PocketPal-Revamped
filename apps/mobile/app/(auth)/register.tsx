@@ -23,6 +23,7 @@ export default function RegisterScreen() {
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [success, setSuccess] = useState(false);
   const [cooldown, setCooldown] = useState(0);
 
@@ -40,6 +41,8 @@ export default function RegisterScreen() {
   };
 
   const handleSendOTP = async () => {
+    setNotice("");
+
     if (!name.trim()) {
       setError("Please enter your name");
       return;
@@ -57,6 +60,7 @@ export default function RegisterScreen() {
 
     setLoading(true);
     setError("");
+    setNotice("");
 
     try {
       const formattedPhone = phone.startsWith("+") ? phone : `+91${phone}`;
@@ -71,9 +75,7 @@ export default function RegisterScreen() {
         }
       } catch (checkErr) {
         console.error("Failed to check user existence:", checkErr);
-        setError("Unable to verify account status. Please try again.");
-        setLoading(false);
-        return;
+        setNotice("Couldn't verify account status, continuing with OTP.");
       }
       
       // Better Auth creates user on OTP verification, not on send
@@ -179,6 +181,13 @@ export default function RegisterScreen() {
             <View style={styles.errorContainer}>
               <MaterialIcons name="error-outline" size={16} color="#FF4B4B" />
               <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
+
+          {notice ? (
+            <View style={styles.noticeContainer}>
+              <MaterialIcons name="info-outline" size={16} color="#FFC107" />
+              <Text style={styles.noticeText}>{notice}</Text>
             </View>
           ) : null}
         </View>
@@ -319,6 +328,16 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 14,
     color: "#FF4B4B",
+  },
+  noticeContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 4,
+  },
+  noticeText: {
+    fontSize: 14,
+    color: "#FFC107",
   },
   spacer: {
     flex: 1,

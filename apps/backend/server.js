@@ -3,11 +3,11 @@ import dotenv from "dotenv";
 
 import express from "express";
 import { createServer } from "http";
+import { randomUUID } from "crypto";
 import { Server } from "socket.io";
 
 import cors from "cors";
 import * as Sentry from "@sentry/node";
-import { createProxyMiddleware } from "http-proxy-middleware";
 // import rateLimit from "express-rate-limit";
 import swaggerDocs from "./config/swagger.js";
 import authRoutes from "./routes/authRoutes.js";
@@ -100,6 +100,29 @@ app.use(
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   }),
 );
+
+// Minimal request tracing for production API troubleshooting.
+app.use((req, res, next) => {
+  const requestId =
+    req.headers["x-request-id"]?.toString() ||
+    req.headers["x-correlation-id"]?.toString() ||
+    randomUUID();
+  const startedAt = process.hrtime.bigint();
+
+  req.requestId = requestId;
+  res.setHeader("x-request-id", requestId);
+
+  res.on("finish", () => {
+    if (!req.originalUrl.startsWith("/api/v1/")) return;
+    const durationMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
+
+    console.log(
+      `[HTTP] ${requestId} ${req.method} ${req.originalUrl} ${res.statusCode} ${durationMs.toFixed(1)}ms`,
+    );
+  });
+
+  next();
+});
 
 const io = new Server(httpServer, {
   cors: {
@@ -217,12 +240,37 @@ app.get("/", (req, res) => {
 // Sentry Error Handler (v8+)
 Sentry.setupExpressErrorHandler(app);
 
-// Optional fallthrough error handler
+// Final fallback error handler with request correlation.
 app.use(function onError(err, req, res, next) {
-  // The error id is attached to `res.sentry` to be returned
-  // and optionally displayed to the user for support.
-  res.statusCode = 500;
-  res.end(res.sentry + "\n");
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  const requestId =
+    req.requestId?.toString() ||
+    res.getHeader("x-request-id")?.toString() ||
+    randomUUID();
+  const statusCode =
+    Number(err?.statusCode || err?.status || res.statusCode) || 500;
+  const sentryId = res.sentry;
+
+  console.error(
+    `[HTTP_ERROR] ${requestId} ${req.method} ${req.originalUrl} ${statusCode}`,
+    err?.stack || err,
+  );
+
+  if (statusCode >= 500) {
+    return res.status(statusCode).json({
+      message: "Internal server error",
+      requestId,
+      ...(sentryId ? { sentryId } : {}),
+    });
+  }
+
+  return res.status(statusCode).json({
+    message: err?.message || "Request failed",
+    requestId,
+  });
 });
 
 const PORT = process.env.PORT || 5757;

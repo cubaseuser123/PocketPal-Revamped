@@ -3,15 +3,49 @@ dotenv.config({ path: "../.env" });
 import { db } from "../config/db.js";
 import { sql } from "drizzle-orm";
 import { eq, and } from "drizzle-orm";
+import { auth } from "@repo/auth-server";
 import {
   users, wallets, categories, transactions, goals, friends,
   bossBattles, bossBattleLeaderboard, quests, questAssignments,
   userBadges, subscriptions, notifications, shopItems, userPurchases,
   splitGroups, splitGroupMembers, splitExpenses, sessions,
-  conversationMemory, duels
+  conversationMemory, duels, accounts, verifications, jwks
 } from "../drizzle/schema.js";
 
 const TARGET_PHONE = "+919860915237";
+const TARGET_NAME = "Harsh Kapse";
+
+const toTempEmail = (phoneNumber) => `${phoneNumber.replace(/\+/g, "")}@pocketpal.temp`;
+
+const createAuthSeedUser = async ({ name, phoneNumber }) => {
+  const ctx = await auth.$context;
+
+  const user = await ctx.internalAdapter.createUser({
+    name,
+    phoneNumber,
+    phoneNumberVerified: true,
+    email: toTempEmail(phoneNumber),
+    emailVerified: false,
+    role: "user",
+    level: 1,
+    coins: 0,
+    kycCompleted: false,
+    onboardingCompleted: false,
+  });
+
+  await ctx.internalAdapter.createAccount({
+    userId: user.id,
+    accountId: phoneNumber,
+    providerId: "phone-number",
+  });
+
+  const session = await ctx.internalAdapter.createSession(user.id);
+
+  // Force Better Auth to create JWKS using the current BETTER_AUTH_SECRET.
+  await auth.api.getJwks({ headers: new Headers() });
+
+  return { user, session };
+};
 
 const resetAndSeed = async () => {
   console.log("🗑️  Clearing ALL data...\n");
@@ -36,6 +70,9 @@ const resetAndSeed = async () => {
   await db.delete(quests);
   await db.delete(wallets);
   await db.delete(sessions);
+  await db.delete(verifications);
+  await db.delete(accounts);
+  await db.delete(jwks);
   await db.delete(categories);
   await db.delete(users);
 
@@ -44,11 +81,12 @@ const resetAndSeed = async () => {
   // ────────────────────────────────────────
   // 1. MAIN USER (Full KYC)
   // ────────────────────────────────────────
-  console.log("👤 Creating main user...");
-  const [mainUser] = await db.insert(users).values({
-    name: "Harsh Kapse",
+  console.log("👤 Creating main user via auth-server...");
+  const { user: authUser, session } = await createAuthSeedUser({
+    name: TARGET_NAME,
     phoneNumber: TARGET_PHONE,
-    phoneNumberVerified: true,
+  });
+  const [mainUser] = await db.update(users).set({
     level: 12,
     coins: 2450,
     kycCompleted: true,
@@ -56,7 +94,8 @@ const resetAndSeed = async () => {
     onboardingCompletedAt: new Date(),
     totalGoalsCompleted: 3,
     friendCode: "HARS1485",
-  }).returning();
+  }).where(eq(users.id, authUser.id)).returning();
+  console.log(`🔐 Auth session created for seed user: ${session.token.slice(0, 16)}...`);
 
   // ────────────────────────────────────────
   // 2. WALLETS

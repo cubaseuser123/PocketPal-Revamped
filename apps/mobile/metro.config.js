@@ -4,22 +4,21 @@ const { withNativeWind } = require("nativewind/metro");
 
 const projectRoot = __dirname;
 const workspaceRoot = path.resolve(projectRoot, "../..");
-
 const config = getDefaultConfig(projectRoot);
 
-// 1. Watch all files within the monorepo
-config.watchFolders = [workspaceRoot];
-
-// 2. Let Metro know where to resolve packages and in what order
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, "node_modules"),
   path.resolve(workspaceRoot, "node_modules"),
 ];
-
-// 3. Force Metro to resolve (sub)dependencies to a single version
 config.resolver.disableHierarchicalLookup = true;
+config.resolver.extraNodeModules = {
+  ...(config.resolver.extraNodeModules || {}),
+  react: path.resolve(projectRoot, "node_modules/react"),
+  "react-dom": path.resolve(projectRoot, "node_modules/react-dom"),
+  "react-native": path.resolve(projectRoot, "node_modules/react-native"),
+};
 
-module.exports = withNativeWind(config, { 
+module.exports = withNativeWind(config, {
   input: "./app/globals.css",
-  configPath: path.resolve(projectRoot, "tailwind.config.js")
+  configPath: "./tailwind.config.js",
 });
