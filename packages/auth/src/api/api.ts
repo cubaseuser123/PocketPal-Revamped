@@ -12,6 +12,11 @@ export const userApi = {
     return response.data;
   },
 
+  getDashboard: async (baseUrl: string) => {
+    const response = await httpApi.get(`${baseUrl}/api/v1/user/dashboard`);
+    return response.data;
+  },
+
   updateProfile: async (baseUrl: string, data: { name?: string; avatarUrl?: string }) => {
     const response = await httpApi.put(`${baseUrl}/api/v1/user/me`, data);
     return response.data;

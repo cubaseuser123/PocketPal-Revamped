@@ -10,6 +10,7 @@ import {
   uploadAvatar,
   deleteUser,
   checkUserExists,
+  getDashboard,
 } from "../controllers/userController.js";
 
 const router = express.Router();
@@ -67,6 +68,17 @@ const upload = multer({
  *         description: User profile with wallets
  */
 router.get("/me", protect, getProfile);
+
+/**
+ * @swagger
+ * /api/user/dashboard:
+ *   get:
+ *     tags: [User]
+ *     summary: Get aggregated dashboard data (user, wallets, stats, goals, categories)
+ *     security:
+ *       - bearerAuth: []
+ */
+router.get("/dashboard", protect, getDashboard);
 
 /**
  * @swagger

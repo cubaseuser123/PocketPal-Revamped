@@ -49,7 +49,7 @@ Sentry.init({
 // ============ AUTH SERVER PROXY ============
 // Proxy /api/auth/* requests to the auth server
 const AUTH_SERVER_URL =
-  process.env.AUTH_SERVER_URL || "http://127.0.0.1:3001/api/auth";
+  process.env.AUTH_SERVER_URL || "http://127.0.0.1:5000/api/auth";
 const authServerBase = AUTH_SERVER_URL.replace(/\/api\/auth\/?$/, ""); // Extract base URL
 console.log(
   `[Auth Proxy] Configured to forward /api/auth -> ${authServerBase}/api/auth`,

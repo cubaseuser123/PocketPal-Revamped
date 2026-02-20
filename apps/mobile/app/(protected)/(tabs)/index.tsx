@@ -22,13 +22,9 @@ import { SavingsWallet } from "../../../components/dashboard/SavingsWallet";
 import { ArcadeTeaser } from "../../../components/dashboard/ArcadeTeaser";
 import { ActiveSplitGroups } from "../../../components/dashboard/ActiveSplitGroups";
 import {
-  useUser,
-  useWallets,
-  useSpendingSummary,
-  useCategories,
-  useGoals,
   getFullAvatarUrl,
 } from "../../../hooks/useApi";
+import { useDashboard } from "../../../hooks/useDashboard";
 
 // Static spending chart data (would come from analytics API in future)
 const SPENDING_CHART_DATA = {
@@ -57,34 +53,21 @@ export default function HomeScreen() {
   );
 
   // API hooks
-  const { user, loading: userLoading, refetch: refetchUser } = useUser();
-  const {
-    wallets,
-    loading: walletsLoading,
-    refetch: refetchWallets,
-  } = useWallets();
-  const { summary, refetch: refetchSummary } =
-    useSpendingSummary(selectedPeriod);
-  const { categories } = useCategories();
-  const { goals, refetch: refetchGoals } = useGoals();
+  const { dashboard, loading, refetch } = useDashboard();
+
+  const user = dashboard?.user;
+  const wallets = dashboard?.wallets;
+  const categories = dashboard?.categories;
+  const goals = dashboard?.goals;
+  const summary = dashboard?.spendingSummary?.[selectedPeriod];
 
   // Pull-to-refresh
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([
-      refetchUser(),
-      refetchWallets(),
-      refetchSummary(),
-      refetchGoals(),
-    ]);
+    await refetch();
     setRefreshing(false);
-  }, [refetchUser, refetchWallets, refetchSummary, refetchGoals]);
-
-  // Refetch spending summary when period changes
-  useEffect(() => {
-    refetchSummary();
-  }, [selectedPeriod]);
+  }, [refetch]);
 
   // Get featured goal for savings widget
   const featuredGoal = goals?.find((g) => g.isFeatured) || goals?.[0];
@@ -136,7 +119,7 @@ export default function HomeScreen() {
   };
 
   // Show loading state
-  if (userLoading || walletsLoading) {
+  if (loading && !dashboard) {
     return (
       <View className="flex-1 items-center justify-center bg-background-dark">
         <ActivityIndicator size="large" color="#FF8C32" />

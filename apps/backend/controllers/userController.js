@@ -1,6 +1,6 @@
 import { db } from "../config/db.js";
-import { users, wallets, transactions } from "../drizzle/schema.js";
-import { eq, sql } from "drizzle-orm";
+import { users, wallets, transactions, goals, categories } from "../drizzle/schema.js";
+import { eq, sql, and, desc, asc, gte } from "drizzle-orm";
 
 // Get current user profile
 export const getProfile = async (req, res) => {
@@ -289,6 +289,128 @@ export const checkUserExists = async (req, res) => {
     });
   } catch (err) {
     console.error("checkUserExists error:", err);
+    return res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
+// Get aggregated dashboard data
+export const getDashboard = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const now = new Date();
+
+    // Calculate dates for spending summaries
+    const weekStart = new Date(now);
+    weekStart.setDate(weekStart.getDate() - 7);
+    
+    const monthStart = new Date(now);
+    monthStart.setMonth(monthStart.getMonth() - 1);
+    
+    const threeMonthStart = new Date(now);
+    threeMonthStart.setMonth(threeMonthStart.getMonth() - 3);
+
+    // Parallel DB queries
+    const [
+      user,
+      userGoals,
+      allCategories,
+      txListWeek,
+      txListMonth,
+      txList3m
+    ] = await Promise.all([
+      db.query.users.findFirst({
+        where: eq(users.id, userId),
+        with: { wallets: true },
+      }),
+      db.query.goals.findMany({
+        where: eq(goals.userId, userId),
+        orderBy: [desc(goals.isFeatured), desc(goals.createdAt)],
+      }),
+      db.query.categories.findMany({
+        orderBy: [desc(categories.isDefault), asc(categories.name)],
+      }),
+      db.query.transactions.findMany({
+        where: and(
+          eq(transactions.userId, userId),
+          eq(transactions.type, "expense"),
+          gte(transactions.createdAt, weekStart)
+        ),
+      }),
+      db.query.transactions.findMany({
+        where: and(
+          eq(transactions.userId, userId),
+          eq(transactions.type, "expense"),
+          gte(transactions.createdAt, monthStart)
+        ),
+      }),
+      db.query.transactions.findMany({
+        where: and(
+          eq(transactions.userId, userId),
+          eq(transactions.type, "expense"),
+          gte(transactions.createdAt, threeMonthStart)
+        ),
+      }),
+    ]);
+
+    if (!user || user.deletedAt) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Process Wallets
+    const userWallets = user.wallets || [];
+    const primaryWallet = userWallets.find(w => w.type === "primary");
+    const savingsWallet = userWallets.find(w => w.type === "savings");
+
+    let shouldShowOnboarding = !user.onboardingCompleted;
+    if (user.onboardingCompleted && user.onboardingCompletedAt) {
+      const daysSinceOnboarding = (Date.now() - new Date(user.onboardingCompletedAt).getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSinceOnboarding > 30) {
+        shouldShowOnboarding = true;
+      }
+    }
+
+    // Process Spending Summaries
+    const calcSummary = (txs, start) => {
+      const totalSpent = txs.reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0);
+      const days = Math.ceil((now - start) / (1000 * 60 * 60 * 24));
+      return {
+        totalSpent,
+        avgPerDay: days > 0 ? Math.round(totalSpent / days) : 0,
+      };
+    };
+
+    return res.json({
+      user: {
+        id: user.id,
+        name: user.name,
+        phone: user.phone,
+        level: user.level,
+        coins: user.coins,
+        avatarUrl: user.avatarUrl,
+        kycCompleted: user.kycCompleted,
+        onboardingCompleted: !shouldShowOnboarding,
+        friendCode: user.friendCode,
+      },
+      wallets: {
+        primary: { balance: Number(primaryWallet?.balance || 0) },
+        savings: { balance: Number(savingsWallet?.balance || 0) },
+        total: Number(primaryWallet?.balance || 0) + Number(savingsWallet?.balance || 0)
+      },
+      goals: userGoals.map(g => ({
+        ...g,
+        targetAmount: Number(g.targetAmount),
+        currentAmount: Number(g.currentAmount),
+        progress: Number(g.targetAmount) > 0 ? Number(g.currentAmount) / Number(g.targetAmount) : 0,
+      })),
+      categories: allCategories,
+      spendingSummary: {
+        week: calcSummary(txListWeek, weekStart),
+        month: calcSummary(txListMonth, monthStart),
+        "3m": calcSummary(txList3m, threeMonthStart),
+      }
+    });
+  } catch (err) {
+    console.error("getDashboard error:", err);
     return res.status(500).json({ message: "Server error", error: err.message });
   }
 };
