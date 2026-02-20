@@ -10,7 +10,9 @@
     "check-types": "turbo run check-types",
     "dev": "turbo run dev",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "lint": "turbo run lint"
+    "lint": "turbo run lint",
+    "security:audit": "pnpm audit --audit-level=moderate",
+    "security:audit:prod": "pnpm audit --prod --audit-level=moderate"
   },
   "dependencies": {
     "react": "^19.2.3",
@@ -18,6 +20,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
+    "@isaacs/brace-expansion": "5.0.1",
     "@types/node": "^22.19.2",
     "eslint": "^9.39.2",
     "eslint-plugin-react": "^7.37.5",
@@ -27,5 +30,18 @@
     "prettier-plugin-tailwindcss": "^0.7.2",
     "turbo": "^2.6.3",
     "typescript": "^5.9.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "ajv": "8.18.0",
+      "body-parser": "2.2.1",
+      "esbuild": "0.25.0",
+      "hono": "4.11.10",
+      "jws": "3.2.3",
+      "lodash": "4.17.23",
+      "minimatch": "10.2.1",
+      "qs": "6.14.2",
+      "tar": "7.5.8"
+    }
   }
 }

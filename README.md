@@ -112,6 +112,7 @@ pnpm install
 ```
 
 This installs dependencies for all apps and shared packages.
+Use pnpm only in this repository. npm/yarn lockfiles are intentionally not supported.
 
 ---
 
@@ -173,8 +174,9 @@ npx expo run:ios
 
 ```
 cd apps/mobile
-eas build --platform android
-eas build --platform ios
+pnpm exec eas build -p android --profile preview
+pnpm exec eas build -p android --profile production
+pnpm exec eas build -p ios --profile production
 ```
 
 ---

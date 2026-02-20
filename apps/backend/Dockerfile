@@ -19,11 +19,12 @@ COPY .gitignore .gitignore
 COPY --from=builder /app/out/json/ .
 COPY --from=builder /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=builder /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
-# We only install production dependencies since we don't need a build step
-RUN pnpm install --frozen-lockfile --prod
+RUN pnpm install --frozen-lockfile
 
 # Copy full pruned source code
 COPY --from=builder /app/out/full/ .
+RUN pnpm --filter @repo/auth-server build
+RUN CI=true pnpm install --frozen-lockfile --prod
 
 FROM base AS runner
 WORKDIR /app

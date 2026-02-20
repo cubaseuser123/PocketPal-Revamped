@@ -1,14 +1,17 @@
 {
   "cli": {
-    "version": ">= 10.0.0"
+    "version": ">= 10.0.0",
+    "appVersionSource": "remote"
   },
   "build": {
     "preview": {
+      "prebuildCommand": "pnpm install --frozen-lockfile && pnpm --filter @repo/auth build",
       "android": {
         "buildType": "apk"
       }
     },
     "production": {
+      "prebuildCommand": "pnpm install --frozen-lockfile && pnpm --filter @repo/auth build",
       "android": {
         "buildType": "app-bundle"
       }
