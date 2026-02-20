@@ -102,17 +102,46 @@ export function usePallyChat(options: UsePallyChatOptions = {}) {
       if (!reader) throw new Error("No response stream");
 
       const decoder = new TextDecoder();
+      const contentType = response.headers.get("content-type") || "";
+      const isPlainTextStream = contentType.includes("text/plain");
       let assistantContent = "";
       const toolsUsed: string[] = [];
+      let buffer = "";
 
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          if (isPlainTextStream && buffer) {
+            assistantContent += buffer;
+          }
+          break;
+        }
 
         const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split("\n").filter((line) => line.trim());
+        if (isPlainTextStream) {
+          assistantContent += chunk;
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMessageId
+                ? { ...m, content: assistantContent }
+                : m
+            )
+          );
+          continue;
+        }
 
-        for (const line of lines) {
+        buffer += chunk;
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const rawLine of lines) {
+          const trimmed = rawLine.trim();
+          if (!trimmed) continue;
+          const line = trimmed.startsWith("data:")
+            ? trimmed.slice(5).trim()
+            : trimmed;
+          if (!line || line === "[DONE]") continue;
+
           if (line.startsWith("0:")) {
             // Text token — JSON-encoded string
             try {
@@ -140,6 +169,23 @@ export function usePallyChat(options: UsePallyChatOptions = {}) {
               }
             } catch {
               // Skip unparseable tool call lines
+            }
+          } else if (line.startsWith("{")) {
+            // Fallback for JSON event payloads in SSE streams.
+            try {
+              const event = JSON.parse(line);
+              if (event?.type === "text-delta" && typeof event.text === "string") {
+                assistantContent += event.text;
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantMessageId
+                      ? { ...m, content: assistantContent }
+                      : m
+                  )
+                );
+              }
+            } catch {
+              // Skip unknown JSON events
             }
           }
           // Other prefixes (a: tool result, d: finish, e: step finish) — ignored

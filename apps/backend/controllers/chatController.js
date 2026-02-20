@@ -226,7 +226,7 @@ export const streamChat = async (req, res) => {
             maxSteps: 5,
         });
 
-        result.pipeDataStreamToResponse(res);
+        result.pipeTextStreamToResponse(res);
     } catch (error) {
         console.error("[Chat] Stream error:", error);
         res.status(500).json({ message: "Chat failed", error: error.message });
