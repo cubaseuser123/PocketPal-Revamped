@@ -12,6 +12,8 @@ interface PeriodData {
   chartPath: string;
   chartFillPath: string;
   xLabels: string[];
+  chartEndX?: number;
+  chartEndY?: number;
 }
 
 interface SpendingOverviewProps {
@@ -125,7 +127,12 @@ export function SpendingOverview({
           />
           
           {/* End point */}
-          <Circle cx={100} cy={10} r={2} fill="#FF8C32" />
+          <Circle
+            cx={currentData.chartEndX ?? 100}
+            cy={currentData.chartEndY ?? 44}
+            r={2}
+            fill="#FF8C32"
+          />
         </Svg>
       </View>
 

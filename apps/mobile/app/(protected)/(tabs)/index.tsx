@@ -38,6 +38,47 @@ const SPENDING_CHART_META = {
   },
 };
 
+type ChartShape = {
+  chartPath: string;
+  chartFillPath: string;
+  chartEndX: number;
+  chartEndY: number;
+};
+
+const buildChartShape = (pointsInput: number[] | undefined): ChartShape => {
+  const points = pointsInput && pointsInput.length > 0 ? pointsInput : [0, 0];
+  const safePoints = points.map((value) =>
+    Number.isFinite(value) ? Math.max(0, value) : 0
+  );
+
+  const bottomY = 44;
+  const topY = 10;
+  const maxValue = Math.max(...safePoints, 0);
+  const yRange = bottomY - topY;
+  const xStep = safePoints.length > 1 ? 100 / (safePoints.length - 1) : 100;
+
+  const coords = safePoints.map((value, idx) => {
+    const normalized = maxValue > 0 ? value / maxValue : 0;
+    return {
+      x: Number((idx * xStep).toFixed(2)),
+      y: Number((bottomY - normalized * yRange).toFixed(2)),
+    };
+  });
+
+  const chartPath = coords
+    .map((point, idx) => `${idx === 0 ? "M" : "L"}${point.x} ${point.y}`)
+    .join(" ");
+  const chartFillPath = `${chartPath} V 50 H 0 Z`;
+  const endPoint = coords[coords.length - 1] || { x: 100, y: bottomY };
+
+  return {
+    chartPath: chartPath || "M0 44 L100 44",
+    chartFillPath: chartFillPath || "M0 44 L100 44 V 50 H 0 Z",
+    chartEndX: endPoint.x,
+    chartEndY: endPoint.y,
+  };
+};
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -52,7 +93,9 @@ export default function HomeScreen() {
   const wallets = dashboard?.wallets;
   const categories = dashboard?.categories;
   const goals = dashboard?.goals;
-  const summary = dashboard?.spendingSummary?.[selectedPeriod];
+  const weekSummary = dashboard?.spendingSummary?.week;
+  const monthSummary = dashboard?.spendingSummary?.month;
+  const threeMonthSummary = dashboard?.spendingSummary?.["3m"];
 
   // Pull-to-refresh
   const [refreshing, setRefreshing] = useState(false);
@@ -65,48 +108,50 @@ export default function HomeScreen() {
   // Get featured goal for savings widget
   const featuredGoal = goals?.find((g) => g.isFeatured) || goals?.[0];
 
+  const weekChart = buildChartShape(weekSummary?.chartPoints);
+  const monthChart = buildChartShape(monthSummary?.chartPoints);
+  const threeMonthChart = buildChartShape(threeMonthSummary?.chartPoints);
+
   // Build spending data from API
   const spendingData = {
     week: {
-      spent: selectedPeriod === "week" ? summary?.totalSpent || 0 : 0,
-      avgPerDay: selectedPeriod === "week" ? summary?.avgPerDay || 0 : 0,
+      spent: weekSummary?.totalSpent || 0,
+      avgPerDay: weekSummary?.avgPerDay || 0,
       label: "This week spent",
-      chartPath: "M0 44 L100 44",
-      chartFillPath: "M0 44 L100 44 V 50 H 0 Z",
-      ...SPENDING_CHART_META.week,
+      chartPath: weekChart.chartPath,
+      chartFillPath: weekChart.chartFillPath,
+      chartEndX: weekChart.chartEndX,
+      chartEndY: weekChart.chartEndY,
+      xLabels: weekSummary?.chartLabels || SPENDING_CHART_META.week.xLabels,
     },
     month: {
-      spent: selectedPeriod === "month" ? summary?.totalSpent || 0 : 0,
-      avgPerDay: selectedPeriod === "month" ? summary?.avgPerDay || 0 : 0,
+      spent: monthSummary?.totalSpent || 0,
+      avgPerDay: monthSummary?.avgPerDay || 0,
       label: "This month spent",
-      chartPath: "M0 44 L100 44",
-      chartFillPath: "M0 44 L100 44 V 50 H 0 Z",
-      ...SPENDING_CHART_META.month,
+      chartPath: monthChart.chartPath,
+      chartFillPath: monthChart.chartFillPath,
+      chartEndX: monthChart.chartEndX,
+      chartEndY: monthChart.chartEndY,
+      xLabels: monthSummary?.chartLabels || SPENDING_CHART_META.month.xLabels,
     },
     "3m": {
-      spent: selectedPeriod === "3m" ? summary?.totalSpent || 0 : 0,
-      avgPerDay: selectedPeriod === "3m" ? summary?.avgPerDay || 0 : 0,
+      spent: threeMonthSummary?.totalSpent || 0,
+      avgPerDay: threeMonthSummary?.avgPerDay || 0,
       label: "Last 3 months spent",
-      chartPath: "M0 44 L100 44",
-      chartFillPath: "M0 44 L100 44 V 50 H 0 Z",
-      ...SPENDING_CHART_META["3m"],
+      chartPath: threeMonthChart.chartPath,
+      chartFillPath: threeMonthChart.chartFillPath,
+      chartEndX: threeMonthChart.chartEndX,
+      chartEndY: threeMonthChart.chartEndY,
+      xLabels: threeMonthSummary?.chartLabels || SPENDING_CHART_META["3m"].xLabels,
     },
   };
 
-  const handleScan = () => {
-    router.push("/(protected)/scan-qr");
+  const handleGoToExpenseWallet = () => {
+    router.push("/(protected)/(tabs)/wallets");
   };
 
-  const handleLoadMoney = () => {
-    router.push("/(protected)/load-money");
-  };
-
-  const handleAddToSavings = () => {
-    if (!featuredGoal) {
-      router.push("/(protected)/(tabs)/goals");
-      return;
-    }
-    router.push("/(protected)/transfer-money");
+  const handleGoToSavings = () => {
+    router.push("/(protected)/(tabs)/goals");
   };
 
   const handleEnterArcade = () => {
@@ -231,8 +276,7 @@ export default function HomeScreen() {
           categories={(categories || [])
             .slice(0, 3)
             .map((c) => ({ id: c.id, name: c.name, emoji: c.emoji }))}
-          onScan={handleScan}
-          onLoadMoney={handleLoadMoney}
+          onGoTo={handleGoToExpenseWallet}
         />
 
         {/* Savings Wallet */}
@@ -241,7 +285,7 @@ export default function HomeScreen() {
           goalName={featuredGoal?.name || "Make your first goal"}
           goalEmoji={featuredGoal?.emoji || "🎯"}
           targetAmount={featuredGoal?.targetAmount || 0}
-          onAddToSavings={handleAddToSavings}
+          onGoTo={handleGoToSavings}
           hasGoal={!!featuredGoal}
         />
 

@@ -321,6 +321,89 @@ export const checkUserExists = async (req, res) => {
   }
 };
 
+const startOfDay = (date) => {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
+const toAmount = (value) => {
+  const num = Number(value);
+  return Number.isFinite(num) ? Math.abs(num) : 0;
+};
+
+const sumInRange = (txs, start, end) =>
+  txs.reduce((sum, tx) => {
+    const txDate = new Date(tx.createdAt);
+    if (txDate >= start && txDate < end) {
+      return sum + toAmount(tx.amount);
+    }
+    return sum;
+  }, 0);
+
+const buildWeekTrend = (txs, now) => {
+  const today = startOfDay(now);
+  const dayStarts = Array.from({ length: 7 }, (_, i) => {
+    const day = new Date(today);
+    day.setDate(today.getDate() - (6 - i));
+    return day;
+  });
+
+  const labels = dayStarts.map((day) =>
+    day.toLocaleDateString("en-US", { weekday: "short" })
+  );
+
+  const points = dayStarts.map((start, idx) => {
+    const end =
+      idx === dayStarts.length - 1
+        ? new Date(today.getTime() + 24 * 60 * 60 * 1000)
+        : dayStarts[idx + 1];
+    return Math.round(sumInRange(txs, start, end));
+  });
+
+  return { chartPoints: points, chartLabels: labels };
+};
+
+const buildMonthTrend = (txs, now, monthStart) => {
+  const end = new Date(now);
+  const start = startOfDay(monthStart);
+  const labels = ["Week 1", "Week 2", "Week 3", "Week 4"];
+  const totalMs = Math.max(end.getTime() - start.getTime(), 1);
+
+  const points = labels.map((_, idx) => {
+    const bucketStart = new Date(start.getTime() + (totalMs * idx) / 4);
+    const bucketEnd =
+      idx === labels.length - 1
+        ? end
+        : new Date(start.getTime() + (totalMs * (idx + 1)) / 4);
+    return Math.round(sumInRange(txs, bucketStart, bucketEnd));
+  });
+
+  return { chartPoints: points, chartLabels: labels };
+};
+
+const buildThreeMonthTrend = (txs, now) => {
+  const monthStarts = Array.from({ length: 3 }, (_, idx) => {
+    const monthDate = new Date(now.getFullYear(), now.getMonth() - (2 - idx), 1);
+    monthDate.setHours(0, 0, 0, 0);
+    return monthDate;
+  });
+
+  const labels = monthStarts.map((monthDate) =>
+    monthDate.toLocaleDateString("en-US", { month: "short" })
+  );
+
+  const points = monthStarts.map((start, idx) => {
+    const end =
+      idx === monthStarts.length - 1
+        ? new Date(now.getFullYear(), now.getMonth() + 1, 1)
+        : monthStarts[idx + 1];
+    return Math.round(sumInRange(txs, start, end));
+  });
+
+  return { chartPoints: points, chartLabels: labels };
+};
+
 // Get aggregated dashboard data
 export const getDashboard = async (req, res) => {
   try {
@@ -415,6 +498,13 @@ export const getDashboard = async (req, res) => {
       };
     };
 
+    const weekSummary = calcSummary(txListWeek, weekStart);
+    const monthSummary = calcSummary(txListMonth, monthStart);
+    const threeMonthSummary = calcSummary(txList3m, threeMonthStart);
+    const weekTrend = buildWeekTrend(txListWeek, now);
+    const monthTrend = buildMonthTrend(txListMonth, now, monthStart);
+    const threeMonthTrend = buildThreeMonthTrend(txList3m, now);
+
     return res.json({
       user: {
         id: user.id,
@@ -440,9 +530,18 @@ export const getDashboard = async (req, res) => {
       })),
       categories: allCategories,
       spendingSummary: {
-        week: calcSummary(txListWeek, weekStart),
-        month: calcSummary(txListMonth, monthStart),
-        "3m": calcSummary(txList3m, threeMonthStart),
+        week: {
+          ...weekSummary,
+          ...weekTrend,
+        },
+        month: {
+          ...monthSummary,
+          ...monthTrend,
+        },
+        "3m": {
+          ...threeMonthSummary,
+          ...threeMonthTrend,
+        },
       }
     });
   } catch (err) {

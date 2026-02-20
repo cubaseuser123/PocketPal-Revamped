@@ -99,6 +99,7 @@ export function usePallyChat(options: UsePallyChatOptions = {}) {
 
       const decoder = new TextDecoder();
       const contentType = response.headers.get("content-type") || "";
+      const isJsonResponse = contentType.includes("application/json");
       const isPlainTextStream = contentType.includes("text/plain");
       let assistantContent = "";
       const toolsUsed: string[] = [];
@@ -156,48 +157,66 @@ export function usePallyChat(options: UsePallyChatOptions = {}) {
         // Other prefixes (a: tool result, d: finish, e: step finish) — ignored
       };
 
-      // React Native fetch may not expose a ReadableStream. Fall back to full body text.
-      const reader = response.body?.getReader?.();
-      if (!reader) {
-        const text = await response.text();
-        if (isPlainTextStream) {
-          assistantContent = text;
-          updateAssistantContent();
-        } else {
-          for (const rawLine of text.split("\n")) {
-            handleProtocolLine(rawLine);
+      if (isJsonResponse) {
+        const data = await response.json();
+        if (typeof data?.text === "string") {
+          assistantContent = data.text;
+        }
+        if (Array.isArray(data?.toolsUsed)) {
+          for (const toolName of data.toolsUsed) {
+            if (typeof toolName === "string") {
+              toolsUsed.push(toolName);
+            }
           }
         }
       } else {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) {
-            if (buffer) {
-              if (isPlainTextStream) {
-                assistantContent += buffer;
-                updateAssistantContent();
-              } else {
-                handleProtocolLine(buffer);
-              }
-            }
-            break;
-          }
-
-          const chunk = decoder.decode(value, { stream: true });
+        // React Native fetch may not expose a ReadableStream. Fall back to full body text.
+        const reader = response.body?.getReader?.();
+        if (!reader) {
+          const text = await response.text();
           if (isPlainTextStream) {
-            assistantContent += chunk;
+            assistantContent = text;
             updateAssistantContent();
-            continue;
+          } else {
+            for (const rawLine of text.split("\n")) {
+              handleProtocolLine(rawLine);
+            }
           }
+        } else {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) {
+              if (buffer) {
+                if (isPlainTextStream) {
+                  assistantContent += buffer;
+                  updateAssistantContent();
+                } else {
+                  handleProtocolLine(buffer);
+                }
+              }
+              break;
+            }
 
-          buffer += chunk;
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
+            const chunk = decoder.decode(value, { stream: true });
+            if (isPlainTextStream) {
+              assistantContent += chunk;
+              updateAssistantContent();
+              continue;
+            }
 
-          for (const rawLine of lines) {
-            handleProtocolLine(rawLine);
+            buffer += chunk;
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
+
+            for (const rawLine of lines) {
+              handleProtocolLine(rawLine);
+            }
           }
         }
+      }
+
+      if (toolsUsed.length > 0) {
+        setThinkingStatus(getToolLabel(toolsUsed[toolsUsed.length - 1]));
       }
 
       // Final update with toolsUsed

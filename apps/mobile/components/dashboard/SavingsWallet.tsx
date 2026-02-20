@@ -7,7 +7,7 @@ interface SavingsWalletProps {
   goalName: string;
   goalEmoji: string;
   targetAmount: number;
-  onAddToSavings: () => void;
+  onGoTo: () => void;
   hasGoal?: boolean;
 }
 
@@ -16,7 +16,7 @@ export function SavingsWallet({
   goalName,
   goalEmoji,
   targetAmount,
-  onAddToSavings,
+  onGoTo,
   hasGoal = true,
 }: SavingsWalletProps) {
   const progress = (hasGoal && targetAmount > 0) ? Math.min((balance / targetAmount) * 100, 100) : 0;
@@ -87,13 +87,13 @@ export function SavingsWallet({
         ₹{balance.toLocaleString()}
       </Text>
 
-      {/* Add to savings button */}
+      {/* Action button */}
       <TouchableOpacity
-        onPress={onAddToSavings}
+        onPress={onGoTo}
         className="w-full bg-transparent border-2 border-indigo-500/50 py-3 px-4 rounded-xl flex-row items-center justify-center gap-2 active:bg-indigo-500/10"
       >
-        <MaterialIcons name={hasGoal ? "payments" : "add-circle-outline"} size={20} color="#A5B4FC" />
-        <Text className="text-indigo-300 font-semibold">{hasGoal ? "Add to Savings" : "Create Goal"}</Text>
+        <MaterialIcons name="arrow-forward" size={20} color="#A5B4FC" />
+        <Text className="text-indigo-300 font-semibold">Go To</Text>
       </TouchableOpacity>
     </View>
   );

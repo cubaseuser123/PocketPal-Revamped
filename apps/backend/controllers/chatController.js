@@ -1,4 +1,4 @@
-import { streamText, tool } from "ai";
+import { generateText, tool, stepCountIs } from "ai";
 import { gateway } from "@ai-sdk/gateway";
 import { z } from "zod";
 import * as chatTools from "../ai/services/chatTools.js";
@@ -44,7 +44,7 @@ export const streamChat = async (req, res) => {
             return res.status(400).json({ message: "Messages array is required" });
         }
 
-        const result = streamText({
+        const { text, steps } = await generateText({
             model: gateway("mistral/devstral-2"),
             system: SYSTEM_PROMPT,
             messages,
@@ -223,10 +223,66 @@ export const streamChat = async (req, res) => {
                         chatTools.getFriendStats(userId, params),
                 }),
             },
-            maxSteps: 5,
+            stopWhen: stepCountIs(8),
+            onStepFinish: (step) => {
+                console.log(`[Chat] Step finished - finishReason: ${step.finishReason}`);
+                if (step.toolCalls?.length) {
+                    console.log(`[Chat] Tools called:`, step.toolCalls.map((tc) => tc.toolName));
+                }
+                if (step.text) {
+                    console.log(`[Chat] Step text: "${step.text.slice(0, 100)}"`);
+                }
+            },
         });
 
-        result.pipeTextStreamToResponse(res);
+        console.log(`[Chat] Steps length:`, steps.length);
+
+        const toolsUsed = steps
+            .filter((s) => s.toolCalls && s.toolCalls.length > 0)
+            .flatMap((s) => s.toolCalls.map((tc) => tc.toolName));
+
+        const stepTexts = steps
+            .map((s) => (typeof s.text === "string" ? s.text.trim() : ""))
+            .filter(Boolean)
+            .join("\n")
+            .trim();
+
+        let finalText = (typeof text === "string" ? text.trim() : "") || stepTexts;
+
+        // If model keeps calling tools and never emits final text, produce a concise fallback
+        // from the latest tool outputs so the user never sees an empty response.
+        if (!finalText && toolsUsed.length > 0) {
+            const toolResults = steps
+                .flatMap((s) => (Array.isArray(s.toolResults) ? s.toolResults : []))
+                .slice(-3)
+                .map((result) => {
+                    const toolName = result?.toolName || "tool";
+                    const raw = result?.result ?? result;
+                    const serialized =
+                        typeof raw === "string" ? raw : JSON.stringify(raw ?? {});
+                    return `${toolName}: ${serialized}`;
+                })
+                .join("\n");
+
+            if (toolResults) {
+                try {
+                    const summary = await generateText({
+                        model: gateway("mistral/devstral-2"),
+                        system:
+                            "You are Pally. Summarize tool outputs for a student in 1-3 short sentences. Use ₹ for money.",
+                        prompt: `Summarize these tool results:\n${toolResults}`,
+                    });
+                    finalText = summary.text?.trim() || "";
+                } catch (summaryError) {
+                    console.error("[Chat] Summary fallback failed:", summaryError);
+                }
+            }
+        }
+
+        res.json({
+            text: finalText || "I couldn't process that request.",
+            toolsUsed,
+        });
     } catch (error) {
         console.error("[Chat] Stream error:", error);
         res.status(500).json({ message: "Chat failed", error: error.message });

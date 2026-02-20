@@ -1,6 +1,5 @@
 import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 
 interface Category {
   id: string;
@@ -11,15 +10,13 @@ interface Category {
 interface ExpenseWalletProps {
   balance: number;
   categories: Category[];
-  onScan: () => void;
-  onLoadMoney: () => void;
+  onGoTo: () => void;
 }
 
 export function ExpenseWallet({
   balance,
   categories,
-  onScan,
-  onLoadMoney,
+  onGoTo,
 }: ExpenseWalletProps) {
   return (
     <View className="bg-card-dark rounded-3xl p-5 border border-white/5 relative overflow-hidden">
@@ -75,31 +72,21 @@ export function ExpenseWallet({
         ))}
       </ScrollView>
 
-      {/* Action buttons */}
-      <View className="flex-row gap-3">
-        <TouchableOpacity
-          onPress={onScan}
-          className="flex-1 bg-card-dark-secondary py-3 rounded-xl flex-row items-center justify-center gap-2 border border-white/5 active:bg-card-dark-secondary/80"
-        >
-          <MaterialIcons name="qr-code-scanner" size={20} color="white" />
-          <Text className="text-white text-sm font-medium">Scan</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={onLoadMoney}
-          className="flex-1 bg-primary py-3 rounded-xl flex-row items-center justify-center gap-1.5 active:bg-primary-hover"
-          style={{
-            shadowColor: "#FF8C32",
-            shadowOffset: { width: 0, height: 0 },
-            shadowOpacity: 0.25,
-            shadowRadius: 15,
-            elevation: 5,
-          }}
-        >
-          <MaterialIcons name="account-balance" size={20} color="white" />
-          <Text className="text-white text-sm font-bold">Load Money</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Action button */}
+      <TouchableOpacity
+        onPress={onGoTo}
+        className="w-full bg-primary py-3 rounded-xl flex-row items-center justify-center gap-1.5 active:bg-primary-hover"
+        style={{
+          shadowColor: "#FF8C32",
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0.25,
+          shadowRadius: 15,
+          elevation: 5,
+        }}
+      >
+        <MaterialIcons name="arrow-forward" size={20} color="white" />
+        <Text className="text-white text-sm font-bold">Go To</Text>
+      </TouchableOpacity>
     </View>
   );
 }
