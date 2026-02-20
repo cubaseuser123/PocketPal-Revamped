@@ -1,0 +1,50 @@
+services:
+  # Backend API Service
+  - type: web
+    name: pocketpal-backend
+    env: docker
+    dockerfilePath: ./apps/backend/Dockerfile
+    dockerContext: .
+    plan: free # Change to 'free' if you want the free tier
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_URL_DIRECT
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: BETTER_AUTH_SECRET
+        generateValue: true
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_PHONE_NUMBER
+        sync: false
+      - key: TWILIO_VERIFY_SERVICE_SID
+        sync: false
+      - key: AI_GATEWAY_API_KEY
+        sync: false
+      - key: PALLY_API_URL
+        value: https://harshkapse-dev--pally-mistral-api-pallymodel-api-dev.modal.run
+      - key: AUTH_SERVER_URL
+        value: http://127.0.0.1:3001/api/auth
+
+  # Next.js Web Frontend Service
+  - type: web
+    name: pocketpal-web
+    env: docker
+    dockerfilePath: ./apps/web/Dockerfile
+    dockerContext: .
+    plan: free # Change to 'free' if you want the free tier
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # If the web app needs to know the backend URL, set it here:
+      # - key: NEXT_PUBLIC_API_URL
+      #   fromService:
+      #     type: web
+      #     name: pocketpal-backend
+      #     envVarKey: RENDER_EXTERNAL_URL
