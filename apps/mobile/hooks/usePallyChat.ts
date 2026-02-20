@@ -83,11 +83,6 @@ export function usePallyChat(options: UsePallyChatOptions = {}) {
         { role: "user" as const, content: content.trim() },
       ];
 
-      // Show "fetching data" after a delay (tool calls take time)
-      const thinkingTimer = setTimeout(() => {
-        setThinkingStatus("Fetching your data... 📊");
-      }, 2000);
-
       const response = await fetch(`${API_URL}/api/v1/chat`, {
         method: "POST",
         headers: {
@@ -98,26 +93,68 @@ export function usePallyChat(options: UsePallyChatOptions = {}) {
         signal: abortControllerRef.current.signal,
       });
 
-      clearTimeout(thinkingTimer);
-
       if (!response.ok) {
         throw new Error(`Chat request failed: ${response.status}`);
       }
 
-      // Parse JSON response (backend now returns { text, toolsUsed })
-      const data = await response.json();
-      const fullContent = data.text || "";
-      const toolsUsed = data.toolsUsed || [];
+      // Read the AI SDK Data Stream Protocol via streaming
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("No response stream");
 
-      // Update assistant message
+      const decoder = new TextDecoder();
+      let assistantContent = "";
+      const toolsUsed: string[] = [];
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split("\n").filter((line) => line.trim());
+
+        for (const line of lines) {
+          if (line.startsWith("0:")) {
+            // Text token — JSON-encoded string
+            try {
+              const text = JSON.parse(line.slice(2));
+              assistantContent += text;
+
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantMessageId
+                    ? { ...m, content: assistantContent }
+                    : m
+                )
+              );
+            } catch {
+              // Skip unparseable lines
+            }
+          } else if (line.startsWith("9:")) {
+            // Tool call — update thinking status
+            try {
+              const toolCall = JSON.parse(line.slice(2));
+              const toolName = toolCall?.toolName;
+              if (toolName) {
+                toolsUsed.push(toolName);
+                setThinkingStatus(getToolLabel(toolName));
+              }
+            } catch {
+              // Skip unparseable tool call lines
+            }
+          }
+          // Other prefixes (a: tool result, d: finish, e: step finish) — ignored
+        }
+      }
+
+      // Final update with toolsUsed
       setMessages((prev) =>
         prev.map((m) =>
           m.id === assistantMessageId
             ? {
-                ...m,
-                content: fullContent || "I couldn't process that request.",
-                toolsUsed,
-              }
+              ...m,
+              content: assistantContent || "I couldn't process that request.",
+              toolsUsed: toolsUsed.length > 0 ? toolsUsed : undefined,
+            }
             : m
         )
       );
