@@ -1,7 +1,20 @@
-import { View, Text, TouchableOpacity } from "react-native";
-import { LinearGradient as ExpoLinearGradient } from "expo-linear-gradient";
+import { useMemo, useState } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  type GestureResponderEvent,
+  type LayoutChangeEvent,
+} from "react-native";
 import { PallyIcon } from "../ui/PallyIcon";
-import Svg, { Path, Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from "react-native-svg";
+import Svg, {
+  Path,
+  Circle,
+  Defs,
+  LinearGradient as SvgLinearGradient,
+  Stop,
+  Line,
+} from "react-native-svg";
 
 type Period = "week" | "month" | "3m";
 
@@ -12,6 +25,7 @@ interface PeriodData {
   chartPath: string;
   chartFillPath: string;
   xLabels: string[];
+  chartPoints?: number[];
   chartEndX?: number;
   chartEndY?: number;
 }
@@ -34,6 +48,81 @@ export function SpendingOverview({
   data,
 }: SpendingOverviewProps) {
   const currentData = data[selectedPeriod];
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [chartLayout, setChartLayout] = useState({ width: 0, height: 0 });
+
+  const resolvedPoints = useMemo(() => {
+    const rawPoints =
+      currentData.chartPoints && currentData.chartPoints.length > 0
+        ? currentData.chartPoints
+        : Array.from({ length: currentData.xLabels.length || 2 }, () => 0);
+
+    return rawPoints.map((value) =>
+      Number.isFinite(value) ? Math.max(0, Number(value)) : 0
+    );
+  }, [currentData.chartPoints, currentData.xLabels.length]);
+
+  const chartCoords = useMemo(() => {
+    const bottomY = 44;
+    const topY = 10;
+    const yRange = bottomY - topY;
+    const maxValue = Math.max(...resolvedPoints, 0);
+    const xStep =
+      resolvedPoints.length > 1 ? 100 / (resolvedPoints.length - 1) : 100;
+
+    return resolvedPoints.map((value, idx) => {
+      const normalized = maxValue > 0 ? value / maxValue : 0;
+      return {
+        x: Number((idx * xStep).toFixed(2)),
+        y: Number((bottomY - normalized * yRange).toFixed(2)),
+      };
+    });
+  }, [resolvedPoints]);
+
+  const updateActiveIndex = (locationX: number) => {
+    if (chartLayout.width <= 0 || resolvedPoints.length === 0) return;
+    const clampedX = Math.max(0, Math.min(locationX, chartLayout.width));
+    const ratio = chartLayout.width > 0 ? clampedX / chartLayout.width : 0;
+    const idx = Math.round(ratio * (resolvedPoints.length - 1));
+    const safeIdx = Math.max(0, Math.min(idx, resolvedPoints.length - 1));
+    setActiveIndex(safeIdx);
+  };
+
+  const onChartGrant = (event: GestureResponderEvent) => {
+    updateActiveIndex(event.nativeEvent.locationX);
+  };
+
+  const onChartMove = (event: GestureResponderEvent) => {
+    updateActiveIndex(event.nativeEvent.locationX);
+  };
+
+  const onChartLayout = (event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout;
+    setChartLayout({ width, height });
+  };
+
+  const activeCoord =
+    activeIndex !== null && chartCoords[activeIndex] ? chartCoords[activeIndex] : null;
+  const activeAmount =
+    activeIndex !== null && resolvedPoints[activeIndex] !== undefined
+      ? resolvedPoints[activeIndex]
+      : 0;
+  const activeLabel =
+    activeIndex !== null && currentData.xLabels[activeIndex]
+      ? currentData.xLabels[activeIndex]
+      : "";
+  const activeXPercent = activeCoord ? activeCoord.x / 100 : 0;
+  const activeYPercent = activeCoord ? activeCoord.y / 50 : 0;
+  const activeXPx = activeXPercent * chartLayout.width;
+  const activeYPx = activeYPercent * chartLayout.height;
+  const tooltipWidth = 120;
+  const tooltipLeft = Math.max(
+    0,
+    Math.min(chartLayout.width - tooltipWidth, activeXPx - tooltipWidth / 2)
+  );
+  const tooltipTop = Math.max(0, activeYPx - 42);
+  const fallbackLastCoord =
+    chartCoords[chartCoords.length - 1] || { x: 100, y: 44 };
 
   return (
     <View className="bg-card-dark rounded-3xl p-5 border border-white/5 relative overflow-hidden">
@@ -90,7 +179,16 @@ export function SpendingOverview({
       </View>
 
       {/* Chart */}
-      <View className="h-32 w-full mb-2">
+      <View
+        className="h-32 w-full mb-2"
+        onLayout={onChartLayout}
+        onStartShouldSetResponder={() => true}
+        onMoveShouldSetResponder={() => true}
+        onResponderGrant={onChartGrant}
+        onResponderMove={onChartMove}
+        onResponderRelease={() => setActiveIndex(null)}
+        onResponderTerminate={() => setActiveIndex(null)}
+      >
         {/* Grid lines */}
         <View className="absolute inset-0 justify-between">
           {[0, 1, 2, 3].map((i) => (
@@ -110,6 +208,17 @@ export function SpendingOverview({
             </SvgLinearGradient>
           </Defs>
           
+          {activeCoord && (
+            <Line
+              x1={activeCoord.x}
+              y1={0}
+              x2={activeCoord.x}
+              y2={50}
+              stroke="rgba(255,140,50,0.35)"
+              strokeWidth={0.9}
+            />
+          )}
+
           {/* Line */}
           <Path
             d={currentData.chartPath}
@@ -128,12 +237,32 @@ export function SpendingOverview({
           
           {/* End point */}
           <Circle
-            cx={currentData.chartEndX ?? 100}
-            cy={currentData.chartEndY ?? 44}
+            cx={currentData.chartEndX ?? fallbackLastCoord.x}
+            cy={currentData.chartEndY ?? fallbackLastCoord.y}
             r={2}
             fill="#FF8C32"
           />
+          {activeCoord && (
+            <Circle cx={activeCoord.x} cy={activeCoord.y} r={3} fill="#FF8C32" />
+          )}
         </Svg>
+
+        {activeCoord && (
+          <View
+            style={{
+              position: "absolute",
+              left: tooltipLeft,
+              top: tooltipTop,
+              width: tooltipWidth,
+            }}
+            className="rounded-lg bg-card-dark-secondary border border-white/10 px-2 py-1"
+          >
+            <Text className="text-white text-xs font-bold">
+              ₹{Math.round(activeAmount).toLocaleString()}
+            </Text>
+            <Text className="text-text-secondary text-[10px]">{activeLabel}</Text>
+          </View>
+        )}
       </View>
 
       {/* X-axis labels */}
