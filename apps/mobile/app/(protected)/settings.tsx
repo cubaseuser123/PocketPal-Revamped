@@ -6,6 +6,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useUser, API_URL } from "../../hooks/useUser";
 import { useCustomAlert } from "../../contexts/CustomAlertContext";
 import { storage } from "@repo/auth";
+import { ScreenHeader } from "../../components/ui/ScreenHeader";
 
 // Check if we're in development mode
 const isDev = process.env.NODE_ENV !== 'production' || __DEV__;
@@ -250,13 +251,7 @@ export default function SettingsScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
-          <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Settings</Text>
-        <View style={styles.headerButton} />
-      </View>
+      <ScreenHeader title="Settings" onBack={handleBack} />
 
       <ScrollView
         style={styles.scrollView}
@@ -339,27 +334,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#0F0F14",
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-    backgroundColor: "rgba(15, 15, 20, 0.95)",
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: {
-    color: "#FFFFFF",
-    fontSize: 18,
-    fontWeight: "700",
-  },
+
   scrollView: {
     flex: 1,
   },

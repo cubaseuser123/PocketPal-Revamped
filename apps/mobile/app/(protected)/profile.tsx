@@ -8,39 +8,20 @@ import { useAuth, storage } from "@repo/auth";
 import { useUser, API_URL, getFullAvatarUrl } from "../../hooks/useApi";
 import * as ImagePicker from 'expo-image-picker';
 import { useCustomAlert } from "../../contexts/CustomAlertContext";
+import { useBadges } from "../../hooks/useApi";
 
+import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { ProfileHeader } from "../../components/profile/ProfileHeader";
 import { LevelProgressCard } from "../../components/profile/LevelProgressCard";
 import { BadgesCard } from "../../components/profile/BadgesCard";
 import { StatsOverviewCard } from "../../components/profile/StatsOverviewCard";
-import { SettingsMenuCard } from "../../components/profile/SettingsMenuCard";
-
-// Mock data
-const MOCK_BADGES = [
-  { id: "1", name: "Early Saver", emoji: "🌱", color: "#10B981", unlocked: true },
-  { id: "2", name: "Boss Slayer", emoji: "⚔️", color: "#8B5CF6", unlocked: true },
-  { id: "3", name: "Streak Master", emoji: "🔥", color: "#EF4444", unlocked: false },
-  { id: "4", name: "Rich List", emoji: "💰", color: "#FFD166", unlocked: false },
-];
-
-const MOCK_STATS = [
-  { id: "1", emoji: "🪙", value: "---", label: "Total Coins" },
-  { id: "2", emoji: "🔥", value: "9 days", label: "Longest Streak" },
-  { id: "3", emoji: "💰", value: "₹4,800", label: "Total Saved" },
-];
-
-const MOCK_MENU_ITEMS = [
-  { id: "subscriptions", icon: "payment" as const, label: "Subscriptions" },
-  { id: "notifications", icon: "notifications" as const, label: "Notifications" },
-  { id: "verification", icon: "verified" as const, label: "Verification", badge: "KYC DONE", badgeColor: "#3DDC97" },
-  { id: "help", icon: "help" as const, label: "Help" },
-];
 
 export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const authContext = useAuth();
   const { user, updateUser, uploadAvatar, deleteAccount, refetch } = useUser();
+  const { badges, earnedCount, totalCount } = useBadges();
   const { showAlert } = useCustomAlert();
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [editName, setEditName] = useState("");
@@ -71,7 +52,6 @@ export default function ProfileScreen() {
   };
 
   const pickImage = async () => {
-    // Request permission
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     
     if (permissionResult.granted === false) {
@@ -96,33 +76,12 @@ export default function ProfileScreen() {
     setUpdating(true);
     try {
       await uploadAvatar(uri);
-      // Avatar update handled by refetch in hook onSuccess?
-      // Actually we might need to manually set it if optimistic not set, 
-      // but invalidation handles it.
-      // We can also setEditAvatar here for immediate feedback if needed but 
-      // refetch() should propagate via 'user' prop.
-      
       showAlert("Success", "Profile picture updated!");
       refetch();
     } catch (error: any) {
       showAlert("Error", error.message || "Failed to upload image");
     } finally {
       setUpdating(false);
-    }
-  };
-
-
-  const handleMenuPress = (id: string) => {
-    if (id === "subscriptions") {
-      router.push("/(protected)/subscriptions");
-    } else if (id === "verification") {
-      if (user?.kycCompleted) {
-        showAlert("Verified", "You are already a fully verified user!");
-      } else {
-        router.push("/(protected)/full-kyc-benefits");
-      }
-    } else {
-      console.log("Menu item pressed:", id);
     }
   };
 
@@ -158,7 +117,6 @@ export default function ProfileScreen() {
                await deleteAccount();
                await authContext?.logout();
                router.replace("/(auth)/welcome");
-               // Small delay to ensure alert is closed before the next one (if any) or navigation handles it
              } catch (error: any) {
                showAlert("Error", error.message || "Failed to delete account");
              }
@@ -170,18 +128,37 @@ export default function ProfileScreen() {
 
   const displayAvatar = getFullAvatarUrl(user?.avatarUrl) || "https://api.dicebear.com/7.x/avataaars/png?seed=PocketPal";
 
+  // Transform real badge data for the BadgesCard preview
+  // Show earned badges first, then unearned, take top 4
+  const sortedBadges = [...badges].sort((a, b) => {
+    if (a.earned && !b.earned) return -1;
+    if (!a.earned && b.earned) return 1;
+    return 0;
+  });
+  const previewBadges = sortedBadges.slice(0, 4).map(b => ({
+    id: b.id,
+    name: b.name,
+    emoji: b.emoji,
+    color: b.earned ? "#FF8C32" : "#6B6B7B",
+    earned: b.earned,
+  }));
+
+  // Real stats from user data
+  const realStats = [
+    { id: "1", emoji: "🪙", value: user?.coins?.toLocaleString() || "0", label: "Total Coins" },
+    { id: "2", emoji: "⭐", value: `Lv ${user?.level || 1}`, label: "Current Level" },
+    { id: "3", emoji: "🏅", value: `${earnedCount}/${totalCount}`, label: "Badges Earned" },
+  ];
+
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
-          <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Profile</Text>
-        <TouchableOpacity style={styles.headerButton} onPress={handleSettings}>
-          <MaterialIcons name="settings" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        title="My Profile"
+        onBack={handleBack}
+        rightIcon="settings"
+        onRightPress={handleSettings}
+      />
 
       <ScrollView
         style={styles.scrollView}
@@ -207,29 +184,14 @@ export default function ProfileScreen() {
           maxXp={1000} 
         />
 
-        {/* Badges */}
-        <BadgesCard badges={MOCK_BADGES} />
-
-        {/* Stats */}
-        <StatsOverviewCard 
-          stats={MOCK_STATS.map(stat => 
-            stat.id === "1" ? { ...stat, value: user?.coins?.toLocaleString() || "0" } : stat
-          )} 
+        {/* Badges — real data */}
+        <BadgesCard 
+          badges={previewBadges} 
+          onViewAll={() => router.push("/(protected)/badges")} 
         />
 
-        {/* Settings Menu */}
-        <SettingsMenuCard 
-          items={MOCK_MENU_ITEMS.map(item => 
-            item.id === "verification" 
-              ? { 
-                  ...item, 
-                  badge: user?.kycCompleted ? "VERIFIED" : "UPGRADE", 
-                  badgeColor: user?.kycCompleted ? "#3DDC97" : "#FF8C32" 
-                } 
-              : item
-          )} 
-          onItemPress={handleMenuPress} 
-        />
+        {/* Stats — real data */}
+        <StatsOverviewCard stats={realStats} />
 
         {/* Logout Button */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
@@ -343,27 +305,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#0F0F14",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 8,
-    backgroundColor: "rgba(15, 15, 20, 0.9)",
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: {
-    color: "#FFFFFF",
-    fontSize: 18,
-    fontWeight: "700",
   },
   scrollView: {
     flex: 1,

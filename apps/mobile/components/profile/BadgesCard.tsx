@@ -2,11 +2,12 @@ import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 
 interface Badge {
-  id: string;
+  id: string | number;
   name: string;
   emoji: string;
-  color: string;
-  unlocked: boolean;
+  color?: string;
+  earned?: boolean;
+  unlocked?: boolean; // backward compat
 }
 
 interface BadgesCardProps {
@@ -15,6 +16,9 @@ interface BadgesCardProps {
 }
 
 export function BadgesCard({ badges, onViewAll }: BadgesCardProps) {
+  // Show up to 4 badges
+  const displayBadges = badges.slice(0, 4);
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -27,29 +31,30 @@ export function BadgesCard({ badges, onViewAll }: BadgesCardProps) {
 
       {/* Badges grid */}
       <View style={styles.grid}>
-        {badges.map((badge) => (
-          <TouchableOpacity
-            key={badge.id}
-            style={[styles.badgeItem, !badge.unlocked && styles.badgeLocked]}
-          >
-            <View
-              style={[
-                styles.badgeIcon,
-                {
-                  backgroundColor: badge.unlocked
-                    ? `${badge.color}15`
-                    : "#2A2A35",
-                  borderColor: badge.unlocked
-                    ? `${badge.color}30`
-                    : "rgba(255, 255, 255, 0.05)",
-                },
-              ]}
+        {displayBadges.map((badge) => {
+          const isUnlocked = badge.earned ?? badge.unlocked ?? false;
+          const badgeColor = badge.color || "#FF8C32";
+
+          return (
+            <TouchableOpacity
+              key={badge.id}
+              style={[styles.badgeItem, !isUnlocked && styles.badgeLocked]}
             >
-              <Text style={styles.badgeEmoji}>{badge.emoji}</Text>
-            </View>
-            <Text style={styles.badgeName}>{badge.name}</Text>
-          </TouchableOpacity>
-        ))}
+              <View
+                style={[
+                  styles.badgeIcon,
+                  {
+                    backgroundColor: isUnlocked ? `${badgeColor}15` : "#2A2A35",
+                    borderColor: isUnlocked ? `${badgeColor}30` : "rgba(255, 255, 255, 0.05)",
+                  },
+                ]}
+              >
+                <Text style={styles.badgeEmoji}>{badge.emoji}</Text>
+              </View>
+              <Text style={styles.badgeName}>{badge.name}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
     </View>
   );

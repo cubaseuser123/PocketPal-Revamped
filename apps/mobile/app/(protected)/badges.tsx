@@ -3,6 +3,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useState, useCallback } from "react";
+import { ScreenHeader } from "../../components/ui/ScreenHeader";
 
 import { useBadges, useUser } from "../../hooks/useApi";
 
@@ -42,19 +43,17 @@ export default function BadgesScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <View style={styles.headerLeft}>
-          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Badges</Text>
-        </View>
-        <View style={styles.progressBadge}>
-          <Text style={styles.progressText}>
-            {earnedCount}/{totalCount}
-          </Text>
-        </View>
-      </View>
+      <ScreenHeader
+        title="Badges"
+        onBack={handleBack}
+        rightContent={
+          <View style={styles.progressBadge}>
+            <Text style={styles.progressText}>
+              {earnedCount}/{totalCount}
+            </Text>
+          </View>
+        }
+      />
 
       {/* Progress Banner */}
       <View style={styles.progressBanner}>
@@ -140,31 +139,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#0F0F14",
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#1A1A22",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: {
-    color: "#FFFFFF",
-    fontSize: 24,
-    fontWeight: "700",
-  },
+
   progressBadge: {
     backgroundColor: "#FF8C32",
     paddingHorizontal: 12,
