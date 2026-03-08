@@ -28,6 +28,7 @@ import chatRoutes from "./routes/chatRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import duelRoutes from "./routes/duelRoutes.js";
 import shopRoutes from "./routes/shopRoutes.js";
+import guardianRoutes from "./routes/guardianRoutes.js";
 
 // Start cron jobs
 import "./jobs/cronJobs.js";
@@ -223,6 +224,7 @@ app.use("/api/v1/chat", chatRoutes);
 app.use("/api/v1/notifications", notificationRoutes);
 app.use("/api/v1/duels", duelRoutes);
 app.use("/api/v1/shop", shopRoutes);
+app.use("/api/v1/guardian", guardianRoutes);
 
 // Legacy support: redirect /api/* to /api/v1/*
 app.use("/api", (req, res, next) => {

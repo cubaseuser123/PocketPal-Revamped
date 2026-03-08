@@ -4,7 +4,7 @@ import { relations } from "drizzle-orm/relations";
 
 export const bossStatus = pgEnum("BossStatus", ['active', 'defeated', 'upcoming']);
 export const friendStatus = pgEnum("FriendStatus", ['pending', 'accepted', 'rejected']);
-export const notificationType = pgEnum("NotificationType", ['alert', 'insight', 'celebration', 'reminder']);
+export const notificationType = pgEnum("NotificationType", ['alert', 'insight', 'celebration', 'reminder', 'nudge']);
 export const ppiType = pgEnum("PpiType", ['small_ppi', 'full_kyc_ppi']);
 export const questDifficulty = pgEnum("QuestDifficulty", ['easy', 'medium', 'hard']);
 export const questType = pgEnum("QuestType", ['savings', 'spending', 'streak', 'social', 'special']);
@@ -37,6 +37,8 @@ export const users = pgTable("users", {
 	lastSpinDate: timestamp("last_spin_date", { withTimezone: true, mode: 'date' }),
 	totalGoalsCompleted: integer("total_goals_completed").default(0).notNull(),
 	expoPushToken: varchar("expo_push_token", { length: 255 }),
+	planBEnabled: boolean("plan_b_enabled").default(true).notNull(),
+	autonomousModeEnabled: boolean("autonomous_mode_enabled").default(false).notNull(),
 	deletedAt: timestamp("deleted_at", { withTimezone: true, mode: 'date' }),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
@@ -81,34 +83,34 @@ export const subscriptions = pgTable("subscriptions", {
 	id: uuid().defaultRandom().primaryKey().notNull(),
 	userId: uuid("user_id").notNull(),
 	name: varchar({ length: 255 }).notNull(),
-	price: numeric({ precision: 15, scale:  2 }).notNull(),
+	price: numeric({ precision: 15, scale: 2 }).notNull(),
 	category: varchar({ length: 100 }).default('general').notNull(),
 	startDate: timestamp("start_date", { withTimezone: true, mode: 'date' }).notNull(),
 	nextRenewal: timestamp("next_renewal", { withTimezone: true, mode: 'date' }).notNull(),
 	renewalCycle: renewalCycle("renewal_cycle").default('monthly').notNull(),
 	status: subscriptionStatus().default('active').notNull(),
 	isReminderOn: boolean("is_reminder_on").default(true).notNull(),
-	roundOffAmount: numeric("round_off_amount", { precision: 15, scale:  2 }).default('0.00').notNull(),
+	roundOffAmount: numeric("round_off_amount", { precision: 15, scale: 2 }).default('0.00').notNull(),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 }, (table) => [
 	index("subscriptions_next_renewal_status_idx").using("btree", table.nextRenewal.asc().nullsLast(), table.status.asc().nullsLast()),
 	index("subscriptions_user_id_idx").using("btree", table.userId.asc().nullsLast()),
 	foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "subscriptions_user_id_fkey"
-		}).onUpdate("cascade").onDelete("cascade"),
+		columns: [table.userId],
+		foreignColumns: [users.id],
+		name: "subscriptions_user_id_fkey"
+	}).onUpdate("cascade").onDelete("cascade"),
 ]);
 
 export const wallets = pgTable("wallets", {
 	id: uuid().defaultRandom().primaryKey().notNull(),
 	userId: uuid("user_id").notNull(),
 	type: walletType().notNull(),
-	balance: numeric({ precision: 15, scale:  2 }).default('0.00').notNull(),
+	balance: numeric({ precision: 15, scale: 2 }).default('0.00').notNull(),
 	ppiType: ppiType("ppi_type").default('small_ppi').notNull(),
 	ppiId: varchar("ppi_id", { length: 100 }),
-	monthlyLoaded: numeric("monthly_loaded", { precision: 15, scale:  2 }).default('0.00').notNull(),
+	monthlyLoaded: numeric("monthly_loaded", { precision: 15, scale: 2 }).default('0.00').notNull(),
 	lastLoadReset: timestamp("last_load_reset", { withTimezone: true, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
@@ -116,17 +118,17 @@ export const wallets = pgTable("wallets", {
 	index("wallets_user_id_idx").using("btree", table.userId.asc().nullsLast()),
 	uniqueIndex("wallets_user_id_type_key").using("btree", table.userId.asc().nullsLast(), table.type.asc().nullsLast()),
 	foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "wallets_user_id_fkey"
-		}).onUpdate("cascade").onDelete("cascade"),
+		columns: [table.userId],
+		foreignColumns: [users.id],
+		name: "wallets_user_id_fkey"
+	}).onUpdate("cascade").onDelete("cascade"),
 ]);
 
 export const splitGroups = pgTable("split_groups", {
 	id: uuid().defaultRandom().primaryKey().notNull(),
 	name: varchar({ length: 255 }).notNull(),
 	creatorId: uuid("creator_id").notNull(),
-	totalAmount: numeric("total_amount", { precision: 15, scale:  2 }).notNull(),
+	totalAmount: numeric("total_amount", { precision: 15, scale: 2 }).notNull(),
 	status: splitGroupStatus().default('active').notNull(),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
@@ -134,10 +136,10 @@ export const splitGroups = pgTable("split_groups", {
 	index("split_groups_creator_id_idx").using("btree", table.creatorId.asc().nullsLast()),
 	index("split_groups_status_idx").using("btree", table.status.asc().nullsLast().op("enum_ops")),
 	foreignKey({
-			columns: [table.creatorId],
-			foreignColumns: [users.id],
-			name: "split_groups_creator_id_fkey"
-		}).onUpdate("cascade").onDelete("cascade"),
+		columns: [table.creatorId],
+		foreignColumns: [users.id],
+		name: "split_groups_creator_id_fkey"
+	}).onUpdate("cascade").onDelete("cascade"),
 ]);
 
 export const transactions = pgTable("transactions", {
@@ -148,7 +150,7 @@ export const transactions = pgTable("transactions", {
 	groupId: uuid("group_id"),
 	name: varchar({ length: 255 }).notNull(),
 	emoji: varchar({ length: 10 }).default('💰').notNull(),
-	amount: numeric({ precision: 15, scale:  2 }).notNull(),
+	amount: numeric({ precision: 15, scale: 2 }).notNull(),
 	type: transactionType().notNull(),
 	note: text(),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
@@ -159,25 +161,25 @@ export const transactions = pgTable("transactions", {
 	index("transactions_user_id_created_at_idx").using("btree", table.userId.asc().nullsLast(), table.createdAt.desc().nullsFirst()),
 	index("transactions_wallet_id_idx").using("btree", table.walletId.asc().nullsLast()),
 	foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "transactions_user_id_fkey"
-		}).onUpdate("cascade").onDelete("cascade"),
+		columns: [table.userId],
+		foreignColumns: [users.id],
+		name: "transactions_user_id_fkey"
+	}).onUpdate("cascade").onDelete("cascade"),
 	foreignKey({
-			columns: [table.walletId],
-			foreignColumns: [wallets.id],
-			name: "transactions_wallet_id_fkey"
-		}).onUpdate("cascade").onDelete("cascade"),
+		columns: [table.walletId],
+		foreignColumns: [wallets.id],
+		name: "transactions_wallet_id_fkey"
+	}).onUpdate("cascade").onDelete("cascade"),
 	foreignKey({
-			columns: [table.categoryId],
-			foreignColumns: [categories.id],
-			name: "transactions_category_id_fkey"
-		}).onUpdate("cascade").onDelete("set null"),
+		columns: [table.categoryId],
+		foreignColumns: [categories.id],
+		name: "transactions_category_id_fkey"
+	}).onUpdate("cascade").onDelete("set null"),
 	foreignKey({
-			columns: [table.groupId],
-			foreignColumns: [splitGroups.id],
-			name: "transactions_group_id_fkey"
-		}).onUpdate("cascade").onDelete("set null"),
+		columns: [table.groupId],
+		foreignColumns: [splitGroups.id],
+		name: "transactions_group_id_fkey"
+	}).onUpdate("cascade").onDelete("set null"),
 ]);
 
 export const goals = pgTable("goals", {
@@ -187,8 +189,8 @@ export const goals = pgTable("goals", {
 	emoji: varchar({ length: 10 }).default('🎯').notNull(),
 	category: varchar({ length: 100 }).default('General').notNull(),
 	color: varchar({ length: 7 }).default('#FF8C32').notNull(),
-	targetAmount: numeric("target_amount", { precision: 15, scale:  2 }).notNull(),
-	currentAmount: numeric("current_amount", { precision: 15, scale:  2 }).default('0.00').notNull(),
+	targetAmount: numeric("target_amount", { precision: 15, scale: 2 }).notNull(),
+	currentAmount: numeric("current_amount", { precision: 15, scale: 2 }).default('0.00').notNull(),
 	isFeatured: boolean("is_featured").default(false).notNull(),
 	isCompleted: boolean("is_completed").default(false).notNull(),
 	targetDate: timestamp("target_date", { withTimezone: true, mode: 'date' }),
@@ -198,10 +200,10 @@ export const goals = pgTable("goals", {
 	index("goals_user_id_idx").using("btree", table.userId.asc().nullsLast()),
 	index("goals_user_id_is_featured_idx").using("btree", table.userId.asc().nullsLast(), table.isFeatured.asc().nullsLast()),
 	foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "goals_user_id_fkey"
-		}).onUpdate("cascade").onDelete("cascade"),
+		columns: [table.userId],
+		foreignColumns: [users.id],
+		name: "goals_user_id_fkey"
+	}).onUpdate("cascade").onDelete("cascade"),
 ]);
 
 export const friends = pgTable("friends", {
@@ -216,15 +218,15 @@ export const friends = pgTable("friends", {
 	uniqueIndex("friends_requester_id_recipient_id_key").using("btree", table.requesterId.asc().nullsLast(), table.recipientId.asc().nullsLast()),
 	index("friends_requester_id_status_idx").using("btree", table.requesterId.asc().nullsLast(), table.status.asc().nullsLast()),
 	foreignKey({
-			columns: [table.requesterId],
-			foreignColumns: [users.id],
-			name: "friends_requester_id_fkey"
-		}).onUpdate("cascade").onDelete("cascade"),
+		columns: [table.requesterId],
+		foreignColumns: [users.id],
+		name: "friends_requester_id_fkey"
+	}).onUpdate("cascade").onDelete("cascade"),
 	foreignKey({
-			columns: [table.recipientId],
-			foreignColumns: [users.id],
-			name: "friends_recipient_id_fkey"
-		}).onUpdate("cascade").onDelete("cascade"),
+		columns: [table.recipientId],
+		foreignColumns: [users.id],
+		name: "friends_recipient_id_fkey"
+	}).onUpdate("cascade").onDelete("cascade"),
 ]);
 
 export const splitGroupMembers = pgTable("split_group_members", {
@@ -237,15 +239,15 @@ export const splitGroupMembers = pgTable("split_group_members", {
 	uniqueIndex("split_group_members_group_id_user_id_key").using("btree", table.groupId.asc().nullsLast(), table.userId.asc().nullsLast()),
 	index("split_group_members_user_id_idx").using("btree", table.userId.asc().nullsLast()),
 	foreignKey({
-			columns: [table.groupId],
-			foreignColumns: [splitGroups.id],
-			name: "split_group_members_group_id_fkey"
-		}).onUpdate("cascade").onDelete("cascade"),
+		columns: [table.groupId],
+		foreignColumns: [splitGroups.id],
+		name: "split_group_members_group_id_fkey"
+	}).onUpdate("cascade").onDelete("cascade"),
 	foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "split_group_members_user_id_fkey"
-		}).onUpdate("cascade").onDelete("cascade"),
+		columns: [table.userId],
+		foreignColumns: [users.id],
+		name: "split_group_members_user_id_fkey"
+	}).onUpdate("cascade").onDelete("cascade"),
 ]);
 
 export const splitExpenses = pgTable("split_expenses", {
@@ -253,7 +255,7 @@ export const splitExpenses = pgTable("split_expenses", {
 	groupId: uuid("group_id").notNull(),
 	payerId: uuid("payer_id").notNull(),
 	owerId: uuid("ower_id").notNull(),
-	amount: numeric({ precision: 15, scale:  2 }).notNull(),
+	amount: numeric({ precision: 15, scale: 2 }).notNull(),
 	status: splitExpenseStatus().default('pending').notNull(),
 	transactionId: varchar("transaction_id", { length: 100 }),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'date' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
@@ -263,20 +265,20 @@ export const splitExpenses = pgTable("split_expenses", {
 	index("split_expenses_ower_id_status_idx").using("btree", table.owerId.asc().nullsLast(), table.status.asc().nullsLast()),
 	index("split_expenses_payer_id_idx").using("btree", table.payerId.asc().nullsLast()),
 	foreignKey({
-			columns: [table.groupId],
-			foreignColumns: [splitGroups.id],
-			name: "split_expenses_group_id_fkey"
-		}).onUpdate("cascade").onDelete("cascade"),
+		columns: [table.groupId],
+		foreignColumns: [splitGroups.id],
+		name: "split_expenses_group_id_fkey"
+	}).onUpdate("cascade").onDelete("cascade"),
 	foreignKey({
-			columns: [table.payerId],
-			foreignColumns: [users.id],
-			name: "split_expenses_payer_id_fkey"
-		}).onUpdate("cascade").onDelete("cascade"),
+		columns: [table.payerId],
+		foreignColumns: [users.id],
+		name: "split_expenses_payer_id_fkey"
+	}).onUpdate("cascade").onDelete("cascade"),
 	foreignKey({
-			columns: [table.owerId],
-			foreignColumns: [users.id],
-			name: "split_expenses_ower_id_fkey"
-		}).onUpdate("cascade").onDelete("cascade"),
+		columns: [table.owerId],
+		foreignColumns: [users.id],
+		name: "split_expenses_ower_id_fkey"
+	}).onUpdate("cascade").onDelete("cascade"),
 ]);
 
 export const userBadges = pgTable("user_badges", {
@@ -290,10 +292,10 @@ export const userBadges = pgTable("user_badges", {
 	uniqueIndex("user_badges_user_id_badge_id_key").using("btree", table.userId.asc().nullsLast(), table.badgeId.asc().nullsLast()),
 	index("user_badges_user_id_idx").using("btree", table.userId.asc().nullsLast()),
 	foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "user_badges_user_id_fkey"
-		}).onUpdate("cascade").onDelete("cascade"),
+		columns: [table.userId],
+		foreignColumns: [users.id],
+		name: "user_badges_user_id_fkey"
+	}).onUpdate("cascade").onDelete("cascade"),
 ]);
 
 export const bossBattles = pgTable("boss_battles", {
@@ -328,15 +330,15 @@ export const bossBattleLeaderboard = pgTable("boss_battle_leaderboard", {
 	index("boss_battle_leaderboard_battle_id_idx").using("btree", table.battleId.asc().nullsLast()),
 	uniqueIndex("boss_battle_leaderboard_battle_id_user_id_key").using("btree", table.battleId.asc().nullsLast(), table.userId.asc().nullsLast()),
 	foreignKey({
-			columns: [table.battleId],
-			foreignColumns: [bossBattles.id],
-			name: "boss_battle_leaderboard_battle_id_fkey"
-		}).onUpdate("cascade").onDelete("cascade"),
+		columns: [table.battleId],
+		foreignColumns: [bossBattles.id],
+		name: "boss_battle_leaderboard_battle_id_fkey"
+	}).onUpdate("cascade").onDelete("cascade"),
 	foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "boss_battle_leaderboard_user_id_fkey"
-		}).onUpdate("cascade").onDelete("cascade"),
+		columns: [table.userId],
+		foreignColumns: [users.id],
+		name: "boss_battle_leaderboard_user_id_fkey"
+	}).onUpdate("cascade").onDelete("cascade"),
 ]);
 
 export const questAssignments = pgTable("quest_assignments", {
@@ -353,15 +355,15 @@ export const questAssignments = pgTable("quest_assignments", {
 	uniqueIndex("quest_assignments_quest_id_user_id_key").using("btree", table.questId.asc().nullsLast(), table.userId.asc().nullsLast()),
 	index("quest_assignments_user_id_completed_idx").using("btree", table.userId.asc().nullsLast(), table.completed.asc().nullsLast()),
 	foreignKey({
-			columns: [table.questId],
-			foreignColumns: [quests.id],
-			name: "quest_assignments_quest_id_fkey"
-		}).onUpdate("cascade").onDelete("cascade"),
+		columns: [table.questId],
+		foreignColumns: [quests.id],
+		name: "quest_assignments_quest_id_fkey"
+	}).onUpdate("cascade").onDelete("cascade"),
 	foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "quest_assignments_user_id_fkey"
-		}).onUpdate("cascade").onDelete("cascade"),
+		columns: [table.userId],
+		foreignColumns: [users.id],
+		name: "quest_assignments_user_id_fkey"
+	}).onUpdate("cascade").onDelete("cascade"),
 ]);
 
 export const conversationMemory = pgTable("conversation_memory", {
@@ -374,10 +376,10 @@ export const conversationMemory = pgTable("conversation_memory", {
 }, (table) => [
 	index("conversation_memory_user_id_created_at_idx").using("btree", table.userId.asc().nullsLast(), table.createdAt.desc().nullsFirst()),
 	foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "conversation_memory_user_id_fkey"
-		}).onUpdate("cascade").onDelete("cascade"),
+		columns: [table.userId],
+		foreignColumns: [users.id],
+		name: "conversation_memory_user_id_fkey"
+	}).onUpdate("cascade").onDelete("cascade"),
 ]);
 
 export const notifications = pgTable("notifications", {
@@ -391,10 +393,10 @@ export const notifications = pgTable("notifications", {
 }, (table) => [
 	index("notifications_user_id_read_created_at_idx").using("btree", table.userId.asc().nullsLast(), table.read.asc().nullsLast(), table.createdAt.desc().nullsFirst()),
 	foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "notifications_user_id_fkey"
-		}).onUpdate("cascade").onDelete("cascade"),
+		columns: [table.userId],
+		foreignColumns: [users.id],
+		name: "notifications_user_id_fkey"
+	}).onUpdate("cascade").onDelete("cascade"),
 ]);
 
 
@@ -418,20 +420,20 @@ export const duels = pgTable("duels", {
 	index("duels_challenged_id_idx").using("btree", table.challengedId.asc().nullsLast()),
 	index("duels_status_idx").using("btree", table.status.asc().nullsLast().op("enum_ops")),
 	foreignKey({
-			columns: [table.challengerId],
-			foreignColumns: [users.id],
-			name: "duels_challenger_id_fkey"
-		}).onUpdate("cascade").onDelete("cascade"),
+		columns: [table.challengerId],
+		foreignColumns: [users.id],
+		name: "duels_challenger_id_fkey"
+	}).onUpdate("cascade").onDelete("cascade"),
 	foreignKey({
-			columns: [table.challengedId],
-			foreignColumns: [users.id],
-			name: "duels_challenged_id_fkey"
-		}).onUpdate("cascade").onDelete("cascade"),
+		columns: [table.challengedId],
+		foreignColumns: [users.id],
+		name: "duels_challenged_id_fkey"
+	}).onUpdate("cascade").onDelete("cascade"),
 	foreignKey({
-			columns: [table.winnerId],
-			foreignColumns: [users.id],
-			name: "duels_winner_id_fkey"
-		}).onUpdate("cascade").onDelete("set null"),
+		columns: [table.winnerId],
+		foreignColumns: [users.id],
+		name: "duels_winner_id_fkey"
+	}).onUpdate("cascade").onDelete("set null"),
 ]);
 
 export const shopItems = pgTable("shop_items", {
@@ -458,15 +460,15 @@ export const userPurchases = pgTable("user_purchases", {
 }, (table) => [
 	index("user_purchases_user_id_idx").using("btree", table.userId.asc().nullsLast()),
 	foreignKey({
-			columns: [table.userId],
-			foreignColumns: [users.id],
-			name: "user_purchases_user_id_fkey"
-		}).onUpdate("cascade").onDelete("cascade"),
+		columns: [table.userId],
+		foreignColumns: [users.id],
+		name: "user_purchases_user_id_fkey"
+	}).onUpdate("cascade").onDelete("cascade"),
 	foreignKey({
-			columns: [table.itemId],
-			foreignColumns: [shopItems.id],
-			name: "user_purchases_item_id_fkey"
-		}).onUpdate("cascade").onDelete("cascade"),
+		columns: [table.itemId],
+		foreignColumns: [shopItems.id],
+		name: "user_purchases_item_id_fkey"
+	}).onUpdate("cascade").onDelete("cascade"),
 ]);
 
 // ============================================
@@ -474,58 +476,58 @@ export const userPurchases = pgTable("user_purchases", {
 // ============================================
 
 export const sessions = pgTable("sessions", {
-  id: uuid().defaultRandom().primaryKey().notNull(),
-  userId: uuid("user_id").notNull(),
-  token: varchar({ length: 255 }).notNull().unique(),
-  expiresAt: timestamp("expires_at", { withTimezone: true, mode: "date" }).notNull(),
-  ipAddress: varchar("ip_address", { length: 45 }),
-  userAgent: text("user_agent"),
-  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+	id: uuid().defaultRandom().primaryKey().notNull(),
+	userId: uuid("user_id").notNull(),
+	token: varchar({ length: 255 }).notNull().unique(),
+	expiresAt: timestamp("expires_at", { withTimezone: true, mode: "date" }).notNull(),
+	ipAddress: varchar("ip_address", { length: 45 }),
+	userAgent: text("user_agent"),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
 export const accounts = pgTable("accounts", {
-  id: uuid().defaultRandom().primaryKey().notNull(),
-  userId: uuid("user_id").notNull(),
-  accountId: varchar("account_id", { length: 255 }).notNull(),
-  providerId: varchar("provider_id", { length: 255 }).notNull(),
-  accessToken: text("access_token"),
-  refreshToken: text("refresh_token"),
-  accessTokenExpiresAt: timestamp("access_token_expires_at", { withTimezone: true, mode: "date" }),
-  refreshTokenExpiresAt: timestamp("refresh_token_expires_at", { withTimezone: true, mode: "date" }),
-  scope: text(),
-  idToken: text("id_token"),
-  password: text(),
-  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+	id: uuid().defaultRandom().primaryKey().notNull(),
+	userId: uuid("user_id").notNull(),
+	accountId: varchar("account_id", { length: 255 }).notNull(),
+	providerId: varchar("provider_id", { length: 255 }).notNull(),
+	accessToken: text("access_token"),
+	refreshToken: text("refresh_token"),
+	accessTokenExpiresAt: timestamp("access_token_expires_at", { withTimezone: true, mode: "date" }),
+	refreshTokenExpiresAt: timestamp("refresh_token_expires_at", { withTimezone: true, mode: "date" }),
+	scope: text(),
+	idToken: text("id_token"),
+	password: text(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
 export const verifications = pgTable("verifications", {
-  id: uuid().defaultRandom().primaryKey().notNull(),
-  identifier: varchar({ length: 255 }).notNull(),
-  value: varchar({ length: 255 }).notNull(),
-  expiresAt: timestamp("expires_at", { withTimezone: true, mode: "date" }).notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+	id: uuid().defaultRandom().primaryKey().notNull(),
+	identifier: varchar({ length: 255 }).notNull(),
+	value: varchar({ length: 255 }).notNull(),
+	expiresAt: timestamp("expires_at", { withTimezone: true, mode: "date" }).notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
 export const jwks = pgTable("jwks", {
-  id: uuid().defaultRandom().primaryKey().notNull(),
-  publicKey: text("public_key").notNull(),
-  privateKey: text("private_key").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+	id: uuid().defaultRandom().primaryKey().notNull(),
+	publicKey: text("public_key").notNull(),
+	privateKey: text("private_key").notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
 // RELATIONS
 
-export const subscriptionsRelations = relations(subscriptions, ({one}) => ({
+export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
 	user: one(users, {
 		fields: [subscriptions.userId],
 		references: [users.id]
 	}),
 }));
 
-export const usersRelations = relations(users, ({many}) => ({
+export const usersRelations = relations(users, ({ many }) => ({
 	subscriptions: many(subscriptions),
 	transactions: many(transactions),
 	splitGroups: many(splitGroups),
@@ -558,7 +560,7 @@ export const usersRelations = relations(users, ({many}) => ({
 	userPurchases: many(userPurchases),
 }));
 
-export const transactionsRelations = relations(transactions, ({one}) => ({
+export const transactionsRelations = relations(transactions, ({ one }) => ({
 	user: one(users, {
 		fields: [transactions.userId],
 		references: [users.id]
@@ -577,7 +579,7 @@ export const transactionsRelations = relations(transactions, ({one}) => ({
 	}),
 }));
 
-export const walletsRelations = relations(wallets, ({one, many}) => ({
+export const walletsRelations = relations(wallets, ({ one, many }) => ({
 	transactions: many(transactions),
 	user: one(users, {
 		fields: [wallets.userId],
@@ -585,11 +587,11 @@ export const walletsRelations = relations(wallets, ({one, many}) => ({
 	}),
 }));
 
-export const categoriesRelations = relations(categories, ({many}) => ({
+export const categoriesRelations = relations(categories, ({ many }) => ({
 	transactions: many(transactions),
 }));
 
-export const splitGroupsRelations = relations(splitGroups, ({one, many}) => ({
+export const splitGroupsRelations = relations(splitGroups, ({ one, many }) => ({
 	transactions: many(transactions),
 	creator: one(users, {
 		fields: [splitGroups.creatorId],
@@ -599,14 +601,14 @@ export const splitGroupsRelations = relations(splitGroups, ({one, many}) => ({
 	splitExpenses: many(splitExpenses),
 }));
 
-export const goalsRelations = relations(goals, ({one}) => ({
+export const goalsRelations = relations(goals, ({ one }) => ({
 	user: one(users, {
 		fields: [goals.userId],
 		references: [users.id]
 	}),
 }));
 
-export const friendsRelations = relations(friends, ({one}) => ({
+export const friendsRelations = relations(friends, ({ one }) => ({
 	user_requesterId: one(users, {
 		fields: [friends.requesterId],
 		references: [users.id],
@@ -619,7 +621,7 @@ export const friendsRelations = relations(friends, ({one}) => ({
 	}),
 }));
 
-export const splitGroupMembersRelations = relations(splitGroupMembers, ({one}) => ({
+export const splitGroupMembersRelations = relations(splitGroupMembers, ({ one }) => ({
 	splitGroup: one(splitGroups, {
 		fields: [splitGroupMembers.groupId],
 		references: [splitGroups.id]
@@ -630,7 +632,7 @@ export const splitGroupMembersRelations = relations(splitGroupMembers, ({one}) =
 	}),
 }));
 
-export const splitExpensesRelations = relations(splitExpenses, ({one}) => ({
+export const splitExpensesRelations = relations(splitExpenses, ({ one }) => ({
 	splitGroup: one(splitGroups, {
 		fields: [splitExpenses.groupId],
 		references: [splitGroups.id]
@@ -647,14 +649,14 @@ export const splitExpensesRelations = relations(splitExpenses, ({one}) => ({
 	}),
 }));
 
-export const userBadgesRelations = relations(userBadges, ({one}) => ({
+export const userBadgesRelations = relations(userBadges, ({ one }) => ({
 	user: one(users, {
 		fields: [userBadges.userId],
 		references: [users.id]
 	}),
 }));
 
-export const questAssignmentsRelations = relations(questAssignments, ({one}) => ({
+export const questAssignmentsRelations = relations(questAssignments, ({ one }) => ({
 	quest: one(quests, {
 		fields: [questAssignments.questId],
 		references: [quests.id]
@@ -665,18 +667,18 @@ export const questAssignmentsRelations = relations(questAssignments, ({one}) => 
 	}),
 }));
 
-export const questsRelations = relations(quests, ({many}) => ({
+export const questsRelations = relations(quests, ({ many }) => ({
 	questAssignments: many(questAssignments),
 }));
 
-export const conversationMemoryRelations = relations(conversationMemory, ({one}) => ({
+export const conversationMemoryRelations = relations(conversationMemory, ({ one }) => ({
 	user: one(users, {
 		fields: [conversationMemory.userId],
 		references: [users.id]
 	}),
 }));
 
-export const bossBattleLeaderboardRelations = relations(bossBattleLeaderboard, ({one}) => ({
+export const bossBattleLeaderboardRelations = relations(bossBattleLeaderboard, ({ one }) => ({
 	bossBattle: one(bossBattles, {
 		fields: [bossBattleLeaderboard.battleId],
 		references: [bossBattles.id]
@@ -687,18 +689,18 @@ export const bossBattleLeaderboardRelations = relations(bossBattleLeaderboard, (
 	}),
 }));
 
-export const bossBattlesRelations = relations(bossBattles, ({many}) => ({
+export const bossBattlesRelations = relations(bossBattles, ({ many }) => ({
 	bossBattleLeaderboards: many(bossBattleLeaderboard),
 }));
 
-export const notificationsRelations = relations(notifications, ({one}) => ({
+export const notificationsRelations = relations(notifications, ({ one }) => ({
 	user: one(users, {
 		fields: [notifications.userId],
 		references: [users.id]
 	}),
 }));
 
-export const duelsRelations = relations(duels, ({one}) => ({
+export const duelsRelations = relations(duels, ({ one }) => ({
 	challenger: one(users, {
 		fields: [duels.challengerId],
 		references: [users.id],
@@ -715,11 +717,11 @@ export const duelsRelations = relations(duels, ({one}) => ({
 	}),
 }));
 
-export const shopItemsRelations = relations(shopItems, ({many}) => ({
+export const shopItemsRelations = relations(shopItems, ({ many }) => ({
 	userPurchases: many(userPurchases),
 }));
 
-export const userPurchasesRelations = relations(userPurchases, ({one}) => ({
+export const userPurchasesRelations = relations(userPurchases, ({ one }) => ({
 	user: one(users, {
 		fields: [userPurchases.userId],
 		references: [users.id]
