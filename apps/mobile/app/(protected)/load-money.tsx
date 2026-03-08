@@ -6,6 +6,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useWallets } from "../../hooks/useApi";
 import { useCustomAlert } from "../../contexts/CustomAlertContext";
+import { ScreenHeader } from "../../components/ui/ScreenHeader";
 
 type PaymentMethod = "upi" | "debit" | "netbanking" | null;
 
@@ -61,17 +62,11 @@ export default function LoadMoneyScreen() {
       <View style={styles.bottomGlow} />
 
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <View style={styles.headerRow}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <MaterialIcons name="arrow-back-ios" size={20} color="#FFFFFF" />
-          </TouchableOpacity>
-          <View>
-            <Text style={styles.headerTitle}>Add Money</Text>
-            <Text style={styles.headerSubtitle}>Load money to your wallet</Text>
-          </View>
-        </View>
-      </View>
+      <ScreenHeader
+        title="Add Money"
+        subtitle="Load money to your wallet"
+        onBack={() => router.back()}
+      />
 
       {/* Content */}
       <ScrollView 
@@ -238,34 +233,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 140, 50, 0.05)",
     borderRadius: 128,
   },
-  header: {
-    paddingHorizontal: 24,
-    paddingBottom: 16,
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#1A1A22",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.05)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  headerSubtitle: {
-    fontSize: 12,
-    color: "#B0B0C3",
-  },
+
   scrollView: {
     flex: 1,
   },
