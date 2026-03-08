@@ -1,5 +1,11 @@
 import { generateText, tool } from "ai";
 import { gateway } from "@ai-sdk/gateway";
+// --- Pally fine-tuned model (uncomment when cloud-hosted) ---
+// import { createOpenAI } from "@ai-sdk/openai";
+// const pally = createOpenAI({
+//   baseURL: "YOUR_CLOUD_URL/v1",
+//   apiKey: "YOUR_API_KEY",
+// });
 import { z } from "zod";
 import fs from "fs/promises";
 import path from "path";
@@ -54,7 +60,7 @@ export async function runNotificationAgent(userId) {
     const lastNotif = await getLastNotification(userId);
     const hoursSinceLastPush = lastNotif
       ? (Date.now() - new Date(lastNotif.createdAt).getTime()) /
-        (1000 * 60 * 60)
+      (1000 * 60 * 60)
       : 999;
 
     const result = await generateText({

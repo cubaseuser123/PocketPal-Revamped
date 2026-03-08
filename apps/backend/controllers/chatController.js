@@ -1,5 +1,11 @@
 import { generateText, tool, stepCountIs } from "ai";
 import { gateway } from "@ai-sdk/gateway";
+// --- Pally fine-tuned model (uncomment when cloud-hosted) ---
+// import { createOpenAI } from "@ai-sdk/openai";
+// const pally = createOpenAI({
+//     baseURL: "YOUR_CLOUD_URL/v1",
+//     apiKey: "YOUR_API_KEY",
+// });
 import { z } from "zod";
 import * as chatTools from "../ai/services/chatTools.js";
 
