@@ -1,299 +1,121 @@
-# 🚀 PocketPal — Monorepo Setup Guide
+<div align="center">
+  <h1>🚀 PocketPal</h1>
+  <p><strong>Autonomous Financial Companion & Gamified Expense Tracker for Gen-Z</strong></p>
 
-PocketPal is a **cross-platform financial tracking app** built using a **Turborepo monorepo**.
+  <!-- USER: Replace this placeholder with your actual Loom link -->
+  [![Watch the Demo](https://img.shields.io/badge/Watch%20Demo-Loom-FF4F00?style=for-the-badge&logo=loom)](https://loom.com/your-link-here)
+  
+  ![React Native](https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+  ![Express.js](https://img.shields.io/badge/express.js-%23404d59.svg?style=for-the-badge&logo=express&logoColor=%2361DAFB)
+  ![Vercel AI SDK](https://img.shields.io/badge/Vercel_AI_SDK-000000?style=for-the-badge&logo=vercel&logoColor=white)
+  ![Mistral AI](https://img.shields.io/badge/Mistral_7B-F37F40?style=for-the-badge&logo=mistral&logoColor=white)
+</div>
 
-It contains:
+<br />
 
-- **Web App** → Next.js
-- **Mobile App** → Expo + React Native
-- **Backend API** → Express.js
-- **Shared Packages** → UI, TS Config, ESLint Config
-- **Package Manager** → pnpm
-- **Build System** → Turborepo
+## 💡 The Core Philosophy
+PocketPal is a gamified financial companion designed to fix the broken spending habits of Gen-Z. It is not a passive budgeting spreadsheet—it is an active, behavior-modifying engine.
 
-This guide helps teammates clone, install, and run the entire project easily.
-
----
-
-# 📁 Repository Structure
-
-```
-pocketpal/
-│
-├── apps/
-│   ├── backend/            # Express.js API server
-│   ├── mobile/             # Expo React Native mobile app
-│   └── web/                # Next.js web app
-│
-├── packages/
-│   ├── eslint-config/      # Shared ESLint rules
-│   ├── typescript-config/  # Shared tsconfig.json presets
-│   └── ui/                 # Shared UI components + utilities
-│
-├── turbo.json              # Turborepo pipelines
-├── pnpm-workspace.yaml     # pnpm workspace setup
-├── package.json
-├── .syncpackrc.json
-├── .npmrc
-└── README.md
-```
+The core behavioral loop is simple but powerful:
+1. **Set Goals:** Define a weekly saving goal (short-term) or a major milestone like a new MacBook (long-term).
+2. **Save & Build Streaks:** Every day you successfully save money or resist an impulse purchase, you earn a streak. **Think of it as Snapchat streaks meeting FamPay.**
+3. **Earn Rewards:** Maintaining longer streaks unlocks in-app rewards, coins, and badges.
+4. **Gamify Everything:** Restraint becomes a reward. Boss battles, 1v1 wagers, and daily spins make financial discipline addictive.
 
 ---
 
-# 🛠️ Tech Stack
+## 📱 Part 1: The App Ecosystem
 
-### **Web (apps/web)**
+PocketPal's frontend is a fully-featured React Native mobile application designed with behavioral psychology at its core.
 
-- Next.js
-- React
-- TailwindCSS
-- shadcn/ui
-- Shared UI package
-
-### **Mobile (apps/mobile)**
-
-- Expo
-- React Native
-- NativeWind (TailwindCSS for RN)
-- Expo Router
-
-### **Backend (apps/backend)**
-
-- Node.js
-- Express.js
-
-### **Monorepo Tools**
-
-- Turborepo
-- pnpm workspaces
-
-### **Shared Packages**
-
-- UI Component Library (`packages/ui`)
-- TypeScript Config (`packages/typescript-config`)
-- ESLint Config (`packages/eslint-config`)
+- **Wallets (Real Money, Real Stakes):** RBI-compliant PPI (Prepaid Payment Instrument) infrastructure via Cashfree & Setu. Users can instantly load money via UPI. Tier 1 allows for ₹10,000 limits without KYC, while Tier 2 unlocks up to ₹2,00,000.
+- **The Arcade:** This is the gamification hub. Users can participate in community **Boss Battles** (e.g., defeating the "Inflation Dragon" by collectively saving money), challenge friends in **1v1 Duels**, and spend earned coins in the **Coin Shop** to buy Streak Shields or UI themes.
+- **Goals & Tracking:** Visual progress bars for every goal, automated categorized spending analytics, and subscription tracking to ensure users always know where their money is going.
 
 ---
 
-# 📦 Prerequisites
+## 🧠 Part 2: The AI & Agentic Architecture
 
-Make sure you have the following installed:
+The AI in PocketPal isn't a gimmick wrapper; it is deeply integrated into the user's financial lifecycle through multi-agent orchestration.
 
-| Tool                       | Version                      |
-| -------------------------- | ---------------------------- |
-| **Node.js**                | v20+                         |
-| **pnpm**                   | v8+                          |
-| **Git**                    | Any recent version           |
-| **Android Studio**         | For running Android builds |
-| **Xcode**                   | For running iOS builds (Mac only) |
+### 1. Pally: The Fine-Tuned Financial LLM
+We fine-tuned a **Mistral 7B** model using **Unsloth** on a custom dataset specifically tailored for financial interactions and strict chatbot behavioral guidelines. 
+*(Note: While the custom fine-tuned weights have been trained and validated, the current live environment utilizes Gemini 2.0 Flash via the Vercel AI SDK due to hosting constraints for the 7B model).*
 
-Install pnpm if needed:
+### 2. Conversational Tool-Calling Agents
+Pally is designed with strict **Zero Hallucination** constraints. It is equipped with a suite of **15 specialized backend tools**.
+- When a user asks *"Where did I spend most?"*, the agent doesn't guess. It intelligently routes the intent to a specific tool, executes a database query, retrieves the exact ₹ amount and percentage, and synthesizes a deterministic, data-backed response.
 
-```
-npm install -g pnpm
-```
+### 3. The Autonomous Notification Swarm
+A proactive background agent scheduled via `node-cron` that runs every morning.
+- **Context Injection:** It analyzes the user's current financial state, active streaks, and goal proximity.
+- **LLM Decision Engine:** Based on the data, the LLM *decides* whether a notification is warranted, assigns a priority level, and generates a personalized push notification.
+- **Constraints:** To prevent notification fatigue, the agent is strictly bounded to generating messages <100 characters and is hard-capped at 1 push per day.
 
-
----
-
-# 📥 1. Clone the Repository
-
-```
-git clone https://github.com/HarshK97/PocketPal/
-cd PocketPal
-```
+### 4. The Spending Guardian (Monitoring Agent)
+An on-device monitoring system designed to intervene *before* a bad financial decision is made.
+- **Contextual Awareness:** Detects when the user opens known spending/delivery apps (like Swiggy, Zomato, or Myntra).
+- **Real-Time Processing:** Cross-references this real-time signal against the user's weekly budget and recent spending habits.
+- **Proactive Nudge:** Fires a high-priority intervention nudge to stop impulse buying, seamlessly tying back into the core loop by offering Arcade coins as a reward for restraint.
 
 ---
 
-# 📦 2. Install All Dependencies
+## 🏗️ Architecture & Tech Stack
 
-```
+PocketPal is structured as a **Turborepo monorepo**:
+
+- **Mobile App:** Expo, React Native, NativeWind (TailwindCSS for RN)
+- **Backend API:** Node.js, Express.js, MongoDB
+- **AI & Agents:** Vercel AI SDK, Gemini 2.0 Flash, Mistral 7B + Unsloth
+- **Tooling:** pnpm workspaces, ESLint, TypeScript
+
+*(Note: The `apps/web` directory contains legacy Next.js web dashboard code that is currently inactive in favor of the mobile-first strategy).*
+
+---
+
+## 🛠️ Local Development Setup
+
+### Prerequisites
+- **Node.js** v20+
+- **pnpm** v8+
+- **Android Studio** / **Xcode** (for mobile builds)
+
+### 1. Clone & Install
+```bash
+git clone https://github.com/cubaseuser123/PocketPal-Revamped.git
+cd PocketPal-Revamped
 pnpm install
 ```
 
-This installs dependencies for all apps and shared packages.
-Use pnpm only in this repository. npm/yarn lockfiles are intentionally not supported.
+### 2. Running the Apps
 
----
-
-# 🏗️ 3. Running Each App
-
-## 🌐 Web App (Next.js)
-
-Run using Turborepo:
-
-```
-pnpm dev --filter web
-```
-
-Or directly inside the app:
-
-```
-cd apps/web
-pnpm dev
-```
-
-Runs on: **http://localhost:3000**
-
----
-
-## 📱 Mobile App (Ionic + Capacitor)
-
-Start in dev mode:
-
-```
-pnpm dev --filter mobile
-```
-
-Or:
-
-```
-cd apps/mobile
-npx expo start
-```
-
-### Run on Android:
-
-**Android Studio must be installed and set up.**
-
-```
-cd apps/mobile
-npx expo run:android
-```
-
-### Run on iOS:
-
-**Xcode must be installed (Mac only).**
-
-```
-cd apps/mobile
-npx expo run:ios
-```
-
-### Build for Production:
-
-```
-cd apps/mobile
-pnpm exec eas build -p android --profile preview
-pnpm exec eas build -p android --profile production
-pnpm exec eas build -p ios --profile production
-```
-
----
-
-## 🖥️ Backend API (Express.js)
-
-Run via Turborepo:
-
-```
+**Backend API (Express.js)**
+```bash
 pnpm dev --filter backend
 ```
 
-Or inside the backend folder:
+**Mobile App (Expo)**
+```bash
+pnpm dev --filter mobile
+# Or run natively:
+cd apps/mobile
+npx expo run:android  # or run:ios
+```
 
-```
-cd apps/backend
-pnpm dev
-```
+### 3. Monorepo Commands
+| Command | Action |
+| :--- | :--- |
+| `pnpm dev` | Run active apps concurrently |
+| `pnpm build` | Build the entire monorepo |
+| `pnpm lint` | Run ESLint across all packages |
+| `pnpm update -r` | Update dependencies globally |
 
 ---
 
-# 🔁 Turborepo Commands
-
-| Command                     | Description                  |
-| --------------------------- | ---------------------------- |
-| `pnpm dev`                  | Run all apps (if configured) |
-| `pnpm dev --filter web`     | Run web only                 |
-| `pnpm dev --filter mobile`  | Run mobile only              |
-| `pnpm dev --filter backend` | Run backend only             |
-| `pnpm build`                | Build everything             |
-| `pnpm build --filter web`   | Build web only               |
-| `pnpm lint`                 | Lint entire monorepo         |
-
----
-
-# 📦 Shared Packages
-
-### `packages/ui/`
-
-- Shared React components
-- Shared Tailwind styles
-
-### `packages/typescript-config/`
-
-- Base tsconfig + multiple presets
-- Used by all apps
-
-### `packages/eslint-config/`
-
-- Shared linting rules
-- Keeps code style consistent
-
-Usage example:
-
-```json
-{
-  "extends": ["@repo/typescript-config/react"],
-  "eslintConfig": {
-    "extends": ["@repo/eslint-config"]
-  }
-}
-```
-
----
-
-# ⚠️ Common Issues & Fixes
-
-### ❌ Capacitor not detecting Android/iOS project
-
-Run:
-
-```
-pnpm cap sync
-```
-
-### ❌ UI package not updating
-
-Build the UI package:
-
-```
-pnpm build --filter ui
-```
-
-### ❌ Dependency mismatch
-
-Run:
-
-```
-pnpm update -r
-```
-
-### ❌ Dependency version conflicts
-
-You can check for version mismatches using Syncpack:
-
-```
-pnpm dlx syncpack list-mismatches
-```
-
-If there are mismatches, run:
-
-```
-pnpm dlx syncpack fix-mismatches
-```
-
----
-
-# 🤝 Contribution Workflow
-
-1. Create a new branch
-2. Make changes
+## 🤝 Contributing
+1. Create a feature branch
+2. Make your changes
 3. Run `pnpm lint` and `pnpm build`
-4. Commit + push
-5. Open a Pull Request
+4. Submit a Pull Request
 
----
-
-# 🎉 You're Ready!
-
-If you need help setting up or contributing to PocketPal, create an issue or reach out to the team.
+*Built for the Mastek Project Deep Blue Season 11.*
