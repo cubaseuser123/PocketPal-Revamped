@@ -3,7 +3,7 @@
   <p><strong>Autonomous Financial Companion & Gamified Expense Tracker for Gen-Z</strong></p>
 
   <!-- USER: Replace this placeholder with your actual Loom link -->
-  [![Watch the Demo](https://img.shields.io/badge/Watch%20Demo-Loom-FF4F00?style=for-the-badge&logo=loom)](https://loom.com/your-link-here)
+  [![Watch the Demo](https://img.shields.io/badge/Watch%20Demo-Loom-FF4F00?style=for-the-badge&logo=loom)](https://www.loom.com/share/cf38c99f7a2846a9b38f73a89b73beff)
   
   ![React Native](https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
   ![Express.js](https://img.shields.io/badge/express.js-%23404d59.svg?style=for-the-badge&logo=express&logoColor=%2361DAFB)
